@@ -5,18 +5,36 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ROK XD • QR Code</title>
 <style>
-:root{--bg-1:#020617;--bg-2:#0f172a;--neon:#38bdf8;--glass-border:rgba(56,189,248,0.22);--card-w:380px;}
-*{box-sizing:border-box;}
-html,body{height:100%;margin:0;font-family:"Inter",system-ui,Arial;
+:root{
+  --bg-1:#020617;
+  --bg-2:#0f172a;
+  --neon:#38bdf8;
+  --glass-border:rgba(56,189,248,0.22);
+  --muted:rgba(255,255,255,0.45);
+  --card-w:380px;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;font-family:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial;
 background: radial-gradient(1200px 600px at 10% 10%, rgba(56,189,248,0.03), transparent),
-           radial-gradient(900px 500px at 90% 85%, rgba(56,189,248,0.02), transparent),
-           linear-gradient(180deg,var(--bg-1),var(--bg-2)); color:#dfffe6;}
-.stage{display:flex;align-items:center;justify-content:center;height:100vh;padding:36px;}
-.glass-card{width:var(--card-w);max-width:92vw; padding:22px; border-radius:18px; background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); border:1px solid var(--glass-border); backdrop-filter: blur(10px) saturate(140%); box-shadow:0 10px 40px rgba(0,0,0,0.7),0 0 40px rgba(56,189,248,0.05) inset; text-align:center;}
-img{width:220px;height:220px;margin:10px auto;display:block;}
-button{width:100%;padding:12px;border-radius:6px;border:none;background:var(--neon);color:#020617;font-weight:bold;cursor:pointer;margin-top:12px;}
+            radial-gradient(900px 500px at 90% 85%, rgba(56,189,248,0.02), transparent),
+            linear-gradient(180deg,var(--bg-1),var(--bg-2));
+color:#dfffe6;overflow:hidden;}
+.stage{position:relative;height:100vh;display:flex;align-items:center;justify-content:center;padding:36px;}
+.glass-card{
+  width:var(--card-w);max-width:92vw;
+  background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+  border-radius:18px;padding:22px;
+  box-shadow:0 10px 40px rgba(0,0,0,0.7),0 0 40px rgba(56,189,248,0.05) inset;
+  backdrop-filter: blur(10px) saturate(140%);
+  border:1px solid var(--glass-border);
+  text-align:center;
+}
+.card-header h1{font-family:"JetBrains Mono", monospace;font-size:20px;margin:0;color:var(--neon);text-transform:uppercase;text-shadow:0 0 18px rgba(56,189,248,0.22);}
+.card-header .small-url{font-size:12px;color:var(--muted);margin-top:6px;}
+img{width:220px;height:220px;margin:16px 0;}
+button{width:100%;padding:12px;border-radius:6px;border:none;background:var(--neon);color:#020617;font-weight:bold;cursor:pointer;font-size:16px;margin-bottom:12px;}
 button:hover{opacity:0.9;}
-.result{margin-top:12px;font-weight:bold;word-break:break-word;}
+.result{margin-top:16px;font-weight:bold;word-break:break-word;}
 </style>
 </head>
 <body>
@@ -29,7 +47,6 @@ button:hover{opacity:0.9;}
 
 <img id="qrImg" src="" alt="QR Code">
 <button onclick="window.location='/pair'">Retour Pairing</button>
-
 <div class="result" id="qrStatus"></div>
 </section>
 </main>
@@ -39,7 +56,7 @@ const sessionId = localStorage.getItem("sessionId");
 if(!sessionId){ alert("Vous devez être connecté !"); window.location='/'; }
 
 async function loadQR(){
-  const r = await fetch('/qr',{headers:{"x-session-id":sessionId}});
+  const r = await fetch('/qr', { headers: { "x-session-id": sessionId } });
   const data = await r.json();
   if(data.qr) document.getElementById('qrImg').src = data.qr;
   else document.getElementById('qrStatus').innerText = data.error || "QR indisponible";

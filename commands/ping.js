@@ -1,6 +1,7 @@
 export default {
     name: "ping",
-    execute: async (sock, m) => {
-        m.reply("pong 🏓");
+    description: "Répond pong",
+    async execute(sock, msg, args) {
+        await msg.reply("🏓 Pong !");
     }
 };

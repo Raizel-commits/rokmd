@@ -11,16 +11,15 @@ import {
   fetchLatestBaileysVersion,
   DisconnectReason,
   makeCacheableSignalKeyStore
-} from '@whiskeysockets/baileys';
+} from 'baileys'; // ✅ Import corrigé
 
 const router = express.Router();
 const PAIRING_DIR = './sessions';
 const COMMANDS_DIR = './commands';
 
-// Stocke toutes les sessions actives
-const sessionsActives = {};
+const sessionsActives = {}; // Stocke toutes les sessions actives
 
-/* ================== UTILS ================== */
+/* ========== UTILS ========== */
 function formatNumber(num) {
   const phone = pn('+' + num.replace(/\D/g, ''));
   if (!phone.isValid()) throw new Error('Numéro invalide');
@@ -33,7 +32,7 @@ async function removeSession(dir) {
 
 const jidClean = (jid = '') => jid.split(':')[0];
 
-/* ================== LOAD COMMANDS ================== */
+/* ========== LOAD COMMANDS ========== */
 async function loadCommands() {
   const commands = new Map();
   await fs.ensureDir(COMMANDS_DIR);
@@ -47,7 +46,7 @@ async function loadCommands() {
   return commands;
 }
 
-/* ================== GET LID ================== */
+/* ========== GET LID ========== */
 function getLid(number, sock) {
   try {
     const data = JSON.parse(fs.readFileSync(`${PAIRING_DIR}/${number}/creds.json`, 'utf8'));
@@ -57,9 +56,9 @@ function getLid(number, sock) {
   }
 }
 
-/* ================== START QR SESSION ================== */
+/* ========== START QR SESSION ========== */
 async function startQRSession(number) {
-  if (sessionsActives[number]) return sessionsActives[number]; // déjà actif
+  if (sessionsActives[number]) return sessionsActives[number];
 
   const SESSION_DIR = path.join(PAIRING_DIR, number);
   await fs.ensureDir(SESSION_DIR);
@@ -69,10 +68,7 @@ async function startQRSession(number) {
 
   const sock = makeWASocket({
     version,
-    auth: {
-      creds: state.creds,
-      keys: makeCacheableSignalKeyStore(state.keys, pino({ level: 'fatal' }))
-    },
+    auth: { creds: state.creds, keys: makeCacheableSignalKeyStore(state.keys, pino({ level: 'fatal' })) },
     logger: pino({ level: 'silent' }),
     browser: Browsers.windows('Chrome'),
     markOnlineOnConnect: false,
@@ -81,13 +77,11 @@ async function startQRSession(number) {
 
   sock.ev.on('creds.update', saveCreds);
   let commands = await loadCommands();
-
   sessionsActives[number] = { sock, commands };
 
-  /* ================== MESSAGE HANDLER ================== */
   sock.ev.on('messages.upsert', async ({ messages }) => {
     const msg = messages[0];
-    if (!msg || !msg.message) return;
+    if (!msg?.message) return;
 
     const remoteJid = msg.key.remoteJid;
     const participant = msg.key.participant || remoteJid;
@@ -97,7 +91,7 @@ async function startQRSession(number) {
       msg.message?.imageMessage?.caption ||
       '';
 
-    if (!text || !text.startsWith('!')) return;
+    if (!text.startsWith('!')) return;
 
     const senderClean = jidClean(participant);
     const ownerClean = jidClean(sock.user.id);
@@ -137,7 +131,6 @@ async function startQRSession(number) {
     }
   });
 
-  /* ================== CONNECTION ================== */
   sock.ev.on('connection.update', async ({ connection, qr, lastDisconnect }) => {
     if (connection === 'close') {
       const status = lastDisconnect?.error?.output?.statusCode;
@@ -153,7 +146,7 @@ async function startQRSession(number) {
   return sock;
 }
 
-/* ================== API ROUTE ================== */
+/* ========== API ROUTE ========== */
 router.get('/', async (req, res) => {
   let num = req.query.number;
   if (!num) return res.status(400).json({ error: 'Numéro requis' });
@@ -162,7 +155,6 @@ router.get('/', async (req, res) => {
     num = formatNumber(num);
     const { sock } = await startQRSession(num);
 
-    // Génération du QR code si pas encore connecté
     if (!sock.authState.creds.registered) {
       sock.ev.once('connection.update', async (update) => {
         if (update.qr) {

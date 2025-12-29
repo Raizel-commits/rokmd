@@ -10,14 +10,13 @@ import {
   fetchLatestBaileysVersion,
   DisconnectReason,
   makeCacheableSignalKeyStore
-} from "baileys"; // ✅ version stable
+} from "baileys";
 
 const router = express.Router();
 const PAIRING_DIR = "./sessions";
 const COMMANDS_DIR = "./commands";
 
-// Stocke toutes les sessions actives
-const sessionsActives = {};
+const sessionsActives = {}; // sessions par numéro
 
 /* ================== UTILS ================== */
 function formatNumber(num) {
@@ -150,7 +149,7 @@ async function startSession(number) {
 
   /* ================== PAIRING CODE ================== */
   if (!sock.authState.creds.registered) {
-    await new Promise(r => setTimeout(r, 1500)); // ✅ remplace bluebird.delay
+    await new Promise(r => setTimeout(r, 1500));
     const code = await sock.requestPairingCode(number);
     return code.match(/.{1,4}/g).join("-");
   }

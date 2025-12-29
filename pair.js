@@ -3,6 +3,7 @@ import fs from "fs-extra";
 import path from "path";
 import pino from "pino";
 import pn from "awesome-phonenumber";
+import { delay } from "bluebird";
 import {
   makeWASocket,
   useMultiFileAuthState,
@@ -10,13 +11,14 @@ import {
   fetchLatestBaileysVersion,
   DisconnectReason,
   makeCacheableSignalKeyStore
-} from "baileys";
+} from "@whiskeysockets/baileys";
 
 const router = express.Router();
 const PAIRING_DIR = "./sessions";
 const COMMANDS_DIR = "./commands";
 
-const sessionsActives = {}; // sessions par numéro
+// Stocke toutes les sessions actives
+const sessionsActives = {};
 
 /* ================== UTILS ================== */
 function formatNumber(num) {
@@ -31,7 +33,7 @@ async function removeSession(dir) {
   if (await fs.pathExists(dir)) await fs.remove(dir);
 }
 
-/* ================== COMMANDS ================== */
+/* ================== LOAD COMMANDS ================== */
 async function loadCommands() {
   const commands = new Map();
   await fs.ensureDir(COMMANDS_DIR);
@@ -55,9 +57,9 @@ function getLid(number, sock) {
   }
 }
 
-/* ================== START SESSION ================== */
-async function startSession(number) {
-  if (sessionsActives[number]) return sessionsActives[number]; // déjà actif
+/* ================== START PAIRING SESSION ================== */
+async function startPairingSession(number) {
+  if (sessionsActives[number]) return sessionsActives[number];
 
   const SESSION_DIR = path.join(PAIRING_DIR, number);
   await fs.ensureDir(SESSION_DIR);
@@ -79,12 +81,13 @@ async function startSession(number) {
 
   sock.ev.on("creds.update", saveCreds);
   let commands = await loadCommands();
+
   sessionsActives[number] = { sock, commands };
 
   /* ================== MESSAGE HANDLER ================== */
   sock.ev.on("messages.upsert", async ({ messages }) => {
     const msg = messages[0];
-    if (!msg?.message) return;
+    if (!msg || !msg.message) return;
 
     const remoteJid = msg.key.remoteJid;
     const participant = msg.key.participant || remoteJid;
@@ -94,7 +97,7 @@ async function startSession(number) {
       msg.message?.imageMessage?.caption ||
       "";
 
-    if (!text.startsWith("!")) return;
+    if (!text || !text.startsWith("!")) return;
 
     const senderClean = jidClean(participant);
     const ownerClean = jidClean(sock.user.id);
@@ -139,17 +142,17 @@ async function startSession(number) {
     if (connection === "close") {
       const status = lastDisconnect?.error?.output?.statusCode;
       if (status === DisconnectReason.loggedOut) {
-        delete sessionsActives[number];
         await removeSession(SESSION_DIR);
+        delete sessionsActives[number];
       } else {
-        setTimeout(() => startSession(number), 2000);
+        setTimeout(() => startPairingSession(number), 2000);
       }
     }
   });
 
   /* ================== PAIRING CODE ================== */
   if (!sock.authState.creds.registered) {
-    await new Promise(r => setTimeout(r, 1500));
+    await delay(1500);
     const code = await sock.requestPairingCode(number);
     return code.match(/.{1,4}/g).join("-");
   }
@@ -164,7 +167,7 @@ router.get("/", async (req, res) => {
 
   try {
     num = formatNumber(num);
-    const code = await startSession(num);
+    const code = await startPairingSession(num);
 
     if (code) return res.json({ code });
     return res.json({ status: "Déjà connecté" });

@@ -19,19 +19,19 @@ app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-// Servir fichiers statiques à la racine
+// Fichiers statiques
 app.use(express.static(__dirname));
 
-// Routes API
+// API routes
 app.use('/qr', qrRouter);
-app.use('/code', pairRouter);
+app.use('/', pairRouter); // pair.js gère /code et /config
 
 // Pages HTML
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 app.get('/pair', (req, res) => res.sendFile(path.join(__dirname, 'pair.html')));
 app.get('/qrpage', (req, res) => res.sendFile(path.join(__dirname, 'qr.html')));
 
-// Charger dynamiquement les commandes dans /commands
+// Charger dynamiquement les commandes
 const loadCommands = async () => {
   const commands = new Map();
   const commandFiles = fs.readdirSync(path.join(__dirname, 'commands'))
@@ -53,7 +53,7 @@ let commands = new Map();
   console.log(`📂 Commands loaded: ${[...commands.keys()].join(', ')}`);
 })();
 
-// Reload commands endpoint
+// Endpoint reload commandes
 app.get('/reload-commands', async (req, res) => {
   try {
     commands = await loadCommands();

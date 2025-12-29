@@ -1,94 +1,33 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="fr">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ROK-XMD • WhatsApp Bot</title>
+<title>RAIZEL XMD • WhatsApp Bot</title>
 <style>
 :root{
- --primary:#1e3a8a; /* Navy Blue */
+ --glass:rgba(255,255,255,0.10);
+ --primary:#1db954;
+ --secondary:#9333ea;
  --text:#fff;
  --muted:#b3b3b3;
 }
 *{box-sizing:border-box;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto;margin:0;padding:0;}
-body{background:#000;color:var(--text);overflow-x:hidden;}
+body{background:#000;color:var(--text);overflow:hidden;}
 canvas{position:fixed;inset:0;z-index:-2;}
-.overlay{position:fixed;inset:0;z-index:-1;background:radial-gradient(circle at 30% 30%,#1e3a8a30,transparent 40%);pointer-events:none;}
+.overlay{position:fixed;inset:0;z-index:-1;background:radial-gradient(circle at 30% 30%,#1db95430,transparent 40%),radial-gradient(circle at 70% 70%,#9333ea30,transparent 45%);pointer-events:none;}
 .app{max-width:480px;margin:auto;padding:30px 20px;position:relative;z-index:1;}
-.logo{text-align:center;margin-bottom:40px;}
-.logo h1{margin:12px 0 4px;letter-spacing:2px;color:var(--text);}
-.logo p{color:var(--muted);font-size:14px;margin-bottom:20px;}
-.btn{display:block;width:100%;padding:16px;margin-top:12px;border-radius:12px;background:linear-gradient(135deg,var(--primary),#2d4fa0);color:#fff;font-weight:700;border:none;text-align:center;transition:all 0.25s;cursor:pointer;font-size:16px;}
+.logo{text-align:center;margin-bottom:30px;}
+.logo h1{margin:12px 0 4px;letter-spacing:2px;}
+.logo p{color:var(--muted);font-size:14px;}
+.card{background:var(--glass);backdrop-filter:blur(20px);border-radius:22px;padding:20px;margin-bottom:20px;border:1px solid rgba(255,255,255,.15);box-shadow:0 0 40px rgba(0,0,0,.4);}
+.btn{display:block;width:100%;padding:15px;margin-top:12px;border-radius:16px;background:linear-gradient(135deg,var(--primary),#22c55e);color:#000;font-weight:800;border:none;text-align:center;transition:.25s;}
 .btn:active{transform:scale(.97);}
+h3{margin-bottom:10px;}
 .footer-fixed{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);display:flex;gap:25px;z-index:2;}
 .footer-fixed a img{width:40px;height:40px;display:block;}
 .footer-text{text-align:center;font-size:12px;color:var(--muted);margin-top:10px;}
-a{color:#8bb4ff;text-decoration:none;font-weight:600;}
-
-/* Profile picture styles */
-.profile-container {
-  display: flex;
-  justify-content: center;
-  margin-bottom: 20px;
-}
-
-.profile-pic {
-  width: 100px;
-  height: 100px;
-  border-radius: 50%;
-  object-fit: cover;
-  border: 3px solid var(--primary);
-  box-shadow: 0 0 20px rgba(30, 58, 138, 0.4);
-}
-
-/* Button improvements */
-.btn:hover {
-  opacity: 0.9;
-  box-shadow: 0 0 20px rgba(30, 58, 138, 0.4);
-}
-
-/* Welcome message - Simple and clean */
-.welcome-title {
-  color: var(--text);
-  text-align: center;
-  font-size: 1.4em;
-  margin-bottom: 30px;
-  font-weight: 600;
-}
-
-/* Authors */
-.authors {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  margin-top: 20px;
-}
-
-.author-tag {
-  background: rgba(30, 58, 138, 0.3);
-  padding: 6px 12px;
-  border-radius: 20px;
-  font-size: 12px;
-  font-weight: 600;
-  color: #8bb4ff;
-  border: 1px solid rgba(30, 58, 138, 0.5);
-}
-
-/* Responsive */
-@media (max-width: 480px) {
-  .app {
-    padding: 20px 15px;
-  }
-  .profile-pic {
-    width: 90px;
-    height: 90px;
-  }
-  .btn {
-    padding: 14px;
-    font-size: 15px;
-  }
-}
+a{color:var(--primary);text-decoration:none;font-weight:600;}
 </style>
 </head>
 <body>
@@ -97,30 +36,27 @@ a{color:#8bb4ff;text-decoration:none;font-weight:600;}
 
 <div class="app">
  <div class="logo">
-   <!-- Profile picture -->
-   <div class="profile-container">
-     <img src="https://files.catbox.moe/cpzn17.jpg" alt="ROK-XMD Profile Picture" class="profile-pic">
-   </div>
-   <h1>ROK-XMD</h1>
-   <p>The ultimate solution to deploy your WhatsApp bot</p>
-   <div class="welcome-title">Welcome to ROK-XMD</div>
+   <h1>RAIZEL XMD</h1>
+   <p>Déployez votre bot WhatsApp en quelques clics</p>
  </div>
 
- <!-- Main buttons -->
- <div>
-  <a class="btn" href="/pair">Pairing Code</a>
-  <a class="btn" href="/qrpage">QR Code</a>
-  <button class="btn" onclick="window.open('help.html', '_blank')">Need help?</button>
+ <div class="card">
+  <a class="btn" href="/pair">🔑 Pairing Code</a>
+  <a class="btn" href="/qrpage">📷 QR Code</a>
  </div>
 
- <!-- Info section -->
- <div style="margin-top: 30px; text-align: center;">
-  <p><strong>Bot:</strong> ROK-XMD</p>
-  <p><strong>Version:</strong> 2.0.1</p>
-  <div class="authors">
-    <span class="author-tag">KNUT</span>
-    <span class="author-tag">DEV-RAIZEL</span>
-  </div>
+ <div class="card">
+  <h3>Comment ça marche</h3>
+  <p>1️⃣ Entrez votre numéro WhatsApp (sans +)</p>
+  <p>2️⃣ Choisissez un nom d’utilisateur</p>
+  <p>3️⃣ Un code de pairing sera généré</p>
+  <p>4️⃣ WhatsApp → Appareils liés</p>
+  <p>5️⃣ Entrez le code affiché</p>
+ </div>
+
+ <div class="card">
+  <p><strong>Bot :</strong> Raizel XMD</p>
+  <p><strong>Développé par :</strong> Raizel</p>
  </div>
 </div>
 
@@ -130,70 +66,17 @@ a{color:#8bb4ff;text-decoration:none;font-weight:600;}
  <a href="https://github.com/yhrespon/RAIZEXMD" target="_blank"><img src="https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png" alt="GitHub"></a>
 </div>
 
-<div class="footer-text">© 2025 ROK-XMD • Developed by KNUT & DEV-RAIZEL</div>
+<div class="footer-text">© 2025 RAIZEL XMD • Développé par Raizel</div>
 
 <script>
 const canvas = document.getElementById("bg"), ctx = canvas.getContext("2d");
 let w,h,particles=[];
 function resize(){w=canvas.width=innerWidth;h=canvas.height=innerHeight;}
 window.onresize=resize;resize();
-
-// Particles color in navy blue
 for(let i=0;i<50;i++) particles.push({x:Math.random()*w,y:Math.random()*h,r:2+Math.random()*3,dx:(Math.random()-.5)*0.7,dy:(Math.random()-.5)*0.7});
-
-function animate(){
-  ctx.clearRect(0,0,w,h);
-  particles.forEach(p=>{
-    p.x+=p.dx;
-    p.y+=p.dy;
-    if(p.x<0||p.x>w)p.dx*=-1;
-    if(p.y<0||p.y>h)p.dy*=-1;
-    ctx.beginPath();
-    ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
-    ctx.fillStyle="rgba(30, 58, 138, 0.5)"; // Navy blue
-    ctx.fill();
-  });
-  requestAnimationFrame(animate);
-}
+function animate(){ctx.clearRect(0,0,w,h);particles.forEach(p=>{p.x+=p.dx;p.y+=p.dy;if(p.x<0||p.x>w)p.dx*=-1;if(p.y<0||p.y>h)p.dy*=-1;ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fillStyle="rgba(29,185,84,0.5)";ctx.fill();});requestAnimationFrame(animate);}
 animate();
-
-window.addEventListener("pointerdown",()=>particles.forEach(p=>{
-  p.dx+=Math.random()*2-1;
-  p.dy+=Math.random()*2-1;
-}));
-
-// Mouse interaction effect for particles
-window.addEventListener('mousemove', (e) => {
-  particles.forEach(p => {
-    const dx = e.clientX - p.x;
-    const dy = e.clientY - p.y;
-    const distance = Math.sqrt(dx * dx + dy * dy);
-    
-    if (distance < 100) {
-      p.dx -= dx * 0.001;
-      p.dy -= dy * 0.001;
-    }
-  });
-});
-
-// Preload profile image to avoid flash
-window.addEventListener('load', function() {
-  const img = new Image();
-  img.src = 'https://files.catbox.moe/cpzn17.jpg';
-  img.onload = function() {
-    console.log('Profile image loaded successfully');
-  };
-});
-
-// Additional visual effect for clicks
-document.querySelectorAll('.btn').forEach(btn => {
-  btn.addEventListener('click', function() {
-    this.style.transform = 'scale(0.95)';
-    setTimeout(() => {
-      this.style.transform = '';
-    }, 150);
-  });
-});
+window.addEventListener("pointerdown",()=>particles.forEach(p=>{p.dx+=Math.random()*2-1;p.dy+=Math.random()*2-1;}));
 </script>
 </body>
-                                                                 </html>
+</html>

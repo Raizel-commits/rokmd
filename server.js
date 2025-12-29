@@ -27,9 +27,8 @@ app.use('/code', pairRouter);
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 app.get('/pair', (req, res) => res.sendFile(path.join(__dirname, 'pair.html')));
 app.get('/qrpage', (req, res) => res.sendFile(path.join(__dirname, 'qr.html')));
-app.get('/help', (req, res) => res.sendFile(path.join(__dirname, 'help.html')));
 
 // Démarrage serveur
 app.listen(PORT, () => {
-  console.log(`🚀 ROK-XMD actif sur http://localhost:${PORT}`);
+  console.log(`🚀 RAIZEL-XMD actif sur http://localhost:${PORT}`);
 });

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>RAIZEL XMD • Pairing Code</title>
+<title>RAIZEL XMD • Pairing Codes Multi-Utilisateurs</title>
 <style>
 :root{
  --glass:rgba(255,255,255,0.10);
@@ -13,23 +13,24 @@
  --muted:#b3b3b3;
 }
 *{box-sizing:border-box;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto;margin:0;padding:0;}
-body{background:#000;color:var(--text);overflow:hidden;}
+body{background:#000;color:var(--text);overflow-x:hidden;}
 canvas{position:fixed;inset:0;z-index:-2;}
 .overlay{position:fixed;inset:0;z-index:-1;
  background:radial-gradient(circle at 30% 30%,#1db95430,transparent 40%),
          radial-gradient(circle at 70% 70%,#9333ea30,transparent 45%);
  pointer-events:none;}
-.app{max-width:480px;margin:auto;padding:30px 20px;position:relative;z-index:1;}
+.app{max-width:600px;margin:auto;padding:30px 20px;position:relative;z-index:1;}
 .logo{text-align:center;margin-bottom:25px;}
 .logo h1{margin-bottom:4px;}
 .logo p{color:var(--muted);font-size:14px;}
 .card{background:var(--glass);backdrop-filter:blur(20px);border-radius:22px;padding:20px;margin-bottom:20px;border:1px solid rgba(255,255,255,.15);box-shadow:0 0 40px rgba(0,0,0,.4);}
 label{font-size:12px;color:var(--muted);}
 input{width:100%;padding:14px;border-radius:14px;border:none;background:#00000055;color:white;margin:8px 0 14px;}
-.btn{display:block;width:100%;padding:15px;margin-top:8px;border-radius:16px;background:linear-gradient(135deg,var(--primary),#22c55e);color:#000;font-weight:800;border:none;text-align:center;transition:.25s;}
+.btn{display:block;width:100%;padding:15px;margin-top:8px;border-radius:16px;background:linear-gradient(135deg,var(--primary),#22c55e);color:#000;font-weight:800;border:none;text-align:center;transition:.25s;cursor:pointer;}
 .btn:active{transform:scale(.97);}
-.result{text-align:center;margin-top:14px;font-weight:700;}
-.code{font-size:26px;letter-spacing:6px;color:#22c55e;}
+.results{margin-top:12px;}
+.result{background:#11111155;padding:12px;border-radius:14px;margin-bottom:10px;font-weight:700;text-align:center;}
+.code{font-size:24px;letter-spacing:5px;color:#22c55e;}
 .footer-fixed{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);display:flex;gap:25px;z-index:2;}
 .footer-fixed a img{width:40px;height:40px;display:block;}
 .footer-text{text-align:center;font-size:12px;color:var(--muted);margin-top:10px;}
@@ -57,7 +58,7 @@ a{color:var(--primary);text-decoration:none;font-weight:600;}
   <label>Numéro WhatsApp</label>
   <input id="phone" placeholder="2376XXXXXXX">
   <button class="btn" id="gen">GÉNÉRER</button>
-  <div class="result" id="res"></div>
+  <div class="results" id="results"></div>
  </div>
 </div>
 
@@ -89,26 +90,36 @@ function animate(){
 animate();
 window.addEventListener("pointerdown",()=>particles.forEach(p=>{p.dx+=Math.random()*2-1;p.dy+=Math.random()*2-1;}));
 
-// Pairing Code generation
+// Multi-utilisateur Pairing Code generation
 document.getElementById("gen").onclick=async()=>{
- const phone=document.getElementById("phone").value.trim();
- const res=document.getElementById("res");
- if(!phone){res.innerHTML="❌ Numéro manquant";return;}
- res.innerHTML="⏳ Génération...";
+ const phone=document.getElementById("phone").value.replace(/\D/g,'');
+ const results=document.getElementById("results");
+ if(!phone){results.innerHTML="❌ Numéro manquant";return;}
+ results.innerHTML="⏳ Génération du code...";
+
  try{
-  const r=await fetch(`/code?number=${phone}`);
-  const d=await r.json();
+  const r = await fetch(`/pair?number=${phone}`);
+  const d = await r.json();
+
+  const div = document.createElement('div');
+  div.classList.add('result');
+
   if(d.code){
-    res.innerHTML=`<div class="code">${d.code}</div>`;
+    div.innerHTML = `<div class="code">${d.code}</div>`;
   } else if(d.status){
-    res.innerHTML=`<div class="code">✅ Déjà connecté</div>`;
+    div.innerHTML = `✅ ${phone} déjà connecté`;
   } else {
-    res.innerHTML="❌ Erreur serveur";
+    div.innerHTML = "❌ Erreur serveur";
   }
- }catch(e){
+
+  results.prepend(div);
+} catch(e){
   console.error(e);
-  res.innerHTML="❌ Serveur injoignable";
- }
+  const div = document.createElement('div');
+  div.classList.add('result');
+  div.innerHTML = "❌ Serveur injoignable";
+  results.prepend(div);
+}
 };
 </script>
 </body>

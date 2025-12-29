@@ -1,7 +1,6 @@
 import express from "express";
 import fs from "fs-extra";
 import path from "path";
-import pino from "pino";
 import QRCode from "qrcode";
 import pn from "awesome-phonenumber";
 import {
@@ -12,31 +11,18 @@ import {
   DisconnectReason,
   makeCacheableSignalKeyStore
 } from "@whiskeysockets/baileys";
+import pino from "pino";
 
 const router = express.Router();
 const PAIRING_DIR = "./sessions";
-const COMMANDS_DIR = "./commands";
-
 const sessionsActives = {};
+
 const jidClean = (jid = "") => jid.split(":")[0];
 
 function formatNumber(num) {
   const phone = pn("+" + num.replace(/\D/g, ""));
   if (!phone.isValid()) throw new Error("Numéro invalide");
   return phone.getNumber("e164").replace("+", "");
-}
-
-async function loadCommands() {
-  const commands = new Map();
-  await fs.ensureDir(COMMANDS_DIR);
-  const files = fs.readdirSync(COMMANDS_DIR).filter(f => f.endsWith(".js"));
-  for (const file of files) {
-    const cmd = await import(`${COMMANDS_DIR}/${file}?update=${Date.now()}`);
-    if (cmd.default?.name && typeof cmd.default.execute === "function") {
-      commands.set(cmd.default.name.toLowerCase(), cmd.default);
-    }
-  }
-  return commands;
 }
 
 async function removeSession(dir) {
@@ -60,55 +46,12 @@ async function startQRSession(number) {
     logger: pino({ level: "silent" }),
     browser: Browsers.windows("Chrome"),
     markOnlineOnConnect: false,
-    printQRInTerminal: true // utile pour debug
   });
 
   sock.ev.on("creds.update", saveCreds);
-  let commands = await loadCommands();
-  sessionsActives[number] = { sock, commands };
+  sessionsActives[number] = { sock, qr: null };
 
-  sock.ev.on("messages.upsert", async ({ messages }) => {
-    const msg = messages[0];
-    if (!msg || !msg.message) return;
-
-    const remoteJid = msg.key.remoteJid;
-    const participant = msg.key.participant || remoteJid;
-    const text =
-      msg.message?.conversation ||
-      msg.message?.extendedTextMessage?.text ||
-      msg.message?.imageMessage?.caption ||
-      "";
-
-    if (!text || !text.startsWith("!")) return;
-
-    const senderClean = jidClean(participant);
-    const ownerClean = jidClean(sock.user.id);
-    const lidRaw = sock.user?.lid || "";
-    const lid = lidRaw ? jidClean(lidRaw) + "@lid" : null;
-
-    const allowed = msg.key.fromMe || senderClean === ownerClean || participant === lid || remoteJid === lid;
-    if (!allowed) return;
-
-    const args = text.slice(1).trim().split(/\s+/);
-    const command = args.shift().toLowerCase();
-
-    if (command === "reload") {
-      commands = await loadCommands();
-      sessionsActives[number].commands = commands;
-      return sock.sendMessage(remoteJid, { text: "✅ Commandes rechargées" });
-    }
-
-    if (commands.has(command)) {
-      try {
-        await commands.get(command).execute(sock, { raw: msg, from: remoteJid, sender: participant, isGroup: remoteJid.endsWith("@g.us"), reply: (t) => sock.sendMessage(remoteJid, { text: t }) }, args);
-      } catch (err) {
-        console.error("Erreur commande:", err);
-        sock.sendMessage(remoteJid, { text: "❌ Erreur commande" });
-      }
-    }
-  });
-
-  // Gestion de la connexion et reconnexion
+  // Gestion connexion / QR
   sock.ev.on("connection.update", async ({ connection, lastDisconnect, qr }) => {
     if (connection === "close") {
       const status = lastDisconnect?.error?.output?.statusCode;
@@ -116,26 +59,23 @@ async function startQRSession(number) {
         delete sessionsActives[number];
         await removeSession(SESSION_DIR);
       } else {
-        console.log("⚠️ Connection fermée, tentative de reconnexion...");
+        console.log("⚠️ Reconnexion...");
         setTimeout(() => startQRSession(number), 3000);
       }
     }
-
     if (qr) {
       try {
-        const qrDataURL = await QRCode.toDataURL(qr);
-        sessionsActives[number].qr = qrDataURL;
+        sessionsActives[number].qr = await QRCode.toDataURL(qr);
       } catch (err) {
         console.error("Erreur génération QR:", err);
       }
     }
   });
 
-  // Timeout QR 60s si pas connecté
+  // Timeout QR 60s
   const timeout = 60000;
   const start = Date.now();
-  while (!sock.authState.creds.registered) {
-    if (sessionsActives[number].qr) break;
+  while (!sessionsActives[number].qr) {
     if (Date.now() - start > timeout) throw new Error("Timeout QR");
     await delay(1000);
   }
@@ -147,7 +87,6 @@ async function startQRSession(number) {
 router.get("/", async (req, res) => {
   let num = req.query.number;
   if (!num) return res.status(400).json({ error: "Numéro requis" });
-
   try {
     num = formatNumber(num);
     const session = await startQRSession(num);

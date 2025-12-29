@@ -9,6 +9,7 @@ import {
   useMultiFileAuthState,
   Browsers,
   fetchLatestBaileysVersion,
+  DisconnectReason,
   makeCacheableSignalKeyStore
 } from "@whiskeysockets/baileys";
 
@@ -16,9 +17,7 @@ const router = express.Router();
 const PAIRING_DIR = "./sessions";
 const COMMANDS_DIR = "./commands";
 
-// Stocke toutes les sessions actives
 const sessionsActives = {};
-
 const jidClean = (jid = "") => jid.split(":")[0];
 
 function formatNumber(num) {
@@ -40,7 +39,10 @@ async function loadCommands() {
   return commands;
 }
 
-// Delay simple
+async function removeSession(dir) {
+  if (await fs.pathExists(dir)) await fs.remove(dir);
+}
+
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 async function startQRSession(number) {
@@ -54,22 +56,17 @@ async function startQRSession(number) {
 
   const sock = makeWASocket({
     version,
-    auth: {
-      creds: state.creds,
-      keys: makeCacheableSignalKeyStore(state.keys, pino({ level: "fatal" }))
-    },
+    auth: { creds: state.creds, keys: makeCacheableSignalKeyStore(state.keys, pino({ level: "fatal" })) },
     logger: pino({ level: "silent" }),
     browser: Browsers.windows("Chrome"),
     markOnlineOnConnect: false,
-    printQRInTerminal: false
+    printQRInTerminal: true // utile pour debug
   });
 
   sock.ev.on("creds.update", saveCreds);
   let commands = await loadCommands();
-
   sessionsActives[number] = { sock, commands };
 
-  // Gestion des messages (commandes)
   sock.ev.on("messages.upsert", async ({ messages }) => {
     const msg = messages[0];
     if (!msg || !msg.message) return;
@@ -86,10 +83,10 @@ async function startQRSession(number) {
 
     const senderClean = jidClean(participant);
     const ownerClean = jidClean(sock.user.id);
+    const lidRaw = sock.user?.lid || "";
+    const lid = lidRaw ? jidClean(lidRaw) + "@lid" : null;
 
-    const allowed =
-      msg.key.fromMe || senderClean === ownerClean;
-
+    const allowed = msg.key.fromMe || senderClean === ownerClean || participant === lid || remoteJid === lid;
     if (!allowed) return;
 
     const args = text.slice(1).trim().split(/\s+/);
@@ -103,13 +100,7 @@ async function startQRSession(number) {
 
     if (commands.has(command)) {
       try {
-        await commands.get(command).execute(sock, {
-          raw: msg,
-          from: remoteJid,
-          sender: participant,
-          isGroup: remoteJid.endsWith("@g.us"),
-          reply: (t) => sock.sendMessage(remoteJid, { text: t })
-        }, args);
+        await commands.get(command).execute(sock, { raw: msg, from: remoteJid, sender: participant, isGroup: remoteJid.endsWith("@g.us"), reply: (t) => sock.sendMessage(remoteJid, { text: t }) }, args);
       } catch (err) {
         console.error("Erreur commande:", err);
         sock.sendMessage(remoteJid, { text: "❌ Erreur commande" });
@@ -117,37 +108,50 @@ async function startQRSession(number) {
     }
   });
 
-  // Renvoi QR code si pas encore enregistré
-  if (!sock.authState.creds.registered) {
-    return new Promise((resolve, reject) => {
-      const timeout = setTimeout(() => reject(new Error("Timeout QR")), 30000);
+  // Gestion de la connexion et reconnexion
+  sock.ev.on("connection.update", async ({ connection, lastDisconnect, qr }) => {
+    if (connection === "close") {
+      const status = lastDisconnect?.error?.output?.statusCode;
+      if (status === DisconnectReason.loggedOut) {
+        delete sessionsActives[number];
+        await removeSession(SESSION_DIR);
+      } else {
+        console.log("⚠️ Connection fermée, tentative de reconnexion...");
+        setTimeout(() => startQRSession(number), 3000);
+      }
+    }
 
-      sock.ev.on("connection.update", async (update) => {
-        if (update.qr) {
-          clearTimeout(timeout);
-          const qrDataURL = await QRCode.toDataURL(update.qr);
-          resolve({ sock, qr: qrDataURL });
-        } else if (update.connection === "close") {
-          clearTimeout(timeout);
-          reject(new Error("Connection fermée avant QR"));
-        }
-      });
-    });
+    if (qr) {
+      try {
+        const qrDataURL = await QRCode.toDataURL(qr);
+        sessionsActives[number].qr = qrDataURL;
+      } catch (err) {
+        console.error("Erreur génération QR:", err);
+      }
+    }
+  });
+
+  // Timeout QR 60s si pas connecté
+  const timeout = 60000;
+  const start = Date.now();
+  while (!sock.authState.creds.registered) {
+    if (sessionsActives[number].qr) break;
+    if (Date.now() - start > timeout) throw new Error("Timeout QR");
+    await delay(1000);
   }
 
-  return { sock, qr: null };
+  return sessionsActives[number];
 }
 
-// Route API pour récupérer QR
+// Route API
 router.get("/", async (req, res) => {
   let num = req.query.number;
   if (!num) return res.status(400).json({ error: "Numéro requis" });
 
   try {
     num = formatNumber(num);
-    const { sock, qr } = await startQRSession(num);
-
-    if (qr) return res.json({ qr });
+    const session = await startQRSession(num);
+    if (session.qr) return res.json({ qr: session.qr });
     return res.json({ status: "Déjà connecté" });
   } catch (err) {
     console.error("QR error:", err);

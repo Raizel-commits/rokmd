@@ -9,18 +9,14 @@ import {
   Browsers,
   fetchLatestBaileysVersion,
   DisconnectReason,
-  makeCacheableSignalKeyStore,
-  delay
+  delay,
+  makeCacheableSignalKeyStore
 } from "@whiskeysockets/baileys";
 
 const router = express.Router();
 const PAIRING_DIR = "./sessions";
-const COMMANDS_DIR = "./commands";
 
-// Stocke toutes les sessions actives
-const sessionsActives = {};
-
-// ------------------ UTILS ------------------
+/* ================== UTILS ================== */
 function formatNumber(num) {
   const phone = pn("+" + num.replace(/\D/g, ""));
   if (!phone.isValid()) throw new Error("Numéro invalide");
@@ -33,13 +29,16 @@ async function removeSession(dir) {
   if (await fs.pathExists(dir)) await fs.remove(dir);
 }
 
-// ------------------ LOAD COMMANDS ------------------
+/* ================== LOAD COMMANDS ================== */
 async function loadCommands() {
   const commands = new Map();
-  await fs.ensureDir(COMMANDS_DIR);
-  const files = fs.readdirSync(COMMANDS_DIR).filter(f => f.endsWith(".js"));
+  const folder = path.join("./commands");
+  await fs.ensureDir(folder);
+  const files = fs.readdirSync(folder).filter(f => f.endsWith(".js"));
+
   for (const file of files) {
-    const cmd = await import(`${COMMANDS_DIR}/${file}?update=${Date.now()}`);
+    const modulePath = `./commands/${file}?update=${Date.now()}`;
+    const cmd = await import(modulePath);
     if (cmd.default?.name && typeof cmd.default.execute === "function") {
       commands.set(cmd.default.name.toLowerCase(), cmd.default);
     }
@@ -47,7 +46,7 @@ async function loadCommands() {
   return commands;
 }
 
-// ------------------ GET LID ------------------
+/* ================== GET LID ================== */
 function getLid(number, sock) {
   try {
     const data = JSON.parse(fs.readFileSync(`${PAIRING_DIR}/${number}/creds.json`, "utf8"));
@@ -57,18 +56,13 @@ function getLid(number, sock) {
   }
 }
 
-// ------------------ START PAIR SESSION ------------------
-async function startPairSession(number) {
+/* ================== START PAIRING SESSION ================== */
+async function startPairingSession(number) {
   const SESSION_DIR = path.join(PAIRING_DIR, number);
   await fs.ensureDir(SESSION_DIR);
 
   const { state, saveCreds } = await useMultiFileAuthState(SESSION_DIR);
   const { version } = await fetchLatestBaileysVersion();
-
-  // Si la session existe déjà et est connectée
-  if (sessionsActives[number] && state.creds.registered) {
-    return null; // Déjà connecté
-  }
 
   const sock = makeWASocket({
     version,
@@ -78,16 +72,15 @@ async function startPairSession(number) {
     },
     logger: pino({ level: "silent" }),
     browser: Browsers.windows("Chrome"),
-    markOnlineOnConnect: false,
-    printQRInTerminal: false
+    printQRInTerminal: false,
+    markOnlineOnConnect: false
   });
 
   sock.ev.on("creds.update", saveCreds);
 
   let commands = await loadCommands();
-  sessionsActives[number] = { sock, commands };
 
-  // ------------------ MESSAGE HANDLER ------------------
+  /* ================== MESSAGE HANDLER ================== */
   sock.ev.on("messages.upsert", async ({ messages }) => {
     const msg = messages[0];
     if (!msg || !msg.message) return;
@@ -102,25 +95,32 @@ async function startPairSession(number) {
 
     if (!text || !text.startsWith("!")) return;
 
-    const senderClean = jidClean(participant);
-    const ownerClean = jidClean(sock.user.id);
+    const number = jidClean(sock.user.id);
     const lidRaw = getLid(number, sock);
     const lid = lidRaw ? jidClean(lidRaw) + "@lid" : null;
 
+    const senderClean = jidClean(participant);
+    const ownerClean = jidClean(sock.user.id);
+
+    // Autorisation simple
     const allowed =
-      msg.key.fromMe || senderClean === ownerClean || participant === lid || remoteJid === lid;
+      msg.key.fromMe ||
+      senderClean === ownerClean ||
+      participant === lid ||
+      remoteJid === lid;
 
     if (!allowed) return;
 
     const args = text.slice(1).trim().split(/\s+/);
     const command = args.shift().toLowerCase();
 
+    // Reload des commandes
     if (command === "reload") {
       commands = await loadCommands();
-      sessionsActives[number].commands = commands;
       return sock.sendMessage(remoteJid, { text: "✅ Commandes rechargées" });
     }
 
+    // Exécution commande
     if (commands.has(command)) {
       try {
         await commands.get(command).execute(sock, {
@@ -137,21 +137,20 @@ async function startPairSession(number) {
     }
   });
 
-  // ------------------ CONNECTION ------------------
+  /* ================== CONNECTION ================== */
   sock.ev.on("connection.update", async ({ connection, lastDisconnect }) => {
     if (connection === "close") {
       const status = lastDisconnect?.error?.output?.statusCode;
       if (status === DisconnectReason.loggedOut) {
-        delete sessionsActives[number];
         await removeSession(SESSION_DIR);
       } else {
-        setTimeout(() => startPairSession(number), 2000);
+        setTimeout(() => startPairingSession(number), 2000);
       }
     }
   });
 
-  // ------------------ PAIRING ------------------
-  if (!state.creds.registered) {
+  /* ================== PAIRING CODE ================== */
+  if (!sock.authState.creds.registered) {
     await delay(1500);
     const code = await sock.requestPairingCode(number);
     return code.match(/.{1,4}/g).join("-");
@@ -160,14 +159,15 @@ async function startPairSession(number) {
   return null;
 }
 
-// ------------------ ROUTE API ------------------
+/* ================== API ROUTE ================== */
 router.get("/", async (req, res) => {
   let num = req.query.number;
   if (!num) return res.status(400).json({ error: "Numéro requis" });
 
   try {
     num = formatNumber(num);
-    const code = await startPairSession(num);
+    const code = await startPairingSession(num);
+
     if (code) return res.json({ code });
     return res.json({ status: "Déjà connecté" });
   } catch (err) {

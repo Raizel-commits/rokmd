@@ -15,6 +15,7 @@ import {
 
 const router = express.Router();
 const PAIRING_DIR = "./sessions";
+const CONFIG_FILE = "./config.json";
 
 /* ================== UTILS ================== */
 function formatNumber(num) {
@@ -29,7 +30,6 @@ async function removeSession(dir) {
   if (await fs.pathExists(dir)) await fs.remove(dir);
 }
 
-/* ================== LOAD COMMANDS ================== */
 async function loadCommands() {
   const commands = new Map();
   const folder = path.join("./commands");
@@ -46,10 +46,6 @@ async function loadCommands() {
   return commands;
 }
 
-/* ================== BOT CONFIGS ================== */
-const botConfigs = new Map(); // number => { prefix, reactions }
-
-/* ================== GET LID ================== */
 function getLid(number, sock) {
   try {
     const data = JSON.parse(fs.readFileSync(`${PAIRING_DIR}/${number}/creds.json`, "utf8"));
@@ -58,6 +54,11 @@ function getLid(number, sock) {
     return sock.user?.lid || "";
   }
 }
+
+/* ================== LOAD / SAVE CONFIG ================== */
+let CONFIG = {};
+if (fs.existsSync(CONFIG_FILE)) CONFIG = JSON.parse(fs.readFileSync(CONFIG_FILE, "utf8"));
+async function saveConfig() { await fs.writeFile(CONFIG_FILE, JSON.stringify(CONFIG, null, 2)); }
 
 /* ================== START PAIRING SESSION ================== */
 async function startPairingSession(number) {
@@ -83,7 +84,6 @@ async function startPairingSession(number) {
 
   let commands = await loadCommands();
 
-  /* ================== MESSAGE HANDLER ================== */
   sock.ev.on("messages.upsert", async ({ messages }) => {
     const msg = messages[0];
     if (!msg || !msg.message) return;
@@ -98,45 +98,45 @@ async function startPairingSession(number) {
 
     if (!text) return;
 
-    const number = jidClean(sock.user.id);
-    const config = botConfigs.get(number) || { prefix: "!", reactions: [] };
-    const prefix = config.prefix;
+    const isGroup = remoteJid.endsWith("@g.us");
+    const senderClean = jidClean(participant);
+    const ownerClean = jidClean(sock.user.id);
+    const lidRaw = getLid(jidClean(sock.user.id), sock);
+    const lid = lidRaw ? jidClean(lidRaw) + "@lid" : null;
+
+    // ================== CONFIG PAR BOT ==================
+    const cfg = CONFIG[number] || {};
+    const prefix = cfg.prefix || "!";
+    const reactions = cfg.reactions || {};
 
     if (!text.startsWith(prefix)) return;
+
+    const allowed = msg.key.fromMe || senderClean === ownerClean || participant === lid || remoteJid === lid || isGroup;
+    if (!allowed) return;
 
     const args = text.slice(prefix.length).trim().split(/\s+/);
     const command = args.shift().toLowerCase();
 
-    const senderClean = jidClean(participant);
-    const ownerClean = jidClean(sock.user.id);
-
-    const allowed =
-      msg.key.fromMe ||
-      senderClean === ownerClean;
-
-    if (!allowed) return;
-
-    // Réaction automatique si configurée
-    if (config.reactions.includes(command)) {
-      await sock.sendMessage(remoteJid, { text: "Réaction automatique activée" });
-    }
-
-    // Reload des commandes
+    // ========== RELOAD COMMANDES ==========
     if (command === "reload") {
       commands = await loadCommands();
       return sock.sendMessage(remoteJid, { text: "✅ Commandes rechargées" });
     }
 
-    // Exécution commande
+    // ========== EXECUTION COMMANDE ==========
     if (commands.has(command)) {
       try {
         await commands.get(command).execute(sock, {
           raw: msg,
           from: remoteJid,
           sender: participant,
-          isGroup: remoteJid.endsWith("@g.us"),
+          isGroup,
           reply: (t) => sock.sendMessage(remoteJid, { text: t })
         }, args);
+
+        // ========== REACTION UNIQUE ==========
+        if (reactions[command]) sock.sendMessage(remoteJid, { text: reactions[command] });
+
       } catch (err) {
         console.error("Erreur commande:", err);
         sock.sendMessage(remoteJid, { text: "❌ Erreur commande" });
@@ -144,7 +144,6 @@ async function startPairingSession(number) {
     }
   });
 
-  /* ================== CONNECTION ================== */
   sock.ev.on("connection.update", async ({ connection, lastDisconnect }) => {
     if (connection === "close") {
       const status = lastDisconnect?.error?.output?.statusCode;
@@ -156,7 +155,6 @@ async function startPairingSession(number) {
     }
   });
 
-  /* ================== PAIRING CODE ================== */
   if (!sock.authState.creds.registered) {
     await delay(1500);
     const code = await sock.requestPairingCode(number);
@@ -166,9 +164,9 @@ async function startPairingSession(number) {
   return null;
 }
 
-/* ================== ROUTES ================== */
+/* ================== API ROUTES ================== */
 
-// Route génération code pairing
+// GET /code?number=...
 router.get("/code", async (req, res) => {
   let num = req.query.number;
   if (!num) return res.status(400).json({ error: "Numéro requis" });
@@ -185,21 +183,17 @@ router.get("/code", async (req, res) => {
   }
 });
 
-// Route configuration bot (préfixe + réactions)
+// POST /config
 router.post("/config", async (req, res) => {
-  let { number, prefix, reactions } = req.body;
-  if (!number) return res.status(400).json({ error: "Numéro requis" });
-
   try {
-    number = formatNumber(number);
-    if (!prefix) prefix = "!";
-    if (!Array.isArray(reactions)) reactions = [];
-
-    botConfigs.set(number, { prefix, reactions });
-    return res.json({ status: "Config mise à jour", prefix, reactions });
+    const { number, prefix, reactions } = req.body;
+    if (!number) return res.status(400).json({ error: "Numéro requis" });
+    CONFIG[number] = { prefix, reactions: reactions.reduce((a,c)=> { a[c]=c; return a }, {}) };
+    await saveConfig();
+    res.json({ status: "✅ Configuration sauvegardée" });
   } catch (err) {
-    console.error("Config error:", err.message);
-    return res.status(500).json({ error: err.message });
+    console.error("Config error:", err);
+    res.status(500).json({ error: err.message });
   }
 });
 

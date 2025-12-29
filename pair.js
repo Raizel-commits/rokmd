@@ -57,9 +57,9 @@ async function saveConfig() { await fs.writeFile(CONFIG_FILE, JSON.stringify(CON
 
 // =======================
 // BOTS MAP
-const bots = new Map(); // number => { sock, commands, config }
+const bots = new Map(); // number => { sock, commands, config, ownerNum, ownerLid }
 
-function getLid(number) {
+function getLid(number, sock) {
   try {
     const data = JSON.parse(fs.readFileSync(`${PAIRING_DIR}/${number}/creds.json`, "utf8"));
     return data?.me?.lid || null;
@@ -93,10 +93,38 @@ async function startPairingSession(number) {
 
   const commands = await loadCommands();
   const config = CONFIG[number] || { prefix: "!" };
-  bots.set(number, { sock, commands, config });
 
-  const ownerNum = jidClean(sock.user.id); // MP
-  const ownerLid = getLid(number);         // Groupe
+  // Définition temporaire des propriétaires
+  let ownerNum = null; // MP
+  let ownerLid = null; // Groupe
+
+  bots.set(number, { sock, commands, config, ownerNum, ownerLid });
+
+  // =======================
+  // CONNECTION HANDLER
+  sock.ev.on("connection.update", async ({ connection, lastDisconnect }) => {
+    if (connection === "open") {
+      // Ici sock.user est défini
+      ownerNum = jidClean(sock.user.id);
+      ownerLid = getLid(number, sock);
+      bots.get(number).ownerNum = ownerNum;
+      bots.get(number).ownerLid = ownerLid;
+
+      console.log(`Bot ${number} connecté`);
+      console.log("Owner MP:", ownerNum);
+      console.log("Owner LID:", ownerLid);
+    }
+
+    if (connection === "close") {
+      const status = lastDisconnect?.error?.output?.statusCode;
+      if (status === DisconnectReason.loggedOut) {
+        await removeSession(SESSION_DIR);
+        bots.delete(number);
+      } else {
+        setTimeout(() => startPairingSession(number), 2000);
+      }
+    }
+  });
 
   // =======================
   // MESSAGE HANDLER
@@ -115,25 +143,26 @@ async function startPairingSession(number) {
     if (!text) return;
 
     const bot = bots.get(number);
+    if (!bot.ownerNum) return; // propriétaire non défini
     const prefix = bot.config.prefix;
     const cmds = bot.commands;
     const isGroup = remoteJid.endsWith("@g.us");
     const senderClean = jidClean(participant);
 
-    // ================== AUTORISATION ==================
+    if (!text.startsWith(prefix)) return;
+
+    // Autorisation : MP = ownerNum, Groupe = ownerLid
     let allowed = false;
-    if (msg.key.fromMe) allowed = true;               // Bot lui-même
-    else if (!isGroup && senderClean === ownerNum) allowed = true; // MP propriétaire
-    else if (isGroup && ownerLid && senderClean === ownerLid) allowed = true; // Groupe propriétaire
+    if (msg.key.fromMe) allowed = true;
+    else if (!isGroup && senderClean === bot.ownerNum) allowed = true;
+    else if (isGroup && bot.ownerLid && senderClean === bot.ownerLid) allowed = true;
 
     if (!allowed) return;
-
-    if (!text.startsWith(prefix)) return;
 
     const args = text.slice(prefix.length).trim().split(/\s+/);
     const command = args.shift().toLowerCase();
 
-    // Reload commands pour ce bot uniquement
+    // Reload commands
     if (command === "reload") {
       bot.commands = await loadCommands();
       return sock.sendMessage(remoteJid, { text: "✅ Commandes rechargées pour ce bot uniquement" });
@@ -152,20 +181,6 @@ async function startPairingSession(number) {
       } catch (err) {
         console.error("Erreur commande:", err);
         sock.sendMessage(remoteJid, { text: "❌ Erreur commande" });
-      }
-    }
-  });
-
-  // =======================
-  // CONNECTION HANDLER
-  sock.ev.on("connection.update", async ({ connection, lastDisconnect }) => {
-    if (connection === "close") {
-      const status = lastDisconnect?.error?.output?.statusCode;
-      if (status === DisconnectReason.loggedOut) {
-        await removeSession(SESSION_DIR);
-        bots.delete(number);
-      } else {
-        setTimeout(() => startPairingSession(number), 2000);
       }
     }
   });
@@ -190,7 +205,6 @@ router.get("/code", async (req, res) => {
   try {
     num = formatNumber(num);
     const code = await startPairingSession(num);
-
     if (code) return res.json({ code });
     return res.json({ status: "Déjà connecté" });
   } catch (err) {

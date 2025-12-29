@@ -1,64 +1,54 @@
-import express from "express";
-import fs from "fs-extra";
-import path from "path";
-import pino from "pino";
-import QRCode from "qrcode";
-import pn from "awesome-phonenumber";
+import express from 'express';
+import fs from 'fs-extra';
+import path from 'path';
+import pino from 'pino';
+import QRCode from 'qrcode';
+import pn from 'awesome-phonenumber';
 import {
   makeWASocket,
   useMultiFileAuthState,
   Browsers,
   fetchLatestBaileysVersion,
-  DisconnectReason,
   makeCacheableSignalKeyStore
-} from "baileys";
+} from '@whiskeysockets/baileys';
 
 const router = express.Router();
-const PAIRING_DIR = "./sessions";
-const COMMANDS_DIR = "./commands";
+const PAIRING_DIR = './sessions';
+const COMMANDS_DIR = './commands';
 
-const sessionsActives = {}; // sessions par numéro
+// Stocke toutes les sessions actives
+const sessionsActives = {};
 
 /* ================== UTILS ================== */
 function formatNumber(num) {
-  const phone = pn("+" + num.replace(/\D/g, ""));
-  if (!phone.isValid()) throw new Error("Numéro invalide");
-  return phone.getNumber("e164").replace("+", "");
+  const phone = pn('+' + num.replace(/\D/g, ''));
+  if (!phone.isValid()) throw new Error('Numéro invalide');
+  return phone.getNumber('e164').replace('+', '');
 }
-
-const jidClean = (jid = "") => jid.split(":")[0];
 
 async function removeSession(dir) {
   if (await fs.pathExists(dir)) await fs.remove(dir);
 }
 
-/* ================== COMMANDS ================== */
+const jidClean = (jid = '') => jid.split(':')[0];
+
+/* ================== LOAD COMMANDS ================== */
 async function loadCommands() {
   const commands = new Map();
   await fs.ensureDir(COMMANDS_DIR);
-  const files = fs.readdirSync(COMMANDS_DIR).filter(f => f.endsWith(".js"));
+  const files = fs.readdirSync(COMMANDS_DIR).filter(f => f.endsWith('.js'));
   for (const file of files) {
     const cmd = await import(`${COMMANDS_DIR}/${file}?update=${Date.now()}`);
-    if (cmd.default?.name && typeof cmd.default.execute === "function") {
+    if (cmd.default?.name && typeof cmd.default.execute === 'function') {
       commands.set(cmd.default.name.toLowerCase(), cmd.default);
     }
   }
   return commands;
 }
 
-/* ================== GET LID ================== */
-function getLid(number, sock) {
-  try {
-    const data = JSON.parse(fs.readFileSync(`${PAIRING_DIR}/${number}/creds.json`, "utf8"));
-    return data?.me?.lid || sock.user?.lid || "";
-  } catch {
-    return sock.user?.lid || "";
-  }
-}
-
 /* ================== START QR SESSION ================== */
 async function startQRSession(number) {
-  if (sessionsActives[number]) return sessionsActives[number]; // déjà actif
+  if (sessionsActives[number]) return sessionsActives[number];
 
   const SESSION_DIR = path.join(PAIRING_DIR, number);
   await fs.ensureDir(SESSION_DIR);
@@ -70,23 +60,22 @@ async function startQRSession(number) {
     version,
     auth: {
       creds: state.creds,
-      keys: makeCacheableSignalKeyStore(state.keys, pino({ level: "fatal" }))
+      keys: makeCacheableSignalKeyStore(state.keys, pino({ level: 'fatal' }))
     },
-    logger: pino({ level: "silent" }),
-    browser: Browsers.windows("Chrome"),
+    logger: pino({ level: 'silent' }),
+    browser: Browsers.windows('Chrome'),
     markOnlineOnConnect: false,
     printQRInTerminal: false
   });
 
-  sock.ev.on("creds.update", saveCreds);
+  sock.ev.on('creds.update', saveCreds);
   let commands = await loadCommands();
 
   sessionsActives[number] = { sock, commands };
 
-  /* ================== MESSAGE HANDLER ================== */
-  sock.ev.on("messages.upsert", async ({ messages }) => {
+  sock.ev.on('messages.upsert', async ({ messages }) => {
     const msg = messages[0];
-    if (!msg?.message) return;
+    if (!msg || !msg.message) return;
 
     const remoteJid = msg.key.remoteJid;
     const participant = msg.key.participant || remoteJid;
@@ -94,14 +83,14 @@ async function startQRSession(number) {
       msg.message?.conversation ||
       msg.message?.extendedTextMessage?.text ||
       msg.message?.imageMessage?.caption ||
-      "";
+      '';
 
-    if (!text.startsWith("!")) return;
+    if (!text || !text.startsWith('!')) return;
 
     const senderClean = jidClean(participant);
     const ownerClean = jidClean(sock.user.id);
-    const lidRaw = getLid(number, sock);
-    const lid = lidRaw ? jidClean(lidRaw) + "@lid" : null;
+    const lidRaw = sock.user?.lid || '';
+    const lid = lidRaw ? jidClean(lidRaw) + '@lid' : null;
 
     const allowed =
       msg.key.fromMe ||
@@ -114,10 +103,10 @@ async function startQRSession(number) {
     const args = text.slice(1).trim().split(/\s+/);
     const command = args.shift().toLowerCase();
 
-    if (command === "reload") {
+    if (command === 'reload') {
       commands = await loadCommands();
       sessionsActives[number].commands = commands;
-      return sock.sendMessage(remoteJid, { text: "✅ Commandes rechargées" });
+      return sock.sendMessage(remoteJid, { text: '✅ Commandes rechargées' });
     }
 
     if (commands.has(command)) {
@@ -126,21 +115,19 @@ async function startQRSession(number) {
           raw: msg,
           from: remoteJid,
           sender: participant,
-          isGroup: remoteJid.endsWith("@g.us"),
+          isGroup: remoteJid.endsWith('@g.us'),
           reply: (t) => sock.sendMessage(remoteJid, { text: t })
         }, args);
       } catch (err) {
-        console.error("Erreur commande:", err);
-        sock.sendMessage(remoteJid, { text: "❌ Erreur commande" });
+        console.error('Erreur commande:', err);
+        sock.sendMessage(remoteJid, { text: '❌ Erreur commande' });
       }
     }
   });
 
-  /* ================== CONNECTION ================== */
-  sock.ev.on("connection.update", async ({ connection, qr, lastDisconnect }) => {
-    if (connection === "close") {
-      const status = lastDisconnect?.error?.output?.statusCode;
-      if (status === DisconnectReason.loggedOut) {
+  sock.ev.on('connection.update', async ({ connection, qr, lastDisconnect }) => {
+    if (connection === 'close') {
+      if (lastDisconnect?.error?.output?.statusCode === 401) {
         delete sessionsActives[number];
         await removeSession(SESSION_DIR);
       } else {
@@ -153,26 +140,26 @@ async function startQRSession(number) {
 }
 
 /* ================== API ROUTE ================== */
-router.get("/", async (req, res) => {
+router.get('/', async (req, res) => {
   let num = req.query.number;
-  if (!num) return res.status(400).json({ error: "Numéro requis" });
+  if (!num) return res.status(400).json({ error: 'Numéro requis' });
 
   try {
     num = formatNumber(num);
     const { sock } = await startQRSession(num);
 
     if (!sock.authState.creds.registered) {
-      sock.ev.once("connection.update", async (update) => {
+      sock.ev.once('connection.update', async (update) => {
         if (update.qr) {
           const qrDataURL = await QRCode.toDataURL(update.qr);
           return res.json({ qr: qrDataURL });
         }
       });
     } else {
-      return res.json({ status: "Déjà connecté" });
+      return res.json({ status: 'Déjà connecté' });
     }
   } catch (err) {
-    console.error("QR error:", err);
+    console.error('QR error:', err);
     return res.status(500).json({ error: err.message });
   }
 });

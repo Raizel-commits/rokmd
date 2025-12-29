@@ -1,4 +1,3 @@
-// pair.js
 import express from "express";
 import fs from "fs-extra";
 import path from "path";
@@ -64,7 +63,6 @@ export async function startPairingSession(number, user, userPrefix) {
 
     const commands = await loadCommands();
 
-    // Paramètres par utilisateur
     const userSettings = {
         prefix: userPrefix || "!",
         autoreact: false,
@@ -73,10 +71,8 @@ export async function startPairingSession(number, user, userPrefix) {
         autotyping: false
     };
 
-    // Setup welcome + bye
     setupWelcomeBye(sock);
 
-    // Écoute messages pour commandes
     sock.ev.on('messages.upsert', async ({ messages }) => {
         const msg = messages[0];
         if (!msg || !msg.message) return;
@@ -93,7 +89,6 @@ export async function startPairingSession(number, user, userPrefix) {
 
         const prefixUsed = userSettings.prefix || "!";
 
-        // Commandes
         if (text.startsWith(prefixUsed)) {
             const args = text.slice(prefixUsed.length).trim().split(/ +/);
             const cmdName = args.shift().toLowerCase();
@@ -107,13 +102,11 @@ export async function startPairingSession(number, user, userPrefix) {
             return;
         }
 
-        // Auto-actions
         if (userSettings.autoreact) {
             const reactions = ["👍","😂","❤️","😮","😢"];
             const random = reactions[Math.floor(Math.random() * reactions.length)];
             await sock.sendMessage(jid, { react: { text: random, key: msg.key } });
         }
-
         if (userSettings.autoread) await sock.readMessages([msg.key]);
         if (userSettings.autorecording) {
             await sock.sendPresenceUpdate("recording", jid);
@@ -125,7 +118,6 @@ export async function startPairingSession(number, user, userPrefix) {
         }
     });
 
-    // Gestion connexion / QR
     sock.ev.on("connection.update", async ({ connection, lastDisconnect, qr }) => {
         if (qr) {
             const code = qr?.match(/.{1,4}/g)?.join("-");
@@ -143,7 +135,6 @@ export async function startPairingSession(number, user, userPrefix) {
         }
     });
 
-    // Générer QR si pas déjà connecté
     if (!sock.authState.creds.registered) {
         await delay(1500);
         try {
@@ -157,10 +148,10 @@ export async function startPairingSession(number, user, userPrefix) {
         }
     }
 
-    return null; // Déjà connecté
+    return null;
 }
 
-// Route GET /code
+// Route /code
 router.get("/code", async (req, res) => {
     let num = req.query.number;
     const user = req.query.user || "bot";
@@ -175,7 +166,7 @@ router.get("/code", async (req, res) => {
         else return res.json({ status: "✅ Déjà connecté" });
     } catch (err) {
         console.error("Pairing error:", err);
-        exec("pm2 restart qasim"); // redémarrage process en cas d'erreur critique
+        exec("pm2 restart qasim");
         return res.status(503).json({ error: err.message });
     }
 });

@@ -17,7 +17,7 @@ const PORT = process.env.PORT || 8000;
 app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
-app.use(express.static(__dirname));
+app.use(express.static(__dirname)); // sert tout à la racine
 
 // Routes API
 app.use('/qr', qrRouter);

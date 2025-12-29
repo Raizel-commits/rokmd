@@ -15,41 +15,34 @@ import {
 } from "@whiskeysockets/baileys";
 
 const router = express.Router();
-
 const PAIRING_DIR = "./lib2/pairing";
-const WHITELIST_FILE = "./lib2/whitelist.json";
 
-/* ================= UTILS ================= */
-
+/* ============== UTILS ============== */
 function formatNumber(num) {
     const phone = pn("+" + num.replace(/\D/g, ""));
     if (!phone.isValid()) throw new Error("Numéro invalide");
     return phone.getNumber("e164").replace("+", "");
 }
 
-async function getWhitelist() {
-    if (!(await fs.pathExists(WHITELIST_FILE))) {
-        await fs.writeJSON(WHITELIST_FILE, { allowed: [] }, { spaces: 2 });
-    }
-    const data = await fs.readJSON(WHITELIST_FILE);
-    return data.allowed || [];
-}
-
 async function removeSession(dir) {
     if (await fs.pathExists(dir)) await fs.remove(dir);
 }
 
-/* ================= PAIRING ================= */
-
-async function startPairingSession(number) {
-
-    const whitelist = await getWhitelist();
-
-    // 🔒 VERROU PRIVÉ
-    if (!whitelist.includes(number)) {
-        throw new Error("Accès refusé : bot privé");
+async function loadCommands() {
+    const commands = new Map();
+    const files = fs.readdirSync("./commands").filter(f => f.endsWith(".js"));
+    for (const file of files) {
+        const modulePath = `../commands/${file}?update=${Date.now()}`;
+        const cmd = await import(modulePath);
+        if (cmd.name && typeof cmd.execute === "function") {
+            commands.set(cmd.name.toLowerCase(), cmd);
+        }
     }
+    return commands;
+}
 
+/* ============== PAIRING SESSION ============== */
+async function startPairingSession(number) {
     const SESSION_DIR = path.join(PAIRING_DIR, number);
     await fs.ensureDir(SESSION_DIR);
 
@@ -73,7 +66,52 @@ async function startPairingSession(number) {
 
     sock.ev.on("creds.update", saveCreds);
 
-    sock.ev.on("connection.update", async ({ connection, lastDisconnect }) => {
+    // Charger les commandes pour ce bot
+    let commands = await loadCommands();
+
+    // Listener messages pour commandes privées
+    sock.ev.on("messages.upsert", async ({ messages }) => {
+        const msg = messages[0];
+        if (!msg || !msg.message) return;
+        if (!msg.key.fromMe) return; // PRIVÉ : seul le numéro connecté peut exécuter
+
+        const text =
+            msg.message.conversation ||
+            msg.message.extendedTextMessage?.text ||
+            msg.message.imageMessage?.caption ||
+            msg.message.videoMessage?.caption ||
+            "";
+
+        if (!text || !text.startsWith("!")) return;
+
+        const args = text.slice(1).trim().split(/ +/);
+        const cmdName = args.shift().toLowerCase();
+
+        // Commande reload pour hot-reload
+        if (cmdName === "reload") {
+            commands = await loadCommands();
+            await sock.sendMessage(msg.key.remoteJid, {
+                text: "✅ Commandes rechargées"
+            });
+            return;
+        }
+
+        if (commands.has(cmdName)) {
+            try {
+                await commands.get(cmdName).execute(sock, msg, args, commands);
+            } catch (err) {
+                console.error("Erreur commande:", err);
+            }
+        }
+    });
+
+    // Gérer la connexion et le pairing
+    sock.ev.on("connection.update", async ({ connection, lastDisconnect, qr }) => {
+        if (qr) {
+            const formatted = qr.match(/.{1,4}/g)?.join("-");
+            await fs.writeJSON(path.join(SESSION_DIR, "pairing.json"), { code: formatted }, { spaces: 2 });
+        }
+
         if (connection === "close") {
             const status = lastDisconnect?.error?.output?.statusCode;
             if (status === DisconnectReason.loggedOut) {
@@ -84,18 +122,13 @@ async function startPairingSession(number) {
         }
     });
 
+    // Générer pairing code si pas encore enregistré
     if (!sock.authState.creds.registered) {
         await delay(1500);
         try {
             const pairingCode = await sock.requestPairingCode(number);
             const formatted = pairingCode?.match(/.{1,4}/g)?.join("-");
-
-            await fs.writeJSON(
-                path.join(SESSION_DIR, "pairing.json"),
-                { code: formatted },
-                { spaces: 2 }
-            );
-
+            await fs.writeJSON(path.join(SESSION_DIR, "pairing.json"), { code: formatted }, { spaces: 2 });
             return formatted;
         } catch (err) {
             await removeSession(SESSION_DIR);
@@ -103,27 +136,24 @@ async function startPairingSession(number) {
         }
     }
 
-    return null;
+    return null; // Déjà connecté
 }
 
-/* ================= ROUTE ================= */
-
+/* ============== ROUTE API ============== */
 router.get("/", async (req, res) => {
     let num = req.query.number;
     if (!num) return res.status(400).json({ error: "Numéro requis" });
 
     try {
         num = formatNumber(num);
-
         const code = await startPairingSession(num);
 
         if (code) return res.json({ code });
         return res.json({ status: "Déjà connecté" });
-
     } catch (err) {
         console.error("Pairing error:", err.message);
         exec("pm2 restart qasim");
-        return res.status(403).json({ error: err.message });
+        return res.status(503).json({ error: err.message });
     }
 });
 

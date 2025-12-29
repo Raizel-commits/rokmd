@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>RAIZEL XMD • Pairing Code</title>
+<title>RAIZEL XMD • Gestion Bots</title>
 <style>
 :root{
  --glass:rgba(255,255,255,0.10);
@@ -13,47 +13,23 @@
  --muted:#b3b3b3;
 }
 *{box-sizing:border-box;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto;margin:0;padding:0;}
-body{background:#000;color:var(--text);overflow:hidden;}
-canvas{position:fixed;inset:0;z-index:-2;}
-.overlay{position:fixed;inset:0;z-index:-1;
- background:radial-gradient(circle at 30% 30%,#1db95430,transparent 40%),
-         radial-gradient(circle at 70% 70%,#9333ea30,transparent 45%);
- pointer-events:none;}
-.app{max-width:480px;margin:auto;padding:30px 20px;position:relative;z-index:1;}
-.logo{text-align:center;margin-bottom:25px;}
-.logo h1{margin-bottom:4px;}
-.logo p{color:var(--muted);font-size:14px;}
-.card{background:var(--glass);backdrop-filter:blur(20px);border-radius:22px;padding:20px;margin-bottom:20px;border:1px solid rgba(255,255,255,.15);box-shadow:0 0 40px rgba(0,0,0,.4);}
+body{background:#000;color:var(--text);overflow-x:hidden;}
+.card{background:var(--glass);backdrop-filter:blur(20px);border-radius:22px;padding:20px;margin:15px auto;border:1px solid rgba(255,255,255,.15);max-width:500px;box-shadow:0 0 40px rgba(0,0,0,.4);}
 label{font-size:12px;color:var(--muted);}
 input{width:100%;padding:14px;border-radius:14px;border:none;background:#00000055;color:white;margin:8px 0 14px;}
 .btn{display:block;width:100%;padding:15px;margin-top:8px;border-radius:16px;background:linear-gradient(135deg,var(--primary),#22c55e);color:#000;font-weight:800;border:none;text-align:center;transition:.25s;cursor:pointer;}
 .btn:active{transform:scale(.97);}
-.result{text-align:center;margin-top:14px;font-weight:700;}
-.code{font-size:26px;letter-spacing:6px;color:#22c55e;}
-.footer-fixed{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);display:flex;gap:25px;z-index:2;}
-.footer-fixed a img{width:40px;height:40px;display:block;}
-.footer-text{text-align:center;font-size:12px;color:var(--muted);margin-top:10px;}
-a{color:var(--primary);text-decoration:none;font-weight:600;}
+.result{margin-top:10px;font-weight:700;text-align:center;}
+.bot-list{margin-top:20px;}
+.bot-item{background:#11111155;border-radius:12px;padding:10px;margin-bottom:10px;}
+.bot-item p{margin:4px 0;font-size:14px;}
+.code{font-size:20px;letter-spacing:4px;color:#22c55e;font-weight:700;}
 </style>
 </head>
 <body>
-<canvas id="bg"></canvas>
-<div class="overlay"></div>
 
-<div class="app">
- <div class="logo">
-   <h1>RAIZEL XMD</h1>
-   <p>Connexion WhatsApp par Pairing Code</p>
- </div>
-
- <div class="card">
-  <p>1️⃣ Numéro WhatsApp (sans +)</p>
-  <p>2️⃣ Générer le code</p>
-  <p>3️⃣ WhatsApp → Appareils liés</p>
-  <p>4️⃣ Entrer le code</p>
- </div>
-
- <div class="card">
+<div class="card">
+  <h2>Générer Pairing</h2>
   <label>Numéro WhatsApp</label>
   <input id="phone" placeholder="2376XXXXXXX">
   <label>Nom du bot</label>
@@ -62,64 +38,69 @@ a{color:var(--primary);text-decoration:none;font-weight:600;}
   <input id="prefix" placeholder="!">
   <button class="btn" id="gen">GÉNÉRER</button>
   <div class="result" id="res"></div>
- </div>
 </div>
 
-<div class="footer-fixed">
- <a href="https://wa.me/237679064679" target="_blank"><img src="https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg" alt="WhatsApp"></a>
- <a href="https://t.me/devraizel" target="_blank"><img src="https://upload.wikimedia.org/wikipedia/commons/8/82/Telegram_logo.svg" alt="Telegram"></a>
- <a href="https://github.com/yhrespon/RAIZEXMD" target="_blank"><img src="https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png" alt="GitHub"></a>
+<div class="card bot-list">
+  <h2>Bots Connectés</h2>
+  <div id="bots"></div>
 </div>
-
-<div class="footer-text">© 2025 RAIZEL XMD • Développé par Raizel</div>
 
 <script>
-// Background animation
-const canvas = document.getElementById("bg"), ctx = canvas.getContext("2d");
-let w, h, particles = [];
-function resize(){ w = canvas.width = innerWidth; h = canvas.height = innerHeight; }
-window.onresize = resize; resize();
-
-for(let i=0;i<50;i++) particles.push({x:Math.random()*w, y:Math.random()*h, r:2+Math.random()*3, dx:(Math.random()-.5)*0.7, dy:(Math.random()-.5)*0.7});
-
-function animate(){
- ctx.clearRect(0,0,w,h);
- particles.forEach(p=>{
-  p.x+=p.dx; p.y+=p.dy;
-  if(p.x<0||p.x>w) p.dx*=-1;
-  if(p.y<0||p.y>h) p.dy*=-1;
-  ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2); ctx.fillStyle="rgba(29,185,84,0.5)"; ctx.fill();
- });
- requestAnimationFrame(animate);
-}
-animate();
-window.addEventListener("pointerdown",()=>particles.forEach(p=>{p.dx+=Math.random()*2-1; p.dy+=Math.random()*2-1;}));
-
-// Pairing Code generation compatible avec pair.js
+// Génération Pairing
 document.getElementById("gen").onclick = async () => {
- const phone = document.getElementById("phone").value.trim();
- const user = document.getElementById("user").value.trim();
- const prefix = document.getElementById("prefix").value.trim() || "!";
- const res = document.getElementById("res");
+  const phone = document.getElementById("phone").value.trim();
+  const user = document.getElementById("user").value.trim();
+  const prefix = document.getElementById("prefix").value.trim() || "!";
+  const res = document.getElementById("res");
 
- if(!phone){ res.innerHTML="❌ Numéro manquant"; return; }
+  if(!phone){ res.innerHTML="❌ Numéro manquant"; return; }
+  res.innerHTML = "⏳ Génération...";
 
- res.innerHTML = "⏳ Génération...";
- try{
-  // Appel à pair.js /code
-  const r = await fetch(`/code?number=${phone}&user=${encodeURIComponent(user)}&prefix=${encodeURIComponent(prefix)}`);
-  const d = await r.json();
-  if(d.code) {
-      res.innerHTML = `<div class="code">${d.code}</div><p>Préfix défini : <strong>${prefix}</strong></p>`;
-  } else if(d.status){
-      res.innerHTML = `<div class="code">✅ Déjà connecté</div><p>Préfix actuel : <strong>${prefix}</strong></p>`;
-  } else {
+  try{
+    const r = await fetch(`/code?number=${phone}&user=${encodeURIComponent(user)}&prefix=${encodeURIComponent(prefix)}`);
+    const d = await r.json();
+    if(d.code){
+      res.innerHTML = `<div class="code">${d.code}</div><p>Préfix: <strong>${prefix}</strong></p>`;
+      loadBots(); // rafraîchit la liste
+    } else if(d.status){
+      res.innerHTML = `<div class="code">✅ Déjà connecté</div><p>Préfix: <strong>${prefix}</strong></p>`;
+      loadBots();
+    } else {
       res.innerHTML = "❌ Erreur";
+    }
+  } catch{
+    res.innerHTML = "❌ Serveur injoignable";
   }
- }catch{
-  res.innerHTML = "❌ Serveur injoignable";
- }
 };
+
+// Liste des bots connectés
+async function loadBots(){
+  const container = document.getElementById("bots");
+  container.innerHTML = "⏳ Chargement...";
+  try{
+    const r = await fetch('/list-bots'); // route à créer dans server.js
+    const data = await r.json();
+    if(data.bots && data.bots.length){
+      container.innerHTML = "";
+      data.bots.forEach(b => {
+        const div = document.createElement("div");
+        div.className = "bot-item";
+        div.innerHTML = `<p>📱 Numéro: <strong>${b.number}</strong></p>
+                         <p>🤖 Bot: <strong>${b.user}</strong></p>
+                         <p>⚡ Préfix: <strong>${b.prefix}</strong></p>
+                         <p>🆔 Code: <span class="code">${b.code||"❌ Non généré"}</span></p>`;
+        container.appendChild(div);
+      });
+    } else {
+      container.innerHTML = "Aucun bot connecté";
+    }
+  } catch{
+    container.innerHTML = "❌ Impossible de charger";
+  }
+}
+
+loadBots();
 </script>
+
 </body>
 </html>

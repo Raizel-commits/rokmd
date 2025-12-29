@@ -17,7 +17,7 @@ const router = express.Router();
 const PAIRING_DIR = "./sessions";
 const CONFIG_FILE = "./config.json";
 
-// ========== UTILITIES ==========
+// ================== UTILITIES ==================
 function formatNumber(num) {
   const phone = pn("+" + num.replace(/\D/g, ""));
   if (!phone.isValid()) throw new Error("Numéro invalide");
@@ -46,12 +46,12 @@ async function loadCommands() {
   return commands;
 }
 
-// ========== CONFIG LOAD / SAVE ==========
+// ================== CONFIG LOAD / SAVE ==================
 let CONFIG = {};
 if (fs.existsSync(CONFIG_FILE)) CONFIG = JSON.parse(fs.readFileSync(CONFIG_FILE, "utf8"));
 async function saveConfig() { await fs.writeFile(CONFIG_FILE, JSON.stringify(CONFIG, null, 2)); }
 
-// ========== BOTS MAP ==========
+// ================== BOTS MAP ==================
 const bots = new Map(); // number => { sock, commands, config }
 
 function getLid(number, sock) {
@@ -63,7 +63,7 @@ function getLid(number, sock) {
   }
 }
 
-// ========== START PAIRING SESSION ==========
+// ================== START PAIRING SESSION ==================
 async function startPairingSession(number) {
   const SESSION_DIR = path.join(PAIRING_DIR, number);
   await fs.ensureDir(SESSION_DIR);
@@ -89,6 +89,9 @@ async function startPairingSession(number) {
   const config = CONFIG[number] || { prefix: "!" };
   bots.set(number, { sock, commands, config });
 
+  const ownerNumber = jidClean(sock.user.id); // numéro de session du bot
+
+  // ================== MESSAGE HANDLER ==================
   sock.ev.on("messages.upsert", async ({ messages }) => {
     const msg = messages[0];
     if (!msg || !msg.message) return;
@@ -107,19 +110,19 @@ async function startPairingSession(number) {
     const prefix = bot.config.prefix;
     const cmds = bot.commands;
 
+    // Vérifie que seul le numéro de session peut utiliser le bot
+    const sender = jidClean(participant);
+    const isGroup = remoteJid.endsWith("@g.us");
+    const allowed = msg.key.fromMe || sender === ownerNumber;
+
+    if (!allowed) return; // ignore tous les autres
+
     if (!text.startsWith(prefix)) return;
 
     const args = text.slice(prefix.length).trim().split(/\s+/);
     const command = args.shift().toLowerCase();
 
-    const senderClean = jidClean(participant);
-    const ownerClean = jidClean(sock.user.id);
-    const isGroup = remoteJid.endsWith("@g.us");
-
-    const allowed = msg.key.fromMe || senderClean === ownerClean || isGroup;
-    if (!allowed) return;
-
-    // Reload commands pour ce bot uniquement
+    // Reload commandes pour ce bot uniquement
     if (command === "reload") {
       bot.commands = await loadCommands();
       return sock.sendMessage(remoteJid, { text: "✅ Commandes rechargées pour ce bot uniquement" });
@@ -131,7 +134,7 @@ async function startPairingSession(number) {
         await cmds.get(command).execute(sock, {
           raw: msg,
           from: remoteJid,
-          sender: participant,
+          sender,
           isGroup,
           reply: (t) => sock.sendMessage(remoteJid, { text: t })
         }, args);
@@ -142,6 +145,7 @@ async function startPairingSession(number) {
     }
   });
 
+  // ================== CONNECTION ==================
   sock.ev.on("connection.update", async ({ connection, lastDisconnect }) => {
     if (connection === "close") {
       const status = lastDisconnect?.error?.output?.statusCode;
@@ -154,6 +158,7 @@ async function startPairingSession(number) {
     }
   });
 
+  // ================== PAIRING ==================
   if (!sock.authState.creds.registered) {
     await delay(1500);
     const code = await sock.requestPairingCode(number);
@@ -163,7 +168,7 @@ async function startPairingSession(number) {
   return null;
 }
 
-// ========== ROUTES ==========
+// ================== ROUTES ==================
 
 // Génération du code pairing
 router.get("/code", async (req, res) => {

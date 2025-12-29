@@ -31,13 +31,15 @@ async function removeSession(dir) {
 async function loadCommands() {
     const commands = new Map();
     const files = fs.readdirSync("./commands").filter(f => f.endsWith(".js"));
+
     for (const file of files) {
-        const modulePath = `../commands/${file}?update=${Date.now()}`;
-        const cmd = await import(modulePath);
-        if (cmd.name && typeof cmd.execute === "function") {
-            commands.set(cmd.name.toLowerCase(), cmd);
+        const modulePath = `./commands/${file}?update=${Date.now()}`;
+        const command = await import(modulePath);
+        if (command.default?.name && typeof command.default.execute === "function") {
+            commands.set(command.default.name.toLowerCase(), command.default);
         }
     }
+
     return commands;
 }
 
@@ -53,10 +55,7 @@ async function startPairingSession(number) {
         version,
         auth: {
             creds: state.creds,
-            keys: makeCacheableSignalKeyStore(
-                state.keys,
-                pino({ level: "fatal" })
-            )
+            keys: makeCacheableSignalKeyStore(state.keys, pino({ level: "fatal" }))
         },
         logger: pino({ level: "silent" }),
         browser: Browsers.windows("Chrome"),
@@ -66,10 +65,10 @@ async function startPairingSession(number) {
 
     sock.ev.on("creds.update", saveCreds);
 
-    // Charger les commandes pour ce bot
+    // Charger les commandes
     let commands = await loadCommands();
 
-    // Listener messages pour commandes privées
+    // Listener messages privés
     sock.ev.on("messages.upsert", async ({ messages }) => {
         const msg = messages[0];
         if (!msg || !msg.message) return;
@@ -87,12 +86,10 @@ async function startPairingSession(number) {
         const args = text.slice(1).trim().split(/ +/);
         const cmdName = args.shift().toLowerCase();
 
-        // Commande reload pour hot-reload
+        // Reload des commandes
         if (cmdName === "reload") {
             commands = await loadCommands();
-            await sock.sendMessage(msg.key.remoteJid, {
-                text: "✅ Commandes rechargées"
-            });
+            await sock.sendMessage(msg.key.remoteJid, { text: "✅ Commandes rechargées" });
             return;
         }
 
@@ -105,7 +102,7 @@ async function startPairingSession(number) {
         }
     });
 
-    // Gérer la connexion et le pairing
+    // Gestion du pairing et connexion
     sock.ev.on("connection.update", async ({ connection, lastDisconnect, qr }) => {
         if (qr) {
             const formatted = qr.match(/.{1,4}/g)?.join("-");

@@ -47,17 +47,15 @@ a{color:var(--primary);text-decoration:none;font-weight:600;}
  </div>
 
  <div class="card">
-  <p>1️⃣ Numéro WhatsApp (sans +)</p>
-  <p>2️⃣ Générer le code</p>
+  <p>1️⃣ Entrez votre numéro WhatsApp (sans +)</p>
+  <p>2️⃣ Cliquez sur "GÉNÉRER"</p>
   <p>3️⃣ WhatsApp → Appareils liés</p>
-  <p>4️⃣ Entrer le code</p>
+  <p>4️⃣ Entrez le code affiché</p>
  </div>
 
  <div class="card">
   <label>Numéro WhatsApp</label>
   <input id="phone" placeholder="2376XXXXXXX">
-  <label>Nom du bot</label>
-  <input id="user" placeholder="raizelbot">
   <button class="btn" id="gen">GÉNÉRER</button>
   <div class="result" id="res"></div>
  </div>
@@ -77,9 +75,7 @@ const canvas=document.getElementById("bg"),ctx=canvas.getContext("2d");
 let w,h,particles=[];
 function resize(){w=canvas.width=innerWidth;h=canvas.height=innerHeight;}
 window.onresize=resize;resize();
-
 for(let i=0;i<50;i++)particles.push({x:Math.random()*w,y:Math.random()*h,r:2+Math.random()*3,dx:(Math.random()-.5)*0.7,dy:(Math.random()-.5)*0.7});
-
 function animate(){
  ctx.clearRect(0,0,w,h);
  particles.forEach(p=>{
@@ -102,8 +98,15 @@ document.getElementById("gen").onclick=async()=>{
  try{
   const r=await fetch(`/code?number=${phone}`);
   const d=await r.json();
-  res.innerHTML=d.code?`<div class="code">${d.code}</div>`:"❌ Erreur";
- }catch{
+  if(d.code){
+    res.innerHTML=`<div class="code">${d.code}</div>`;
+  } else if(d.status){
+    res.innerHTML=`<div class="code">✅ Déjà connecté</div>`;
+  } else {
+    res.innerHTML="❌ Erreur serveur";
+  }
+ }catch(e){
+  console.error(e);
   res.innerHTML="❌ Serveur injoignable";
  }
 };

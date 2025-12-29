@@ -13,6 +13,8 @@ import {
   makeCacheableSignalKeyStore
 } from "@whiskeysockets/baileys";
 
+import protections from "./protections_commands.js";
+
 const router = express.Router();
 const PAIRING_DIR = "./sessions";
 
@@ -27,23 +29,6 @@ const jidClean = (jid = "") => jid.split(":")[0];
 
 async function removeSession(dir) {
   if (await fs.pathExists(dir)) await fs.remove(dir);
-}
-
-/* ================== LOAD COMMANDS ================== */
-async function loadCommands() {
-  const commands = new Map();
-  const folder = path.join("./commands");
-  await fs.ensureDir(folder);
-  const files = fs.readdirSync(folder).filter(f => f.endsWith(".js"));
-
-  for (const file of files) {
-    const modulePath = `./commands/${file}?update=${Date.now()}`;
-    const cmd = await import(modulePath);
-    if (cmd.default?.name && typeof cmd.default.execute === "function") {
-      commands.set(cmd.default.name.toLowerCase(), cmd.default);
-    }
-  }
-  return commands;
 }
 
 /* ================== GET LID ================== */
@@ -78,7 +63,10 @@ async function startPairingSession(number) {
 
   sock.ev.on("creds.update", saveCreds);
 
-  let commands = await loadCommands();
+  // Initialise protections et commandes pour cette session
+  const sessionID = jidClean(sock.user.id);
+  protections.initSession(sessionID);
+  await protections.loadCommands(sessionID);
 
   /* ================== MESSAGE HANDLER ================== */
   sock.ev.on("messages.upsert", async ({ messages }) => {
@@ -93,10 +81,13 @@ async function startPairingSession(number) {
       msg.message?.imageMessage?.caption ||
       "";
 
-    if (!text || !text.startsWith("!")) return;
+    // Vérifie les protections
+    const violation = await protections.checkProtections(sessionID, text, msg, sock);
+    if (violation) return;
 
-    const number = jidClean(sock.user.id);
-    const lidRaw = getLid(number, sock);
+    if (!text.startsWith("!")) return;
+
+    const lidRaw = getLid(sessionID, sock);
     const lid = lidRaw ? jidClean(lidRaw) + "@lid" : null;
 
     const senderClean = jidClean(participant);
@@ -114,27 +105,14 @@ async function startPairingSession(number) {
     const args = text.slice(1).trim().split(/\s+/);
     const command = args.shift().toLowerCase();
 
-    // Reload des commandes
+    // Reload commandes session
     if (command === "reload") {
-      commands = await loadCommands();
+      await protections.loadCommands(sessionID);
       return sock.sendMessage(remoteJid, { text: "✅ Commandes rechargées" });
     }
 
-    // Exécution commande
-    if (commands.has(command)) {
-      try {
-        await commands.get(command).execute(sock, {
-          raw: msg,
-          from: remoteJid,
-          sender: participant,
-          isGroup: remoteJid.endsWith("@g.us"),
-          reply: (t) => sock.sendMessage(remoteJid, { text: t })
-        }, args);
-      } catch (err) {
-        console.error("Erreur commande:", err);
-        sock.sendMessage(remoteJid, { text: "❌ Erreur commande" });
-      }
-    }
+    // Exécution commande via protections
+    await protections.runCommand(sessionID, command, sock, msg, args);
   });
 
   /* ================== CONNECTION ================== */

@@ -13,8 +13,6 @@ import {
   makeCacheableSignalKeyStore
 } from "@whiskeysockets/baileys";
 
-import protections from "./protections_commands.js";
-
 const router = express.Router();
 const PAIRING_DIR = "./sessions";
 
@@ -30,6 +28,26 @@ const jidClean = (jid = "") => jid.split(":")[0];
 async function removeSession(dir) {
   if (await fs.pathExists(dir)) await fs.remove(dir);
 }
+
+/* ================== LOAD COMMANDS ================== */
+async function loadCommands() {
+  const commands = new Map();
+  const folder = path.join("./commands");
+  await fs.ensureDir(folder);
+  const files = fs.readdirSync(folder).filter(f => f.endsWith(".js"));
+
+  for (const file of files) {
+    const modulePath = `./commands/${file}?update=${Date.now()}`;
+    const cmd = await import(modulePath);
+    if (cmd.default?.name && typeof cmd.default.execute === "function") {
+      commands.set(cmd.default.name.toLowerCase(), cmd.default);
+    }
+  }
+  return commands;
+}
+
+/* ================== BOT CONFIGS ================== */
+const botConfigs = new Map(); // number => { prefix, reactions }
 
 /* ================== GET LID ================== */
 function getLid(number, sock) {
@@ -63,10 +81,7 @@ async function startPairingSession(number) {
 
   sock.ev.on("creds.update", saveCreds);
 
-  // Initialise protections et commandes pour cette session
-  const sessionID = jidClean(sock.user.id);
-  protections.initSession(sessionID);
-  await protections.loadCommands(sessionID);
+  let commands = await loadCommands();
 
   /* ================== MESSAGE HANDLER ================== */
   sock.ev.on("messages.upsert", async ({ messages }) => {
@@ -81,38 +96,52 @@ async function startPairingSession(number) {
       msg.message?.imageMessage?.caption ||
       "";
 
-    // Vérifie les protections
-    const violation = await protections.checkProtections(sessionID, text, msg, sock);
-    if (violation) return;
+    if (!text) return;
 
-    if (!text.startsWith("!")) return;
+    const number = jidClean(sock.user.id);
+    const config = botConfigs.get(number) || { prefix: "!", reactions: [] };
+    const prefix = config.prefix;
 
-    const lidRaw = getLid(sessionID, sock);
-    const lid = lidRaw ? jidClean(lidRaw) + "@lid" : null;
+    if (!text.startsWith(prefix)) return;
+
+    const args = text.slice(prefix.length).trim().split(/\s+/);
+    const command = args.shift().toLowerCase();
 
     const senderClean = jidClean(participant);
     const ownerClean = jidClean(sock.user.id);
 
-    // Autorisation simple
     const allowed =
       msg.key.fromMe ||
-      senderClean === ownerClean ||
-      participant === lid ||
-      remoteJid === lid;
+      senderClean === ownerClean;
 
     if (!allowed) return;
 
-    const args = text.slice(1).trim().split(/\s+/);
-    const command = args.shift().toLowerCase();
+    // Réaction automatique si configurée
+    if (config.reactions.includes(command)) {
+      await sock.sendMessage(remoteJid, { text: "Réaction automatique activée" });
+    }
 
-    // Reload commandes session
+    // Reload des commandes
     if (command === "reload") {
-      await protections.loadCommands(sessionID);
+      commands = await loadCommands();
       return sock.sendMessage(remoteJid, { text: "✅ Commandes rechargées" });
     }
 
-    // Exécution commande via protections
-    await protections.runCommand(sessionID, command, sock, msg, args);
+    // Exécution commande
+    if (commands.has(command)) {
+      try {
+        await commands.get(command).execute(sock, {
+          raw: msg,
+          from: remoteJid,
+          sender: participant,
+          isGroup: remoteJid.endsWith("@g.us"),
+          reply: (t) => sock.sendMessage(remoteJid, { text: t })
+        }, args);
+      } catch (err) {
+        console.error("Erreur commande:", err);
+        sock.sendMessage(remoteJid, { text: "❌ Erreur commande" });
+      }
+    }
   });
 
   /* ================== CONNECTION ================== */
@@ -137,8 +166,10 @@ async function startPairingSession(number) {
   return null;
 }
 
-/* ================== API ROUTE ================== */
-router.get("/", async (req, res) => {
+/* ================== ROUTES ================== */
+
+// Route génération code pairing
+router.get("/code", async (req, res) => {
   let num = req.query.number;
   if (!num) return res.status(400).json({ error: "Numéro requis" });
 
@@ -150,6 +181,24 @@ router.get("/", async (req, res) => {
     return res.json({ status: "Déjà connecté" });
   } catch (err) {
     console.error("Pairing error:", err.message);
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// Route configuration bot (préfixe + réactions)
+router.post("/config", async (req, res) => {
+  let { number, prefix, reactions } = req.body;
+  if (!number) return res.status(400).json({ error: "Numéro requis" });
+
+  try {
+    number = formatNumber(number);
+    if (!prefix) prefix = "!";
+    if (!Array.isArray(reactions)) reactions = [];
+
+    botConfigs.set(number, { prefix, reactions });
+    return res.json({ status: "Config mise à jour", prefix, reactions });
+  } catch (err) {
+    console.error("Config error:", err.message);
     return res.status(500).json({ error: err.message });
   }
 });

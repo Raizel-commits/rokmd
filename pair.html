@@ -3,12 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>RAIZEL XMD • Gestion Bots</title>
+<title>RAIZEL XMD • Pairing Code</title>
 <style>
 :root{
  --glass:rgba(255,255,255,0.10);
  --primary:#1db954;
- --secondary:#9333ea;
  --text:#fff;
  --muted:#b3b3b3;
 }
@@ -61,7 +60,7 @@ document.getElementById("gen").onclick = async () => {
     const d = await r.json();
     if(d.code){
       res.innerHTML = `<div class="code">${d.code}</div><p>Préfix: <strong>${prefix}</strong></p>`;
-      loadBots(); // rafraîchit la liste
+      loadBots();
     } else if(d.status){
       res.innerHTML = `<div class="code">✅ Déjà connecté</div><p>Préfix: <strong>${prefix}</strong></p>`;
       loadBots();
@@ -78,7 +77,7 @@ async function loadBots(){
   const container = document.getElementById("bots");
   container.innerHTML = "⏳ Chargement...";
   try{
-    const r = await fetch('/list-bots'); // route à créer dans server.js
+    const r = await fetch('/list-bots');
     const data = await r.json();
     if(data.bots && data.bots.length){
       container.innerHTML = "";
@@ -99,7 +98,9 @@ async function loadBots(){
   }
 }
 
+// Auto-refresh toutes les 10 secondes
 loadBots();
+setInterval(loadBots, 10000);
 </script>
 
 </body>

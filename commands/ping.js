@@ -1,7 +1,7 @@
+// commands/ping.js
 export default {
-    name: "ping",
-    description: "Répond pong",
-    async execute(sock, msg, args) {
-        await msg.reply("🏓 Pong !");
-    }
+  name: "ping",
+  async execute(sock, msg) {
+    await msg.reply("Pong !");
+  },
 };

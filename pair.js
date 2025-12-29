@@ -3,7 +3,6 @@ import fs from "fs-extra";
 import path from "path";
 import pino from "pino";
 import pn from "awesome-phonenumber";
-import { delay } from "bluebird";
 import {
   makeWASocket,
   useMultiFileAuthState,
@@ -11,7 +10,7 @@ import {
   fetchLatestBaileysVersion,
   DisconnectReason,
   makeCacheableSignalKeyStore
-} from "@whiskeysockets/baileys";
+} from "baileys"; // ✅ version stable
 
 const router = express.Router();
 const PAIRING_DIR = "./sessions";
@@ -81,14 +80,12 @@ async function startSession(number) {
 
   sock.ev.on("creds.update", saveCreds);
   let commands = await loadCommands();
-
-  // Stocke la session active
   sessionsActives[number] = { sock, commands };
 
   /* ================== MESSAGE HANDLER ================== */
   sock.ev.on("messages.upsert", async ({ messages }) => {
     const msg = messages[0];
-    if (!msg || !msg.message) return;
+    if (!msg?.message) return;
 
     const remoteJid = msg.key.remoteJid;
     const participant = msg.key.participant || remoteJid;
@@ -98,14 +95,13 @@ async function startSession(number) {
       msg.message?.imageMessage?.caption ||
       "";
 
-    if (!text || !text.startsWith("!")) return;
+    if (!text.startsWith("!")) return;
 
     const senderClean = jidClean(participant);
     const ownerClean = jidClean(sock.user.id);
     const lidRaw = getLid(number, sock);
     const lid = lidRaw ? jidClean(lidRaw) + "@lid" : null;
 
-    // Autorisation : uniquement le propriétaire ou lid
     const allowed =
       msg.key.fromMe ||
       senderClean === ownerClean ||
@@ -144,8 +140,8 @@ async function startSession(number) {
     if (connection === "close") {
       const status = lastDisconnect?.error?.output?.statusCode;
       if (status === DisconnectReason.loggedOut) {
-        await removeSession(SESSION_DIR);
         delete sessionsActives[number];
+        await removeSession(SESSION_DIR);
       } else {
         setTimeout(() => startSession(number), 2000);
       }
@@ -154,7 +150,7 @@ async function startSession(number) {
 
   /* ================== PAIRING CODE ================== */
   if (!sock.authState.creds.registered) {
-    await delay(1500);
+    await new Promise(r => setTimeout(r, 1500)); // ✅ remplace bluebird.delay
     const code = await sock.requestPairingCode(number);
     return code.match(/.{1,4}/g).join("-");
   }

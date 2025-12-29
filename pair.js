@@ -17,7 +17,7 @@ import {
 const router = express.Router();
 const PAIRING_DIR = "./lib2/pairing";
 
-/* ============== UTILS ============== */
+/* ================== UTILS ================== */
 function formatNumber(num) {
     const phone = pn("+" + num.replace(/\D/g, ""));
     if (!phone.isValid()) throw new Error("Numéro invalide");
@@ -39,11 +39,37 @@ async function loadCommands() {
             commands.set(command.default.name.toLowerCase(), command.default);
         }
     }
-
     return commands;
 }
 
-/* ============== PAIRING SESSION ============== */
+/* ============ SERIALIZE (SENKU CORE) ============ */
+function serializeMessage(sock, msg) {
+    const from = msg.key.remoteJid;
+    const isGroup = from.endsWith("@g.us");
+
+    const sender = isGroup
+        ? msg.key.participant
+        : from;
+
+    const text =
+        msg.message?.conversation ||
+        msg.message?.extendedTextMessage?.text ||
+        msg.message?.imageMessage?.caption ||
+        msg.message?.videoMessage?.caption ||
+        "";
+
+    return {
+        raw: msg,
+        from,
+        sender,
+        isGroup,
+        text,
+        fromMe: msg.key.fromMe,
+        reply: (text) => sock.sendMessage(from, { text })
+    };
+}
+
+/* ================== PAIRING ================== */
 async function startPairingSession(number) {
     const SESSION_DIR = path.join(PAIRING_DIR, number);
     await fs.ensureDir(SESSION_DIR);
@@ -65,48 +91,49 @@ async function startPairingSession(number) {
 
     sock.ev.on("creds.update", saveCreds);
 
-    // Charger les commandes
     let commands = await loadCommands();
 
-    // Listener messages privés
+    /* ============ MESSAGE HANDLER ============ */
     sock.ev.on("messages.upsert", async ({ messages }) => {
         const msg = messages[0];
         if (!msg || !msg.message) return;
-        if (!msg.key.fromMe) return; // PRIVÉ : seul le numéro connecté peut exécuter
 
-        const text =
-            msg.message.conversation ||
-            msg.message.extendedTextMessage?.text ||
-            msg.message.imageMessage?.caption ||
-            msg.message.videoMessage?.caption ||
-            "";
+        const m = serializeMessage(sock, msg);
 
-        if (!text || !text.startsWith("!")) return;
+        if (!m.text || !m.text.startsWith("!")) return;
 
-        const args = text.slice(1).trim().split(/ +/);
+        const args = m.text.slice(1).trim().split(/ +/);
         const cmdName = args.shift().toLowerCase();
 
-        // Reload des commandes
+        // 🔐 OWNER ONLY (comme Senku)
+        const owner = sock.user.id;
+        if (m.sender !== owner) return;
+
+        // Reload commandes
         if (cmdName === "reload") {
             commands = await loadCommands();
-            await sock.sendMessage(msg.key.remoteJid, { text: "✅ Commandes rechargées" });
-            return;
+            return m.reply("✅ Commandes rechargées");
         }
 
         if (commands.has(cmdName)) {
             try {
-                await commands.get(cmdName).execute(sock, msg, args, commands);
+                await commands.get(cmdName).execute(sock, m, args, commands);
             } catch (err) {
                 console.error("Erreur commande:", err);
+                m.reply("❌ Erreur commande");
             }
         }
     });
 
-    // Gestion du pairing et connexion
+    /* ============ CONNECTION HANDLER ============ */
     sock.ev.on("connection.update", async ({ connection, lastDisconnect, qr }) => {
         if (qr) {
             const formatted = qr.match(/.{1,4}/g)?.join("-");
-            await fs.writeJSON(path.join(SESSION_DIR, "pairing.json"), { code: formatted }, { spaces: 2 });
+            await fs.writeJSON(
+                path.join(SESSION_DIR, "pairing.json"),
+                { code: formatted },
+                { spaces: 2 }
+            );
         }
 
         if (connection === "close") {
@@ -119,13 +146,17 @@ async function startPairingSession(number) {
         }
     });
 
-    // Générer pairing code si pas encore enregistré
+    /* ============ PAIRING CODE ============ */
     if (!sock.authState.creds.registered) {
         await delay(1500);
         try {
             const pairingCode = await sock.requestPairingCode(number);
             const formatted = pairingCode?.match(/.{1,4}/g)?.join("-");
-            await fs.writeJSON(path.join(SESSION_DIR, "pairing.json"), { code: formatted }, { spaces: 2 });
+            await fs.writeJSON(
+                path.join(SESSION_DIR, "pairing.json"),
+                { code: formatted },
+                { spaces: 2 }
+            );
             return formatted;
         } catch (err) {
             await removeSession(SESSION_DIR);
@@ -133,10 +164,10 @@ async function startPairingSession(number) {
         }
     }
 
-    return null; // Déjà connecté
+    return null;
 }
 
-/* ============== ROUTE API ============== */
+/* ================== ROUTE API ================== */
 router.get("/", async (req, res) => {
     let num = req.query.number;
     if (!num) return res.status(400).json({ error: "Numéro requis" });

@@ -9,7 +9,8 @@ import {
   Browsers,
   fetchLatestBaileysVersion,
   DisconnectReason,
-  makeCacheableSignalKeyStore
+  makeCacheableSignalKeyStore,
+  delay
 } from "@whiskeysockets/baileys";
 
 const router = express.Router();
@@ -32,7 +33,7 @@ async function removeSession(dir) {
   if (await fs.pathExists(dir)) await fs.remove(dir);
 }
 
-// ------------------ COMMANDS ------------------
+// ------------------ LOAD COMMANDS ------------------
 async function loadCommands() {
   const commands = new Map();
   await fs.ensureDir(COMMANDS_DIR);
@@ -56,18 +57,18 @@ function getLid(number, sock) {
   }
 }
 
-// ------------------ DELAY ------------------
-const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
-
-// ------------------ START SESSION ------------------
+// ------------------ START PAIR SESSION ------------------
 async function startPairSession(number) {
-  if (sessionsActives[number]) return sessionsActives[number];
-
   const SESSION_DIR = path.join(PAIRING_DIR, number);
   await fs.ensureDir(SESSION_DIR);
 
   const { state, saveCreds } = await useMultiFileAuthState(SESSION_DIR);
   const { version } = await fetchLatestBaileysVersion();
+
+  // Si la session existe déjà et est connectée
+  if (sessionsActives[number] && state.creds.registered) {
+    return null; // Déjà connecté
+  }
 
   const sock = makeWASocket({
     version,
@@ -82,8 +83,8 @@ async function startPairSession(number) {
   });
 
   sock.ev.on("creds.update", saveCreds);
-  let commands = await loadCommands();
 
+  let commands = await loadCommands();
   sessionsActives[number] = { sock, commands };
 
   // ------------------ MESSAGE HANDLER ------------------
@@ -150,7 +151,7 @@ async function startPairSession(number) {
   });
 
   // ------------------ PAIRING ------------------
-  if (!sock.authState.creds.registered) {
+  if (!state.creds.registered) {
     await delay(1500);
     const code = await sock.requestPairingCode(number);
     return code.match(/.{1,4}/g).join("-");

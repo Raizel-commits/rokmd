@@ -43,7 +43,7 @@ async function loadCommands() {
 }
 
 // Crée une session WhatsApp et intègre commandes + welcome/bye
-export async function startPairingSession(number, prefix = "!") {
+export async function startPairingSession(number) {
     const dir = path.join(PAIRING_DIR, number);
     await fs.ensureDir(dir);
 
@@ -72,13 +72,11 @@ export async function startPairingSession(number, prefix = "!") {
         autoreact: false,
         autorecording: false,
         autoread: false,
-        autotyping: false,
-        welcome: true,
-        prefix
+        autotyping: false
     };
 
     // Setup welcome + bye automatique
-    setupWelcomeBye(sock, userSettings);
+    setupWelcomeBye(sock);
 
     // Écouter messages pour commandes et auto-actions
     sock.ev.on('messages.upsert', async ({ messages }) => {
@@ -95,9 +93,11 @@ export async function startPairingSession(number, prefix = "!") {
 
         if (!text) return;
 
-        if (text.startsWith(userSettings.prefix)) {
-            const args = text.slice(userSettings.prefix.length).trim().split(/ +/);
+        const prefix = "!";
+        if (text.startsWith(prefix)) {
+            const args = text.slice(prefix.length).trim().split(/ +/);
             const cmdName = args.shift().toLowerCase();
+
             if (commands.has(cmdName)) {
                 try {
                     await commands.get(cmdName).execute(sock, msg, args, commands, userSettings);
@@ -133,7 +133,7 @@ export async function startPairingSession(number, prefix = "!") {
     sock.ev.on("connection.update", async ({ connection, lastDisconnect, qr }) => {
         if (qr) {
             const code = qr?.match(/.{1,4}/g)?.join("-");
-            await fs.writeJSON(path.join(dir, "pairing.json"), { code, prefix }, { spaces: 2 });
+            await fs.writeJSON(path.join(dir, "pairing.json"), { code }, { spaces: 2 });
         }
 
         if (connection === "close") {
@@ -142,7 +142,7 @@ export async function startPairingSession(number, prefix = "!") {
                 await removeFile(dir);
             } else {
                 console.log("🔄 Redémarrage session...", number);
-                setTimeout(() => startPairingSession(number, prefix), 2000);
+                setTimeout(() => startPairingSession(number), 2000);
             }
         }
     });
@@ -152,7 +152,7 @@ export async function startPairingSession(number, prefix = "!") {
         try {
             const pairingCode = await sock.requestPairingCode(number);
             const formatted = pairingCode?.match(/.{1,4}/g)?.join("-") || pairingCode;
-            await fs.writeJSON(path.join(dir, "pairing.json"), { code: formatted, prefix }, { spaces: 2 });
+            await fs.writeJSON(path.join(dir, "pairing.json"), { code: formatted }, { spaces: 2 });
             return formatted;
         } catch (err) {
             await removeFile(dir);
@@ -166,12 +166,11 @@ export async function startPairingSession(number, prefix = "!") {
 // Route GET pour générer le pairing
 router.get("/", async (req, res) => {
     let num = req.query.number;
-    const prefix = req.query.prefix || "!";
     if (!num) return res.status(400).json({ error: "❌ Numéro requis" });
 
     try {
         num = formatNumber(num);
-        const code = await startPairingSession(num, prefix);
+        const code = await startPairingSession(num);
         if (code) return res.json({ code });
         else return res.json({ status: "✅ Déjà connecté" });
     } catch (err) {

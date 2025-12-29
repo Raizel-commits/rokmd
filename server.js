@@ -1,7 +1,7 @@
 import express from "express";
 import path from "path";
 import fs from "fs-extra";
-import bcrypt from "bcrypt";
+import bcrypt from 'bcrypt';
 import qrRouter from "./qr.js";
 import pairRouter from "./pair.js";
 

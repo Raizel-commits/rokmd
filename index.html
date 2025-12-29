@@ -3,64 +3,74 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ROK XD • WhatsApp Bot</title>
+<title>ROK XD • Login</title>
 <style>
-:root{--bg-1:#020617;--bg-2:#0f172a;--neon:#38bdf8;--error:#ef4444;--glass-border:rgba(56,189,248,0.22);--muted:rgba(255,255,255,0.45);--card-w:380px;}
-*{box-sizing:border-box;}
-html,body{height:100%;margin:0;font-family:"Inter",system-ui,Arial; 
+:root{
+  --bg-1:#020617;
+  --bg-2:#0f172a;
+  --neon:#38bdf8;
+  --glass-border:rgba(56,189,248,0.22);
+  --muted:rgba(255,255,255,0.45);
+  --card-w:380px;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;font-family:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial;
 background: radial-gradient(1200px 600px at 10% 10%, rgba(56,189,248,0.03), transparent),
-           radial-gradient(900px 500px at 90% 85%, rgba(56,189,248,0.02), transparent),
-           linear-gradient(180deg,var(--bg-1),var(--bg-2)); color:#dfffe6;}
-.stage{display:flex;align-items:center;justify-content:center;height:100vh;padding:36px;}
-.glass-card{width:var(--card-w);max-width:92vw; padding:22px; border-radius:18px; 
-background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); 
-border:1px solid var(--glass-border); backdrop-filter: blur(10px) saturate(140%); 
-box-shadow:0 10px 40px rgba(0,0,0,0.7),0 0 40px rgba(56,189,248,0.05) inset; text-align:center;}
-.card-header h1{font-family:"JetBrains Mono", monospace; font-size:24px;margin:0;color:var(--neon);text-transform:uppercase;text-shadow:0 0 18px var(--neon);}
-.card-header .small-url{font-size:12px;color:var(--muted);margin-top:6px;}
-input{width:100%;padding:12px;margin-bottom:12px;border-radius:10px;border:1px solid rgba(56,189,248,0.06); background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.006)); color:#eafff2;outline:none;font-size:14px;}
-input::placeholder{color:rgba(200,255,255,0.22);}
-button{width:100%;padding:12px;border-radius:6px;border:none;background:var(--neon);color:#020617;font-weight:bold;cursor:pointer;margin-bottom:12px;}
+            radial-gradient(900px 500px at 90% 85%, rgba(56,189,248,0.02), transparent),
+            linear-gradient(180deg,var(--bg-1),var(--bg-2));
+color:#dfffe6;overflow:hidden;}
+.stage{position:relative;height:100vh;display:flex;align-items:center;justify-content:center;padding:36px;}
+.glass-card{
+  width:var(--card-w);max-width:92vw;
+  background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+  border-radius:18px;padding:22px;
+  box-shadow:0 10px 40px rgba(0,0,0,0.7),0 0 40px rgba(56,189,248,0.05) inset;
+  backdrop-filter: blur(10px) saturate(140%);
+  border:1px solid var(--glass-border);
+  text-align:center;
+}
+h1{font-family:"JetBrains Mono", monospace;font-size:24px;margin:0;color:var(--neon);text-transform:uppercase;text-shadow:0 0 18px rgba(56,189,248,0.22);}
+input{width:100%;padding:12px;margin:10px 0;border-radius:6px;border:none;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.006));color:#eafff2;}
+button{width:100%;padding:12px;border-radius:6px;border:none;background:var(--neon);color:#020617;font-weight:bold;cursor:pointer;font-size:16px;margin:10px 0;}
 button:hover{opacity:0.9;}
-.result{margin-top:12px;font-weight:bold;word-break:break-word;}
+.small{font-size:12px;color:var(--muted);}
 </style>
 </head>
 <body>
 <main class="stage">
 <section class="glass-card">
-<header class="card-header">
-<h1>ROK XD</h1>
-<div class="small-url">WhatsApp Bot sécurisé</div>
-</header>
-
-<form id="loginForm">
-  <input type="email" name="email" placeholder="Email" required>
-  <input type="password" name="password" placeholder="Mot de passe" required>
-  <button>Connexion</button>
-</form>
-
+<h1>ROK XD • Login</h1>
+<input type="email" id="email" placeholder="Email" required>
+<input type="password" id="password" placeholder="Mot de passe" required>
+<button id="loginBtn">Connexion</button>
+<p class="small" id="msg"></p>
+<hr>
 <button onclick="window.location='/register'">Créer un compte</button>
-
-<p class="result" id="msg"></p>
 </section>
 </main>
 
 <script>
-document.getElementById('loginForm').addEventListener('submit', async e=>{
-  e.preventDefault();
-  const data={email:e.target.email.value,password:e.target.password.value};
-  const res=await fetch('/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
-  const result=await res.json();
-  const msgEl=document.getElementById('msg');
+document.getElementById("loginBtn").onclick = async ()=>{
+  const email = document.getElementById("email").value.trim();
+  const password = document.getElementById("password").value.trim();
+  const msg = document.getElementById("msg");
 
-  if(result.message.startsWith("Bienvenue")){
-    msgEl.innerHTML=`<span style="color:#38bdf8;font-weight:bold;text-shadow:0 0 10px #38bdf8;">${result.message}</span>`;
-    localStorage.setItem("sessionId",result.sessionId);
-    setTimeout(()=>window.location='/pair',1000);
-  } else {
-    msgEl.innerHTML=`<span style="color:#ef4444;font-weight:bold;text-shadow:0 0 10px #ef4444;">${result.message}</span>`;
-  }
-});
+  if(!email || !password){ msg.innerText="Tous les champs sont requis"; return; }
+
+  try{
+    const r = await fetch("/auth/login", {
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({email,password})
+    });
+    const data = await r.json();
+    msg.innerText = data.message;
+    if(data.sessionId){
+      localStorage.setItem("sessionId", data.sessionId);
+      setTimeout(()=> window.location='/pair', 1000);
+    }
+  }catch(e){ msg.innerText="Erreur serveur"; console.error(e);}
+};
 </script>
 </body>
 </html>

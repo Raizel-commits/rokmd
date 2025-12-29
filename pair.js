@@ -30,16 +30,13 @@ async function removeSession(dir) {
   if (await fs.pathExists(dir)) await fs.remove(dir);
 }
 
-// Charger commandes
 async function loadCommands() {
   const commands = new Map();
   const folder = path.join("./commands");
   await fs.ensureDir(folder);
   const files = fs.readdirSync(folder).filter(f => f.endsWith(".js"));
-
   for (const file of files) {
-    const modulePath = `./commands/${file}?update=${Date.now()}`;
-    const cmd = await import(modulePath);
+    const cmd = await import(`./commands/${file}?update=${Date.now()}`);
     if (cmd.default?.name && typeof cmd.default.execute === "function") {
       commands.set(cmd.default.name.toLowerCase(), cmd.default);
     }
@@ -47,15 +44,13 @@ async function loadCommands() {
   return commands;
 }
 
-// ================= CONFIG =================
+// ================= CONFIG LOAD / SAVE =================
 let CONFIG = {};
 if (fs.existsSync(CONFIG_FILE)) CONFIG = JSON.parse(fs.readFileSync(CONFIG_FILE, "utf8"));
-async function saveConfig() {
-  await fs.writeFile(CONFIG_FILE, JSON.stringify(CONFIG, null, 2));
-}
+async function saveConfig() { await fs.writeFile(CONFIG_FILE, JSON.stringify(CONFIG, null, 2)); }
 
 // ================= BOTS MAP =================
-const bots = new Map(); // number => { sock, commands, config, ownerNumber }
+const bots = new Map(); // number => { sock, commands, config, lid }
 
 // ================= GET LID =================
 function getLid(number, sock) {
@@ -91,19 +86,13 @@ async function startPairingSession(number) {
 
   const commands = await loadCommands();
   const config = CONFIG[number] || { prefix: "!" };
-  let ownerNumber = null; // sera défini après connexion
+  const lid = getLid(number, sock); // LID du propriétaire
+  bots.set(number, { sock, commands, config, lid });
 
-  bots.set(number, { sock, commands, config, ownerNumber });
-
-  // ========== MESSAGES HANDLER ==========
+  // ================= MESSAGE HANDLER =================
   sock.ev.on("messages.upsert", async ({ messages }) => {
     const msg = messages[0];
     if (!msg || !msg.message) return;
-
-    const bot = bots.get(number);
-    if (!bot || !bot.ownerNumber) return; // bot pas encore prêt
-
-    const { commands: cmds, config: cfg, sock: s, ownerNumber: owner } = bot;
 
     const remoteJid = msg.key.remoteJid;
     const participant = msg.key.participant || remoteJid;
@@ -113,52 +102,58 @@ async function startPairingSession(number) {
       msg.message?.imageMessage?.caption ||
       "";
 
-    if (!text || !text.startsWith(cfg.prefix)) return;
+    if (!text) return;
 
-    const args = text.slice(cfg.prefix.length).trim().split(/\s+/);
+    const bot = bots.get(number);
+    const prefix = bot.config.prefix;
+    const cmds = bot.commands;
+
+    if (!text.startsWith(prefix)) return;
+
+    const args = text.slice(prefix.length).trim().split(/\s+/);
     const command = args.shift().toLowerCase();
 
     const senderClean = jidClean(participant);
+    const ownerClean = jidClean(bot.sock.user.id);
     const isGroup = remoteJid.endsWith("@g.us");
 
-    // autorisation : propriétaire ou message mp
-    const allowed = senderClean === owner || msg.key.fromMe;
+    // ================== PRIVACY ==================
+    // MP: uniquement le propriétaire de la session
+    // Groupe: uniquement le propriétaire de la session (lid)
+    const allowed =
+      (!isGroup && senderClean === ownerClean) ||
+      (isGroup && (senderClean === bot.lid || senderClean === ownerClean));
+
     if (!allowed) return;
 
-    // reload commandes pour ce bot uniquement
+    // Reload commands pour ce bot uniquement
     if (command === "reload") {
       bot.commands = await loadCommands();
-      return s.sendMessage(remoteJid, { text: "✅ Commandes rechargées pour ce bot uniquement" });
+      return sock.sendMessage(remoteJid, { text: "✅ Commandes rechargées pour ce bot uniquement" });
     }
 
+    // Exécution commande
     if (cmds.has(command)) {
       try {
-        await cmds.get(command).execute(s, {
+        await cmds.get(command).execute(sock, {
           raw: msg,
           from: remoteJid,
           sender: participant,
           isGroup,
-          reply: (t) => s.sendMessage(remoteJid, { text: t })
+          reply: (t) => sock.sendMessage(remoteJid, { text: t })
         }, args);
       } catch (err) {
         console.error("Erreur commande:", err);
-        s.sendMessage(remoteJid, { text: "❌ Erreur commande" });
+        sock.sendMessage(remoteJid, { text: "❌ Erreur commande" });
       }
     }
   });
 
-  // ========== CONNECTION ==========
-  sock.ev.on("connection.update", ({ connection, lastDisconnect }) => {
-    if (connection === "open") {
-      ownerNumber = jidClean(sock.user.id);
-      bots.get(number).ownerNumber = ownerNumber;
-      console.log(`🤖 Bot ${number} connecté avec le numéro: ${ownerNumber}`);
-    }
-
+  sock.ev.on("connection.update", async ({ connection, lastDisconnect }) => {
     if (connection === "close") {
       const status = lastDisconnect?.error?.output?.statusCode;
       if (status === DisconnectReason.loggedOut) {
-        removeSession(SESSION_DIR);
+        await removeSession(SESSION_DIR);
         bots.delete(number);
       } else {
         setTimeout(() => startPairingSession(number), 2000);
@@ -166,6 +161,7 @@ async function startPairingSession(number) {
     }
   });
 
+  // ================= PAIRING CODE =================
   if (!sock.authState.creds.registered) {
     await delay(1500);
     const code = await sock.requestPairingCode(number);

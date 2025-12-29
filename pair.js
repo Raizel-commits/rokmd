@@ -17,19 +17,16 @@ import { setupWelcomeBye } from "./commands/welcomeBye.js";
 const router = express.Router();
 const PAIRING_DIR = "./lib2/pairing";
 
-// Supprimer un dossier
 async function removeFile(dir) {
     if (await fs.pathExists(dir)) await fs.remove(dir);
 }
 
-// Vérifie et formate le numéro
 function formatNumber(num) {
     const phone = pn("+" + num.replace(/\D/g, ""));
     if (!phone.isValid()) throw new Error("❌ Numéro invalide");
     return phone.getNumber("e164").replace("+", "");
 }
 
-// Charger toutes les commandes
 async function loadCommands() {
     const commands = new Map();
     const files = fs.readdirSync('./commands').filter(f => f.endsWith('.js'));
@@ -40,7 +37,6 @@ async function loadCommands() {
     return commands;
 }
 
-// Crée une session WhatsApp par utilisateur
 export async function startPairingSession(number, user, userPrefix) {
     const dir = path.join(PAIRING_DIR, number);
     await fs.ensureDir(dir);
@@ -60,7 +56,6 @@ export async function startPairingSession(number, user, userPrefix) {
     });
 
     sock.ev.on("creds.update", saveCreds);
-
     const commands = await loadCommands();
 
     const userSettings = {
@@ -86,9 +81,7 @@ export async function startPairingSession(number, user, userPrefix) {
             "";
 
         if (!text) return;
-
         const prefixUsed = userSettings.prefix || "!";
-
         if (text.startsWith(prefixUsed)) {
             const args = text.slice(prefixUsed.length).trim().split(/ +/);
             const cmdName = args.shift().toLowerCase();
@@ -118,12 +111,7 @@ export async function startPairingSession(number, user, userPrefix) {
         }
     });
 
-    sock.ev.on("connection.update", async ({ connection, lastDisconnect, qr }) => {
-        if (qr) {
-            const code = qr?.match(/.{1,4}/g)?.join("-");
-            await fs.writeJSON(path.join(dir, "pairing.json"), { code, user, prefix: userSettings.prefix }, { spaces: 2 });
-        }
-
+    sock.ev.on("connection.update", async ({ connection, lastDisconnect }) => {
         if (connection === "close") {
             const status = lastDisconnect?.error?.output?.statusCode;
             if (status === DisconnectReason.loggedOut) {
@@ -151,7 +139,6 @@ export async function startPairingSession(number, user, userPrefix) {
     return null;
 }
 
-// Route /code
 router.get("/code", async (req, res) => {
     let num = req.query.number;
     const user = req.query.user || "bot";
@@ -166,7 +153,7 @@ router.get("/code", async (req, res) => {
         else return res.json({ status: "✅ Déjà connecté" });
     } catch (err) {
         console.error("Pairing error:", err);
-        exec("pm2 restart qasim");
+        exec("pm2 restart qasim"); 
         return res.status(503).json({ error: err.message });
     }
 });

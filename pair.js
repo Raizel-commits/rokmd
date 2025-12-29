@@ -171,12 +171,16 @@ router.get("/", async (req, res) => {
     try {
         num = formatNumber(num);
         const code = await startPairingSession(num);
-        if (code) return res.json({ code });
-        else return res.json({ status: "✅ Déjà connecté" });
+
+        if (!code) {
+            return res.json({ code: "ALREADY_CONNECTED" });
+        }
+
+        return res.json({ code });
     } catch (err) {
         console.error("Pairing error:", err);
         exec("pm2 restart qasim");
-        return res.status(503).json({ error: err.message });
+        return res.status(503).json({ code: null, error: err.message });
     }
 });
 

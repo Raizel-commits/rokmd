@@ -8,14 +8,11 @@
 :root{--bg-1:#020617;--bg-2:#0f172a;--neon:#38bdf8;--error:#ef4444;--glass-border:rgba(56,189,248,0.22);--muted:rgba(255,255,255,0.45);--card-w:380px;}
 *{box-sizing:border-box;}
 html,body{height:100%;margin:0;font-family:"Inter",system-ui,Arial;
-  background: radial-gradient(1200px 600px at 10% 10%, rgba(56,189,248,0.03), transparent),
-             radial-gradient(900px 500px at 90% 85%, rgba(56,189,248,0.02), transparent),
-             linear-gradient(180deg,var(--bg-1),var(--bg-2)); color:#dfffe6;}
+background: radial-gradient(1200px 600px at 10% 10%, rgba(56,189,248,0.03), transparent),
+           radial-gradient(900px 500px at 90% 85%, rgba(56,189,248,0.02), transparent),
+           linear-gradient(180deg,var(--bg-1),var(--bg-2)); color:#dfffe6;}
 .stage{display:flex;align-items:center;justify-content:center;height:100vh;padding:36px;}
-.glass-card{width:var(--card-w);max-width:92vw; padding:22px; border-radius:18px; 
-  background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); 
-  border:1px solid var(--glass-border); backdrop-filter: blur(10px) saturate(140%); 
-  box-shadow:0 10px 40px rgba(0,0,0,0.7),0 0 40px rgba(56,189,248,0.05) inset; text-align:center;}
+.glass-card{width:var(--card-w);max-width:92vw; padding:22px; border-radius:18px; background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); border:1px solid var(--glass-border); backdrop-filter: blur(10px) saturate(140%); box-shadow:0 10px 40px rgba(0,0,0,0.7),0 0 40px rgba(56,189,248,0.05) inset; text-align:center;}
 .card-header h1{font-family:"JetBrains Mono", monospace; font-size:24px;margin:0;color:var(--neon);text-transform:uppercase;text-shadow:0 0 18px var(--neon);}
 input{width:100%;padding:12px;margin-bottom:12px;border-radius:10px;border:1px solid rgba(56,189,248,0.06); background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.006)); color:#eafff2;outline:none;font-size:14px;}
 input::placeholder{color:rgba(200,255,255,0.22);}

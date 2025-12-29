@@ -9,13 +9,14 @@ import {
   useMultiFileAuthState,
   Browsers,
   fetchLatestBaileysVersion,
-  makeCacheableSignalKeyStore,
-  DisconnectReason
+  makeCacheableSignalKeyStore
 } from "@whiskeysockets/baileys";
 
 const router = express.Router();
 const PAIRING_DIR = "./sessions";
 const COMMANDS_DIR = "./commands";
+
+// Stocke toutes les sessions actives
 const sessionsActives = {};
 
 const jidClean = (jid = "") => jid.split(":")[0];
@@ -38,6 +39,9 @@ async function loadCommands() {
   }
   return commands;
 }
+
+// Delay simple
+const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 async function startQRSession(number) {
   if (sessionsActives[number]) return sessionsActives[number];
@@ -65,6 +69,7 @@ async function startQRSession(number) {
 
   sessionsActives[number] = { sock, commands };
 
+  // Gestion des messages (commandes)
   sock.ev.on("messages.upsert", async ({ messages }) => {
     const msg = messages[0];
     if (!msg || !msg.message) return;
@@ -81,11 +86,9 @@ async function startQRSession(number) {
 
     const senderClean = jidClean(participant);
     const ownerClean = jidClean(sock.user.id);
-    const lidRaw = sock.user?.lid || "";
-    const lid = lidRaw ? jidClean(lidRaw) + "@lid" : null;
 
     const allowed =
-      msg.key.fromMe || senderClean === ownerClean || participant === lid || remoteJid === lid;
+      msg.key.fromMe || senderClean === ownerClean;
 
     if (!allowed) return;
 
@@ -114,27 +117,38 @@ async function startQRSession(number) {
     }
   });
 
-  return sock;
+  // Renvoi QR code si pas encore enregistré
+  if (!sock.authState.creds.registered) {
+    return new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => reject(new Error("Timeout QR")), 30000);
+
+      sock.ev.on("connection.update", async (update) => {
+        if (update.qr) {
+          clearTimeout(timeout);
+          const qrDataURL = await QRCode.toDataURL(update.qr);
+          resolve({ sock, qr: qrDataURL });
+        } else if (update.connection === "close") {
+          clearTimeout(timeout);
+          reject(new Error("Connection fermée avant QR"));
+        }
+      });
+    });
+  }
+
+  return { sock, qr: null };
 }
 
+// Route API pour récupérer QR
 router.get("/", async (req, res) => {
   let num = req.query.number;
   if (!num) return res.status(400).json({ error: "Numéro requis" });
 
   try {
     num = formatNumber(num);
-    const { sock } = await startQRSession(num);
+    const { sock, qr } = await startQRSession(num);
 
-    if (!sock.authState.creds.registered) {
-      sock.ev.once("connection.update", async (update) => {
-        if (update.qr) {
-          const qrDataURL = await QRCode.toDataURL(update.qr);
-          return res.json({ qr: qrDataURL });
-        }
-      });
-    } else {
-      return res.json({ status: "Déjà connecté" });
-    }
+    if (qr) return res.json({ qr });
+    return res.json({ status: "Déjà connecté" });
   } catch (err) {
     console.error("QR error:", err);
     return res.status(500).json({ error: err.message });

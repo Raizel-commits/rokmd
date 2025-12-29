@@ -3,7 +3,6 @@ import fs from "fs-extra";
 import pino from "pino";
 import pn from "awesome-phonenumber";
 import path from "path";
-import { exec } from "child_process";
 import {
     makeWASocket,
     useMultiFileAuthState,
@@ -15,7 +14,7 @@ import {
 } from "@whiskeysockets/baileys";
 
 const router = express.Router();
-const PAIRING_DIR = "./lib2/pairing";
+const PAIRING_DIR = "./sessions";
 
 /* ================== UTILS ================== */
 function formatNumber(num) {
@@ -24,52 +23,41 @@ function formatNumber(num) {
     return phone.getNumber("e164").replace("+", "");
 }
 
+const jidClean = (jid = "") => jid.split(":")[0];
+
 async function removeSession(dir) {
     if (await fs.pathExists(dir)) await fs.remove(dir);
 }
 
+/* ================== LOAD COMMANDS ================== */
 async function loadCommands() {
     const commands = new Map();
     const files = fs.readdirSync("./commands").filter(f => f.endsWith(".js"));
 
     for (const file of files) {
-        const modulePath = `./commands/${file}?update=${Date.now()}`;
-        const command = await import(modulePath);
-        if (command.default?.name && typeof command.default.execute === "function") {
-            commands.set(command.default.name.toLowerCase(), command.default);
+        const modulePath = `../commands/${file}?update=${Date.now()}`;
+        const cmd = await import(modulePath);
+
+        if (cmd.default?.name && typeof cmd.default.execute === "function") {
+            commands.set(cmd.default.name.toLowerCase(), cmd.default);
         }
     }
     return commands;
 }
 
-/* ============ SERIALIZE (SENKU CORE) ============ */
-function serializeMessage(sock, msg) {
-    const from = msg.key.remoteJid;
-    const isGroup = from.endsWith("@g.us");
-
-    const sender = isGroup
-        ? msg.key.participant
-        : from;
-
-    const text =
-        msg.message?.conversation ||
-        msg.message?.extendedTextMessage?.text ||
-        msg.message?.imageMessage?.caption ||
-        msg.message?.videoMessage?.caption ||
-        "";
-
-    return {
-        raw: msg,
-        from,
-        sender,
-        isGroup,
-        text,
-        fromMe: msg.key.fromMe,
-        reply: (text) => sock.sendMessage(from, { text })
-    };
+/* ================== GET LID (SENKU KEY) ================== */
+function getLid(number, sock) {
+    try {
+        const data = JSON.parse(
+            fs.readFileSync(`${PAIRING_DIR}/${number}/creds.json`, "utf8")
+        );
+        return data?.me?.lid || sock.user?.lid || "";
+    } catch {
+        return sock.user?.lid || "";
+    }
 }
 
-/* ================== PAIRING ================== */
+/* ================== START SESSION ================== */
 async function startPairingSession(number) {
     const SESSION_DIR = path.join(PAIRING_DIR, number);
     await fs.ensureDir(SESSION_DIR);
@@ -93,49 +81,67 @@ async function startPairingSession(number) {
 
     let commands = await loadCommands();
 
-    /* ============ MESSAGE HANDLER ============ */
+    /* ================== MESSAGE HANDLER ================== */
     sock.ev.on("messages.upsert", async ({ messages }) => {
         const msg = messages[0];
         if (!msg || !msg.message) return;
 
-        const m = serializeMessage(sock, msg);
+        const remoteJid = msg.key.remoteJid;
+        const participant = msg.key.participant || remoteJid;
 
-        if (!m.text || !m.text.startsWith("!")) return;
+        const text =
+            msg.message?.conversation ||
+            msg.message?.extendedTextMessage?.text ||
+            msg.message?.imageMessage?.caption ||
+            msg.message?.videoMessage?.caption ||
+            "";
 
-        const args = m.text.slice(1).trim().split(/ +/);
-        const cmdName = args.shift().toLowerCase();
+        if (!text || !text.startsWith("!")) return;
 
-        // 🔐 OWNER ONLY (comme Senku)
-        const owner = sock.user.id;
-        if (m.sender !== owner) return;
+        const number = jidClean(sock.user.id);
+        const lidRaw = getLid(number, sock);
+        const lid = lidRaw ? jidClean(lidRaw) + "@lid" : null;
 
-        // Reload commandes
-        if (cmdName === "reload") {
+        const senderClean = jidClean(participant);
+        const ownerClean = jidClean(sock.user.id);
+
+        /* ===== AUTORISATION (SENKU STYLE) ===== */
+        const allowed =
+            msg.key.fromMe ||
+            senderClean === ownerClean ||
+            participant === lid ||
+            remoteJid === lid;
+
+        if (!allowed) return;
+
+        const args = text.slice(1).trim().split(/\s+/);
+        const command = args.shift().toLowerCase();
+
+        /* ===== RELOAD ===== */
+        if (command === "reload") {
             commands = await loadCommands();
-            return m.reply("✅ Commandes rechargées");
+            return sock.sendMessage(remoteJid, { text: "✅ Commandes rechargées" });
         }
 
-        if (commands.has(cmdName)) {
+        /* ===== EXEC COMMAND ===== */
+        if (commands.has(command)) {
             try {
-                await commands.get(cmdName).execute(sock, m, args, commands);
+                await commands.get(command).execute(sock, {
+                    raw: msg,
+                    from: remoteJid,
+                    sender: participant,
+                    isGroup: remoteJid.endsWith("@g.us"),
+                    reply: (t) => sock.sendMessage(remoteJid, { text: t })
+                }, args);
             } catch (err) {
                 console.error("Erreur commande:", err);
-                m.reply("❌ Erreur commande");
+                sock.sendMessage(remoteJid, { text: "❌ Erreur commande" });
             }
         }
     });
 
-    /* ============ CONNECTION HANDLER ============ */
-    sock.ev.on("connection.update", async ({ connection, lastDisconnect, qr }) => {
-        if (qr) {
-            const formatted = qr.match(/.{1,4}/g)?.join("-");
-            await fs.writeJSON(
-                path.join(SESSION_DIR, "pairing.json"),
-                { code: formatted },
-                { spaces: 2 }
-            );
-        }
-
+    /* ================== CONNECTION ================== */
+    sock.ev.on("connection.update", async ({ connection, lastDisconnect }) => {
         if (connection === "close") {
             const status = lastDisconnect?.error?.output?.statusCode;
             if (status === DisconnectReason.loggedOut) {
@@ -146,28 +152,17 @@ async function startPairingSession(number) {
         }
     });
 
-    /* ============ PAIRING CODE ============ */
+    /* ================== PAIRING CODE ================== */
     if (!sock.authState.creds.registered) {
         await delay(1500);
-        try {
-            const pairingCode = await sock.requestPairingCode(number);
-            const formatted = pairingCode?.match(/.{1,4}/g)?.join("-");
-            await fs.writeJSON(
-                path.join(SESSION_DIR, "pairing.json"),
-                { code: formatted },
-                { spaces: 2 }
-            );
-            return formatted;
-        } catch (err) {
-            await removeSession(SESSION_DIR);
-            throw new Error("Impossible de générer le pairing code");
-        }
+        const code = await sock.requestPairingCode(number);
+        return code.match(/.{1,4}/g).join("-");
     }
 
     return null;
 }
 
-/* ================== ROUTE API ================== */
+/* ================== API ROUTE ================== */
 router.get("/", async (req, res) => {
     let num = req.query.number;
     if (!num) return res.status(400).json({ error: "Numéro requis" });
@@ -180,8 +175,7 @@ router.get("/", async (req, res) => {
         return res.json({ status: "Déjà connecté" });
     } catch (err) {
         console.error("Pairing error:", err.message);
-        exec("pm2 restart qasim");
-        return res.status(503).json({ error: err.message });
+        return res.status(500).json({ error: err.message });
     }
 });
 

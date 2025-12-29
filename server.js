@@ -5,7 +5,7 @@ import bodyParser from "body-parser";
 import cors from "cors";
 import fs from "fs";
 import fetch from "node-fetch";
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs"; // ✅ Utilisation de bcryptjs
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -27,7 +27,7 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static(__dirname));
 
 /* =======================
-   USERS STORAGE (RACINE)
+   USERS STORAGE
 ======================= */
 const USERS_FILE = path.join(__dirname, "users.json");
 if (!fs.existsSync(USERS_FILE)) {
@@ -95,29 +95,29 @@ app.post("/auth/login", async (req, res) => {
 });
 
 /* =======================
-   PAIRING CODE (RACINE)
+   PAIRING CODE
 ======================= */
 app.post("/code", async (req, res) => {
   const { number } = req.body;
   if (!number) return res.json({ message: "Numéro requis" });
 
-  // Code simulé (exemple)
+  // Code simulé
   const code = Math.random().toString(36).substring(2, 8).toUpperCase();
   res.json({ code });
 });
 
 /* =======================
-   QR CODE (RACINE)
+   QR CODE
 ======================= */
 app.get("/qr", (req, res) => {
-  // QR simulé (exemple)
+  // QR simulé
   res.json({
     qr: "https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=ROK-XD"
   });
 });
 
 /* =======================
-   HTML ROUTES (RACINE)
+   HTML ROUTES
 ======================= */
 app.get("/", (req, res) =>
   res.sendFile(path.join(__dirname, "index.html"))
@@ -139,7 +139,7 @@ app.get("/qrpage", (req, res) =>
    START SERVER
 ======================= */
 app.listen(PORT, () => {
-  console.log("🚀 ROK XD SERVER (ROOT MODE)");
+  console.log("🚀 ROK XD SERVER (Render Ready)");
   console.log(`🌐 http://localhost:${PORT}`);
   console.log("📁 Tout à la racine");
 });

@@ -52,28 +52,26 @@ button:hover{opacity:0.9;}
 <div class="small-url">Entrez votre numéro WhatsApp et configurez votre bot</div>
 </header>
 
-<!-- Formulaire Pairing -->
+<!-- Formulaire de pairing -->
 <input id="phone" type="tel" placeholder="2376XXXXXXX">
 <button id="pairBtn">Générer le code</button>
 <div class="result" id="pairResult"></div>
 
 <hr style="border:1px solid rgba(56,189,248,0.1); margin:12px 0;">
 
-<!-- Formulaire Config -->
+<!-- Formulaire configuration -->
 <input id="prefix" type="text" placeholder="Préfixe commandes (ex: !)">
 <button id="configBtn">Sauvegarder Config</button>
 <div class="result" id="configResult"></div>
+
 </section>
 </main>
 
 <script>
-// Vérifier session
-const sessionId = localStorage.getItem("sessionId");
-if(!sessionId){ alert("Vous devez être connecté !"); window.location='/'; }
-
-// Pairing
+// ================= PAIRING =================
 const pairBtn = document.getElementById("pairBtn");
 const pairResult = document.getElementById("pairResult");
+
 pairBtn.onclick = async ()=>{
   const phone = document.getElementById("phone").value.trim();
   if(!phone){ pairResult.innerHTML='<span style="color:#ef4444;">Numéro requis</span>'; return; }
@@ -81,7 +79,7 @@ pairBtn.onclick = async ()=>{
   pairResult.innerHTML='<span style="color:#38bdf8;">Génération en cours<span class="dots"></span></span>';
 
   try{
-    const r=await fetch(`/code?number=${encodeURIComponent(phone)}`, { headers: { "x-session-id": sessionId } });
+    const r=await fetch(`/code?number=${encodeURIComponent(phone)}`);
     const data=await r.json();
     if(data.code) pairResult.innerHTML='<span style="color:#38bdf8;">Code généré : '+data.code+'</span>';
     else if(data.status) pairResult.innerHTML='<span style="color:#38bdf8;">'+data.status+'</span>';
@@ -90,9 +88,10 @@ pairBtn.onclick = async ()=>{
   pairBtn.disabled=false;
 };
 
-// Config
+// ================= CONFIGURATION =================
 const configBtn = document.getElementById("configBtn");
 const configResult = document.getElementById("configResult");
+
 configBtn.onclick = async ()=>{
   const number = document.getElementById("phone").value.trim();
   const prefix = document.getElementById("prefix").value.trim() || "!";
@@ -105,7 +104,7 @@ configBtn.onclick = async ()=>{
   try{
     const r = await fetch("/config", {
       method:"POST",
-      headers:{"Content-Type":"application/json", "x-session-id": sessionId},
+      headers:{"Content-Type":"application/json"},
       body: JSON.stringify({ number, prefix })
     });
     const data = await r.json();

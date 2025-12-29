@@ -1,7 +1,6 @@
+// pair.js
 import express from "express";
 import fs from "fs-extra";
-import pino from "pino";
-import pn from "awesome-phonenumber";
 import path from "path";
 import { exec } from "child_process";
 import {
@@ -13,7 +12,7 @@ import {
     makeCacheableSignalKeyStore,
     delay
 } from "@whiskeysockets/baileys";
-
+import pn from "awesome-phonenumber";
 import { setupWelcomeBye } from "./commands/welcomeBye.js";
 
 const router = express.Router();
@@ -42,8 +41,8 @@ async function loadCommands() {
     return commands;
 }
 
-// Crée une session WhatsApp et intègre commandes + welcome/bye
-export async function startPairingSession(number) {
+// Crée une session WhatsApp par utilisateur
+export async function startPairingSession(number, user, userPrefix) {
     const dir = path.join(PAIRING_DIR, number);
     await fs.ensureDir(dir);
 
@@ -54,31 +53,30 @@ export async function startPairingSession(number) {
         version,
         auth: {
             creds: state.creds,
-            keys: makeCacheableSignalKeyStore(state.keys, pino({ level: "fatal" }))
+            keys: makeCacheableSignalKeyStore(state.keys)
         },
         printQRInTerminal: false,
-        logger: pino({ level: "silent" }),
         browser: Browsers.windows("Chrome"),
         markOnlineOnConnect: false
     });
 
     sock.ev.on("creds.update", saveCreds);
 
-    // Charger les commandes
     const commands = await loadCommands();
 
-    // Paramètres automatiques par utilisateur
+    // Paramètres par utilisateur
     const userSettings = {
+        prefix: userPrefix || "!",
         autoreact: false,
         autorecording: false,
         autoread: false,
         autotyping: false
     };
 
-    // Setup welcome + bye automatique
+    // Setup welcome + bye
     setupWelcomeBye(sock);
 
-    // Écouter messages pour commandes et auto-actions
+    // Écoute messages pour commandes
     sock.ev.on('messages.upsert', async ({ messages }) => {
         const msg = messages[0];
         if (!msg || !msg.message) return;
@@ -93,11 +91,12 @@ export async function startPairingSession(number) {
 
         if (!text) return;
 
-        const prefix = "!";
-        if (text.startsWith(prefix)) {
-            const args = text.slice(prefix.length).trim().split(/ +/);
-            const cmdName = args.shift().toLowerCase();
+        const prefixUsed = userSettings.prefix || "!";
 
+        // Commandes
+        if (text.startsWith(prefixUsed)) {
+            const args = text.slice(prefixUsed.length).trim().split(/ +/);
+            const cmdName = args.shift().toLowerCase();
             if (commands.has(cmdName)) {
                 try {
                     await commands.get(cmdName).execute(sock, msg, args, commands, userSettings);
@@ -108,32 +107,29 @@ export async function startPairingSession(number) {
             return;
         }
 
-        // Actions automatiques selon userSettings
+        // Auto-actions
         if (userSettings.autoreact) {
             const reactions = ["👍","😂","❤️","😮","😢"];
             const random = reactions[Math.floor(Math.random() * reactions.length)];
             await sock.sendMessage(jid, { react: { text: random, key: msg.key } });
         }
 
-        if (userSettings.autoread) {
-            await sock.readMessages([msg.key]);
-        }
-
+        if (userSettings.autoread) await sock.readMessages([msg.key]);
         if (userSettings.autorecording) {
             await sock.sendPresenceUpdate("recording", jid);
             setTimeout(() => sock.sendPresenceUpdate("available", jid), 5000);
         }
-
         if (userSettings.autotyping) {
             await sock.sendPresenceUpdate("composing", jid);
             setTimeout(() => sock.sendPresenceUpdate("available", jid), 5000);
         }
     });
 
+    // Gestion connexion / QR
     sock.ev.on("connection.update", async ({ connection, lastDisconnect, qr }) => {
         if (qr) {
             const code = qr?.match(/.{1,4}/g)?.join("-");
-            await fs.writeJSON(path.join(dir, "pairing.json"), { code }, { spaces: 2 });
+            await fs.writeJSON(path.join(dir, "pairing.json"), { code, user, prefix: userSettings.prefix }, { spaces: 2 });
         }
 
         if (connection === "close") {
@@ -142,17 +138,18 @@ export async function startPairingSession(number) {
                 await removeFile(dir);
             } else {
                 console.log("🔄 Redémarrage session...", number);
-                setTimeout(() => startPairingSession(number), 2000);
+                setTimeout(() => startPairingSession(number, user, userPrefix), 2000);
             }
         }
     });
 
+    // Générer QR si pas déjà connecté
     if (!sock.authState.creds.registered) {
         await delay(1500);
         try {
             const pairingCode = await sock.requestPairingCode(number);
             const formatted = pairingCode?.match(/.{1,4}/g)?.join("-") || pairingCode;
-            await fs.writeJSON(path.join(dir, "pairing.json"), { code: formatted }, { spaces: 2 });
+            await fs.writeJSON(path.join(dir, "pairing.json"), { code: formatted, user, prefix: userSettings.prefix }, { spaces: 2 });
             return formatted;
         } catch (err) {
             await removeFile(dir);
@@ -163,19 +160,22 @@ export async function startPairingSession(number) {
     return null; // Déjà connecté
 }
 
-// Route GET pour générer le pairing
-router.get("/", async (req, res) => {
+// Route GET /code
+router.get("/code", async (req, res) => {
     let num = req.query.number;
+    const user = req.query.user || "bot";
+    const prefix = req.query.prefix || "!";
+
     if (!num) return res.status(400).json({ error: "❌ Numéro requis" });
 
     try {
         num = formatNumber(num);
-        const code = await startPairingSession(num);
+        const code = await startPairingSession(num, user, prefix);
         if (code) return res.json({ code });
         else return res.json({ status: "✅ Déjà connecté" });
     } catch (err) {
         console.error("Pairing error:", err);
-        exec("pm2 restart qasim");
+        exec("pm2 restart qasim"); // redémarrage process en cas d'erreur critique
         return res.status(503).json({ error: err.message });
     }
 });

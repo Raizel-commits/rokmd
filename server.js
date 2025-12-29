@@ -4,7 +4,6 @@ import { fileURLToPath } from "url";
 import bodyParser from "body-parser";
 import cors from "cors";
 import fs from "fs";
-import fetch from "node-fetch";
 import bcrypt from "bcryptjs";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -13,22 +12,12 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 8000;
 
-// =====================
-// CONFIG reCAPTCHA
-// =====================
-const RECAPTCHA_SECRET = "6Lf3pzosAAAAALxob2jVTiaomg0xIpREfXBvGONB";
-
-// =====================
-// MIDDLEWARE
-// =====================
 app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static(__dirname));
 
-// =====================
 // USERS & SESSIONS
-// =====================
 const USERS_FILE = path.join(__dirname, "users.json");
 if (!fs.existsSync(USERS_FILE)) fs.writeFileSync(USERS_FILE, JSON.stringify([]));
 
@@ -39,34 +28,12 @@ function saveSessions(sessions) { fs.writeFileSync(SESSIONS_FILE, JSON.stringify
 function loadSessions() { return JSON.parse(fs.readFileSync(SESSIONS_FILE)); }
 
 // =====================
-// CAPTCHA CHECK
-// =====================
-async function verifyCaptcha(token) {
-  try {
-    const res = await fetch(
-      "https://www.google.com/recaptcha/api/siteverify",
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: `secret=${RECAPTCHA_SECRET}&response=${token}`
-      }
-    );
-    const data = await res.json();
-    return data.success === true;
-  } catch {
-    return false;
-  }
-}
-
-// =====================
 // AUTH ROUTES
 // =====================
 
 // REGISTER
 app.post("/auth/register", async (req, res) => {
-  const { username, email, password, recaptcha } = req.body;
-
-  if (!await verifyCaptcha(recaptcha)) return res.status(403).json({ message: "Robot détecté" });
+  const { username, email, password } = req.body;
 
   const users = JSON.parse(fs.readFileSync(USERS_FILE));
   if (users.find(u => u.email === email)) return res.json({ message: "Email déjà utilisé" });
@@ -80,9 +47,7 @@ app.post("/auth/register", async (req, res) => {
 
 // LOGIN
 app.post("/auth/login", async (req, res) => {
-  const { email, password, recaptcha } = req.body;
-
-  if (!await verifyCaptcha(recaptcha)) return res.status(403).json({ message: "Robot détecté" });
+  const { email, password } = req.body;
 
   const users = JSON.parse(fs.readFileSync(USERS_FILE));
   const user = users.find(u => u.email === email);
@@ -114,7 +79,7 @@ function requireAuth(req, res, next) {
 // =====================
 // PAIRING & CONFIG
 // =====================
-app.get("/code", requireAuth, async (req, res) => {
+app.get("/code", requireAuth, (req, res) => {
   const { number } = req.query;
   if (!number) return res.json({ error: "Numéro requis" });
 
@@ -128,9 +93,6 @@ app.post("/config", requireAuth, (req, res) => {
   res.json({ status: `Config sauvegardée: préfixe = ${prefix || "!"}` });
 });
 
-// =====================
-// QR CODE
-// =====================
 app.get("/qr", requireAuth, (req, res) => {
   res.json({ qr: "https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=ROK-XD" });
 });
@@ -143,10 +105,7 @@ app.get("/register", (req, res) => res.sendFile(path.join(__dirname, "register.h
 app.get("/pair", (req, res) => res.sendFile(path.join(__dirname, "pair.html")));
 app.get("/qrpage", (req, res) => res.sendFile(path.join(__dirname, "qr.html")));
 
-// =====================
-// START SERVER
-// =====================
 app.listen(PORT, () => {
-  console.log("🚀 ROK XD SERVER (Render Ready)");
+  console.log("🚀 ROK XD SERVER (sans reCAPTCHA)");
   console.log(`🌐 http://localhost:${PORT}`);
 });

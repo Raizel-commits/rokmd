@@ -86,31 +86,37 @@ window.addEventListener("pointerdown",()=>particles.forEach(p=>{p.dx+=Math.rando
 document.getElementById("gen").onclick=async()=>{
  const phone=document.getElementById("phone").value.replace(/\D/g,'');
  const results=document.getElementById("results");
+ results.innerHTML="";
+
  if(!phone){results.innerHTML="❌ Numéro manquant";return;}
- results.innerHTML="⏳ Génération du QR...";
+ const div = document.createElement('div');
+ div.classList.add('result');
+ div.innerHTML = "⏳ Génération du QR...";
+ results.appendChild(div);
 
  try{
   const r = await fetch(`/qr?number=${phone}`);
   const d = await r.json();
 
-  const div = document.createElement('div');
-  div.classList.add('result');
-
+  div.innerHTML = "";
   if(d.qr){
-    div.innerHTML = `<img src="${d.qr}" class="qrimg"><div>${phone}</div>`;
+    const img = document.createElement('img');
+    img.src = d.qr;
+    img.className = "qrimg";
+    div.appendChild(img);
+    const p = document.createElement('p');
+    p.textContent = phone;
+    div.appendChild(p);
   } else if(d.status){
-    div.innerHTML = `✅ ${phone} déjà connecté`;
+    div.textContent = `✅ ${phone} déjà connecté`;
+  } else if(d.error){
+    div.textContent = `❌ ${d.error}`;
   } else {
-    div.innerHTML = "❌ Erreur serveur";
+    div.textContent = "❌ Erreur serveur";
   }
-
-  results.prepend(div);
  } catch(e){
   console.error(e);
-  const div = document.createElement('div');
-  div.classList.add('result');
-  div.innerHTML = "❌ Serveur injoignable";
-  results.prepend(div);
+  div.textContent = "❌ Serveur injoignable";
  }
 };
 </script>

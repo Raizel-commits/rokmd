@@ -4,7 +4,6 @@ import express from "express";
 import fs from "fs-extra";
 import path from "path";
 import pino from "pino";
-import bcrypt from 'bcrypt';
 import pn from "awesome-phonenumber";
 import {
   makeWASocket,

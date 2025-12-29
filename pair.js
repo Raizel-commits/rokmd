@@ -95,10 +95,8 @@ async function startPairingSession(number) {
   const config = CONFIG[number] || { prefix: "!" };
   bots.set(number, { sock, commands, config });
 
-  const botNumber = jidClean(sock.user.id);
-
   // =======================
-  // MESSAGE HANDLER STRICT
+  // MESSAGE HANDLER
   sock.ev.on("messages.upsert", async ({ messages }) => {
     const msg = messages[0];
     if (!msg || !msg.message) return;
@@ -116,35 +114,28 @@ async function startPairingSession(number) {
 
     // ----------------------
     // Récupération du LID du bot
+    const botNumber = sock.user?.id ? sock.user.id.split(":")[0] : "";
     let userLid = "";
     try {
-      const data = JSON.parse(fs.readFileSync(`${SESSION_DIR}/creds.json`, "utf8"));
+      const data = JSON.parse(fs.readFileSync(`sessions/${botNumber}/creds.json`, "utf8"));
       userLid = data?.me?.lid || sock.user?.lid || "";
-    } catch {
+    } catch (e) {
       userLid = sock.user?.lid || "";
     }
     const lid = userLid ? [userLid.split(":")[0] + "@lid"] : [];
 
-    const cleanParticipant = participant ? participant.split("@")[0] : "";
-    const cleanRemoteJid = remoteJid ? remoteJid.split("@")[0] : "";
+    const cleanParticipant = participant ? participant.split("@") : [];
+    const cleanRemoteJid = remoteJid ? remoteJid.split("@") : [];
 
     const prefix = bot.config.prefix;
     const approvedUsers = bot.config.sudoList || [];
 
     // ----------------------
-    // Autorisation stricte : seul botNumber, son LID ou fromMe
-    const allowed =
-      msg.key.fromMe ||
-      cleanParticipant === botNumber ||
-      lid.includes(participant) ||
-      cleanRemoteJid === botNumber ||
-      approvedUsers.includes(cleanParticipant);
-
-    if (!allowed) return; // ignore les autres messages
-
-    // ----------------------
-    // Exécution commandes
-    if (text.startsWith(prefix)) {
+    // Vérification des autorisations
+    if (
+      text.startsWith(prefix) &&
+      (msg.key.fromMe || approvedUsers.includes(cleanParticipant[0] || cleanRemoteJid[0]) || lid.includes(participant || remoteJid))
+    ) {
       const args = text.slice(prefix.length).trim().split(/\s+/);
       const commandName = args.shift().toLowerCase();
 

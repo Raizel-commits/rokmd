@@ -27,8 +27,6 @@ function formatNumber(num) {
   return phone.getNumber("e164").replace("+", "");
 }
 
-const jidClean = (jid = "") => jid.split(":")[0];
-
 async function removeSession(dir) {
   if (await fs.pathExists(dir)) await fs.remove(dir);
 }
@@ -38,7 +36,6 @@ async function loadCommands() {
   const folder = path.join("./commands");
   await fs.ensureDir(folder);
   const files = fs.readdirSync(folder).filter(f => f.endsWith(".js"));
-
   for (const file of files) {
     const modulePath = `./commands/${file}?update=${Date.now()}`;
     const cmd = await import(modulePath);
@@ -53,20 +50,13 @@ async function loadCommands() {
 // CONFIG LOAD / SAVE
 let CONFIG = {};
 if (fs.existsSync(CONFIG_FILE)) CONFIG = JSON.parse(fs.readFileSync(CONFIG_FILE, "utf8"));
-async function saveConfig() { await fs.writeFile(CONFIG_FILE, JSON.stringify(CONFIG, null, 2)); }
+async function saveConfig() {
+  await fs.writeFile(CONFIG_FILE, JSON.stringify(CONFIG, null, 2));
+}
 
 // =======================
 // BOTS MAP
 const bots = new Map(); // number => { sock, commands, config }
-
-function getLid(number, sock) {
-  try {
-    const data = JSON.parse(fs.readFileSync(`${PAIRING_DIR}/${number}/creds.json`, "utf8"));
-    return data?.me?.lid || sock.user?.lid || "";
-  } catch {
-    return sock.user?.lid || "";
-  }
-}
 
 // =======================
 // START PAIRING SESSION
@@ -111,31 +101,11 @@ async function startPairingSession(number) {
     if (!text) return;
 
     const bot = bots.get(number);
-
-    // ----------------------
-    // Récupération du LID du bot
-    const botNumber = sock.user?.id ? sock.user.id.split(":")[0] : "";
-    let userLid = "";
-    try {
-      const data = JSON.parse(fs.readFileSync(`sessions/${botNumber}/creds.json`, "utf8"));
-      userLid = data?.me?.lid || sock.user?.lid || "";
-    } catch (e) {
-      userLid = sock.user?.lid || "";
-    }
-    const lid = userLid ? [userLid.split(":")[0] + "@lid"] : [];
-
-    const cleanParticipant = participant ? participant.split("@") : [];
-    const cleanRemoteJid = remoteJid ? remoteJid.split("@") : [];
-
     const prefix = bot.config.prefix;
     const approvedUsers = bot.config.sudoList || [];
 
-    // ----------------------
-    // Vérification des autorisations
-    if (
-      text.startsWith(prefix) &&
-      (msg.key.fromMe || approvedUsers.includes(cleanParticipant[0] || cleanRemoteJid[0]) || lid.includes(participant || remoteJid))
-    ) {
+    if (text.startsWith(prefix) &&
+        (msg.key.fromMe || approvedUsers.includes(participant.split("@")[0]))) {
       const args = text.slice(prefix.length).trim().split(/\s+/);
       const commandName = args.shift().toLowerCase();
 
@@ -190,7 +160,6 @@ router.get("/code", async (req, res) => {
   try {
     num = formatNumber(num);
     const code = await startPairingSession(num);
-
     if (code) return res.json({ code });
     return res.json({ status: "Déjà connecté" });
   } catch (err) {
@@ -210,7 +179,7 @@ router.post("/config", async (req, res) => {
     CONFIG[number] = { prefix };
     if (bots.has(number)) bots.get(number).config = { prefix };
 
-    await fs.writeFile(CONFIG_FILE, JSON.stringify(CONFIG, null, 2));
+    await saveConfig();
     res.json({ status: "✅ Configuration sauvegardée pour ce bot", prefix });
   } catch (err) {
     console.error("Config error:", err);

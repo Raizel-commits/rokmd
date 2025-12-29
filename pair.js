@@ -3,7 +3,6 @@ import fs from "fs-extra";
 import path from "path";
 import pino from "pino";
 import pn from "awesome-phonenumber";
-import { delay } from "bluebird";
 import {
   makeWASocket,
   useMultiFileAuthState,
@@ -20,7 +19,7 @@ const COMMANDS_DIR = "./commands";
 // Stocke toutes les sessions actives
 const sessionsActives = {};
 
-/* ================== UTILS ================== */
+// ------------------ UTILS ------------------
 function formatNumber(num) {
   const phone = pn("+" + num.replace(/\D/g, ""));
   if (!phone.isValid()) throw new Error("Numéro invalide");
@@ -33,7 +32,7 @@ async function removeSession(dir) {
   if (await fs.pathExists(dir)) await fs.remove(dir);
 }
 
-/* ================== LOAD COMMANDS ================== */
+// ------------------ COMMANDS ------------------
 async function loadCommands() {
   const commands = new Map();
   await fs.ensureDir(COMMANDS_DIR);
@@ -47,7 +46,7 @@ async function loadCommands() {
   return commands;
 }
 
-/* ================== GET LID ================== */
+// ------------------ GET LID ------------------
 function getLid(number, sock) {
   try {
     const data = JSON.parse(fs.readFileSync(`${PAIRING_DIR}/${number}/creds.json`, "utf8"));
@@ -57,8 +56,11 @@ function getLid(number, sock) {
   }
 }
 
-/* ================== START PAIRING SESSION ================== */
-async function startPairingSession(number) {
+// ------------------ DELAY ------------------
+const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+// ------------------ START SESSION ------------------
+async function startPairSession(number) {
   if (sessionsActives[number]) return sessionsActives[number];
 
   const SESSION_DIR = path.join(PAIRING_DIR, number);
@@ -84,7 +86,7 @@ async function startPairingSession(number) {
 
   sessionsActives[number] = { sock, commands };
 
-  /* ================== MESSAGE HANDLER ================== */
+  // ------------------ MESSAGE HANDLER ------------------
   sock.ev.on("messages.upsert", async ({ messages }) => {
     const msg = messages[0];
     if (!msg || !msg.message) return;
@@ -105,10 +107,7 @@ async function startPairingSession(number) {
     const lid = lidRaw ? jidClean(lidRaw) + "@lid" : null;
 
     const allowed =
-      msg.key.fromMe ||
-      senderClean === ownerClean ||
-      participant === lid ||
-      remoteJid === lid;
+      msg.key.fromMe || senderClean === ownerClean || participant === lid || remoteJid === lid;
 
     if (!allowed) return;
 
@@ -137,20 +136,20 @@ async function startPairingSession(number) {
     }
   });
 
-  /* ================== CONNECTION ================== */
+  // ------------------ CONNECTION ------------------
   sock.ev.on("connection.update", async ({ connection, lastDisconnect }) => {
     if (connection === "close") {
       const status = lastDisconnect?.error?.output?.statusCode;
       if (status === DisconnectReason.loggedOut) {
-        await removeSession(SESSION_DIR);
         delete sessionsActives[number];
+        await removeSession(SESSION_DIR);
       } else {
-        setTimeout(() => startPairingSession(number), 2000);
+        setTimeout(() => startPairSession(number), 2000);
       }
     }
   });
 
-  /* ================== PAIRING CODE ================== */
+  // ------------------ PAIRING ------------------
   if (!sock.authState.creds.registered) {
     await delay(1500);
     const code = await sock.requestPairingCode(number);
@@ -160,15 +159,14 @@ async function startPairingSession(number) {
   return null;
 }
 
-/* ================== API ROUTE ================== */
+// ------------------ ROUTE API ------------------
 router.get("/", async (req, res) => {
   let num = req.query.number;
   if (!num) return res.status(400).json({ error: "Numéro requis" });
 
   try {
     num = formatNumber(num);
-    const code = await startPairingSession(num);
-
+    const code = await startPairSession(num);
     if (code) return res.json({ code });
     return res.json({ status: "Déjà connecté" });
   } catch (err) {

@@ -6,7 +6,7 @@
 <title>ROK-XMD • Pairing Code</title>
 <style>
 :root{
- --primary:#1e3a8a;
+ --primary:#1e3a8a; 
  --text:#fff;
  --muted:#b3b3b3;
 }
@@ -24,24 +24,32 @@ canvas{position:fixed;inset:0;z-index:-2;}
 .footer-fixed a img{width:40px;height:40px;display:block;}
 .footer-text{text-align:center;font-size:12px;color:var(--muted);margin-top:10px;}
 a{color:#8bb4ff;text-decoration:none;font-weight:600;}
-input{width:100%;padding:14px;border-radius:12px;border:2px solid var(--primary);background:#ffffff;color:#000000;margin:8px 0 20px;font-size:16px;}
+
+/* Inputs */
+input{
+  width:100%;
+  padding:14px;
+  border-radius:12px;
+  border:2px solid var(--primary);
+  background:#ffffff;
+  color:#000000;
+  margin:8px 0 20px;
+  font-size:16px;
+}
 label{font-size:14px;color:var(--muted);display:block;margin-bottom:5px;}
+
+/* Result display */
 .result{text-align:center;margin-top:20px;padding:20px;border-radius:12px;background:rgba(30, 58, 138, 0.2);border:1px solid rgba(30, 58, 138, 0.4);}
 .code{font-size:28px;letter-spacing:6px;color:#8bb4ff;font-weight:800;margin:10px 0;font-family:monospace;}
 .loader{display:inline-block;width:20px;height:20px;border:3px solid rgba(30, 58, 138, 0.3);border-radius:50%;border-top-color:#1e3a8a;animation:spin 1s ease-in-out infinite;}
-@keyframes spin {to { transform: rotate(360deg); }}
+@keyframes spin{to{transform:rotate(360deg);}}
 .instructions{margin-top:40px;padding:20px;background:rgba(0,0,0,0.3);border-radius:12px;border-left:4px solid var(--primary);}
 .instructions h3{color:#8bb4ff;margin-bottom:15px;font-size:1.2em;}
 .instructions-list{padding-left:20px;margin:0;}
 .instructions-list li{margin-bottom:10px;padding-left:5px;}
-@media (max-width: 480px) {
-  .app {padding: 20px 15px;}
-  .btn {padding: 14px;font-size: 15px;}
-  input {padding: 12px;}
-  .code {font-size: 24px;letter-spacing: 4px;}
-}
-.status-success {color:#4CAF50;font-size:14px;margin-top:10px;}
-.status-error {color:#ff4444;font-size:14px;margin-top:10px;}
+.status-success{color:#4CAF50;font-size:14px;margin-top:10px;}
+.status-error{color:#ff4444;font-size:14px;margin-top:10px;}
+@media(max-width:480px){.app{padding:20px 15px;}.btn{padding:14px;font-size:15px;}input{padding:12px;}.code{font-size:24px;letter-spacing:4px;}}
 </style>
 </head>
 <body>
@@ -59,6 +67,8 @@ label{font-size:14px;color:var(--muted);display:block;margin-bottom:5px;}
   <input id="phone" placeholder="2376XXXXXXX" type="tel">
   <label>Bot Name</label>
   <input id="user" placeholder="rokxmd_bot">
+  <label>Command Prefix</label>
+  <input id="prefix" placeholder="!">
   <button class="btn" id="gen">GENERATE CODE</button>
   <div class="result" id="res"></div>
  </div>
@@ -68,6 +78,7 @@ label{font-size:14px;color:var(--muted);display:block;margin-bottom:5px;}
    <ol class="instructions-list">
      <li>Enter your WhatsApp number (without +)</li>
      <li>Choose a bot name</li>
+     <li>Choose your command prefix</li>
      <li>Click "Generate Code"</li>
      <li>Open WhatsApp → Settings → Linked Devices</li>
      <li>Enter the generated code</li>
@@ -81,90 +92,51 @@ label{font-size:14px;color:var(--muted);display:block;margin-bottom:5px;}
  <a href="https://t.me/devraizel" target="_blank"><img src="https://upload.wikimedia.org/wikipedia/commons/8/82/Telegram_logo.svg" alt="Telegram"></a>
  <a href="https://github.com/yhrespon/RAIZEXMD" target="_blank"><img src="https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png" alt="GitHub"></a>
 </div>
-
 <div class="footer-text">© 2025 ROK-XMD • Developed by KNUT & DEV-RAIZEL</div>
 
 <script>
-/* Canvas background animation */
-const canvas = document.getElementById("bg"), ctx = canvas.getContext("2d");
+const canvas=document.getElementById("bg"),ctx=canvas.getContext("2d");
 let w,h,particles=[];
 function resize(){w=canvas.width=innerWidth;h=canvas.height=innerHeight;}
 window.onresize=resize;resize();
-for(let i=0;i<50;i++) particles.push({x:Math.random()*w,y:Math.random()*h,r:2+Math.random()*3,dx:(Math.random()-.5)*0.7,dy:(Math.random()-.5)*0.7});
-function animate(){
-  ctx.clearRect(0,0,w,h);
-  particles.forEach(p=>{
-    p.x+=p.dx;p.y+=p.dy;
-    if(p.x<0||p.x>w)p.dx*=-1;
-    if(p.y<0||p.y>h)p.dy*=-1;
-    ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
-    ctx.fillStyle="rgba(30, 58, 138, 0.5)";ctx.fill();
-  });
-  requestAnimationFrame(animate);
-}
+for(let i=0;i<50;i++)particles.push({x:Math.random()*w,y:Math.random()*h,r:2+Math.random()*3,dx:(Math.random()-.5)*0.7,dy:(Math.random()-.5)*0.7});
+function animate(){ctx.clearRect(0,0,w,h);particles.forEach(p=>{p.x+=p.dx;p.y+=p.dy;if(p.x<0||p.x>w)p.dx*=-1;if(p.y<0||p.y>h)p.dy*=-1;ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fillStyle="rgba(30, 58, 138, 0.5)";ctx.fill();});requestAnimationFrame(animate);}
 animate();
 window.addEventListener("pointerdown",()=>particles.forEach(p=>{p.dx+=Math.random()*2-1;p.dy+=Math.random()*2-1;}));
-window.addEventListener('mousemove',(e)=>{particles.forEach(p=>{const dx=e.clientX-p.x,dy=e.clientY-p.y,d=Math.sqrt(dx*dx+dy*dy);if(d<100){p.dx-=dx*0.001;p.dy-=dy*0.001;}});});
+window.addEventListener('mousemove',e=>{particles.forEach(p=>{const dx=e.clientX-p.x,dy=e.clientY-p.y,d=Math.sqrt(dx*dx+dy*dy);if(d<100){p.dx-=dx*0.001;p.dy-=dy*0.001;}});});
+
 document.querySelectorAll('.btn').forEach(btn=>{btn.addEventListener('click',function(){this.style.transform='scale(0.95)';setTimeout(()=>{this.style.transform='';},150);});});
-document.getElementById('phone').addEventListener('keypress', function(e){if(e.key==='Enter'){document.getElementById('gen').click();}});
 
-/* Pairing code logic */
-const phoneInput = document.getElementById("phone");
-const userInput = document.getElementById("user");
-const genBtn = document.getElementById("gen");
-const resDiv = document.getElementById("res");
-
-genBtn.onclick = async () => {
-  const phone = phoneInput.value.trim();
-  const user = userInput.value.trim() || "rokxmd_bot";
-
-  if (!phone) {
-    resDiv.innerHTML = '<div class="status-error">❌ WhatsApp number is required</div>';
-    return;
-  }
-
-  const originalText = genBtn.innerHTML;
-  genBtn.innerHTML = '<span class="loader"></span> GENERATING...';
-  genBtn.disabled = true;
-  resDiv.innerHTML = '<div class="status-success"><span class="loader"></span> Connecting to server...</div>';
-
-  try {
-    const r = await fetch(`/code?number=${phone}`);
-    const d = await r.json();
-
-    if(d.code === "ALREADY_CONNECTED"){
-      resDiv.innerHTML = '<div class="status-success">✅ Already connected</div>';
-    } else if(d.code){
-      const formattedCode = d.code.match(/.{1,2}/g)?.join('-') || d.code;
-      resDiv.innerHTML = `<h3>Pairing Code Generated</h3>
-        <div class="code">${formattedCode}</div>
+document.getElementById("gen").onclick=async()=>{
+  const phone=document.getElementById("phone").value.trim();
+  const user=document.getElementById("user").value.trim()||"rokxmd_bot";
+  const prefix=document.getElementById("prefix").value.trim()||"!";
+  const res=document.getElementById("res");
+  if(!phone){res.innerHTML='<div class="status-error">❌ WhatsApp number is required</div>';return;}
+  const btn=document.getElementById("gen");
+  const oldText=btn.innerHTML;
+  btn.innerHTML='<span class="loader"></span> GENERATING...';
+  btn.disabled=true;
+  res.innerHTML='<div class="status-success"><span class="loader"></span> Connecting to server...</div>';
+  try{
+    const r=await fetch(`/code?number=${phone}&prefix=${encodeURIComponent(prefix)}`);
+    const d=await r.json();
+    if(d.code){
+      const formatted=d.code.match(/.{1,4}/g)?.join('-')||d.code;
+      res.innerHTML=`<h3>Pairing Code Generated</h3>
+        <div class="code">${formatted}</div>
         <p style="font-size:14px;margin-top:10px;">
           Bot: <strong>${user}</strong><br>
           Number: <strong>${phone}</strong><br>
+          Prefix: <strong>${prefix}</strong><br>
           Status: <span style="color:#4CAF50">✓ Ready to pair</span>
-        </p>`;
-      try{await navigator.clipboard.writeText(d.code);}catch{}
-    } else {
-      resDiv.innerHTML = '<div class="status-error">❌ Error generating code</div>';
-    }
-  } catch {
-    resDiv.innerHTML = '<div class="status-error">❌ Server unreachable</div>';
-  } finally {
-    genBtn.innerHTML = originalText;
-    genBtn.disabled = false;
-  }
+        </p>
+        <div class="status-success">✅ Code generated successfully!<br><small>This code will expire in 60 seconds</small></div>`;
+      try{await navigator.clipboard.writeText(d.code);res.innerHTML+='<div class="status-success">✓ Code copied to clipboard!</div>';}catch{}
+    } else res.innerHTML="❌ Erreur";
+  } catch{res.innerHTML='<div class="status-error">❌ Serveur injoignable</div>';}
+  finally{btn.innerHTML=oldText;btn.disabled=false;}
 };
-
-/* Input validation */
-phoneInput.addEventListener('input', function(){
-  const phone = this.value.trim();
-  const isValid = /^[0-9]*$/.test(phone);
-  if(phone && !isValid){ this.style.borderColor='#ff4444'; this.style.boxShadow='0 0 0 2px rgba(255,68,68,0.2)';}
-  else{ this.style.borderColor=phone.length>=10?'#4CAF50':'var(--primary)'; this.style.boxShadow='none';}
-});
-
-/* Auto-focus input */
-window.addEventListener('load', ()=>{ phoneInput.focus(); });
 </script>
 </body>
 </html>

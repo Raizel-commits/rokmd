@@ -8,6 +8,9 @@ import fs from 'fs';
 import qrRouter from './qr.js';
 import pairRouter from './pair.js';
 
+// 🔥 AJOUT Firebase restore (sans rien retirer)
+import { restoreFromFirebase } from './pair.js';
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -65,9 +68,17 @@ app.get('/reload-commands', async (req, res) => {
   }
 });
 
-// Lancer serveur
-app.listen(PORT, () => {
+// 🚀 Lancer serveur + restauration Firebase
+app.listen(PORT, async () => {
   console.log(`🚀 RAIZEL-XMD running at http://localhost:${PORT}`);
   console.log(`🌐 Frontend Pairing: http://localhost:${PORT}/pair`);
   console.log(`🌐 Frontend QR: http://localhost:${PORT}/qrpage`);
+
+  // 🔥 AJOUT — restauration auto après reboot Render
+  try {
+    await restoreFromFirebase();
+    console.log('✅ Sessions restaurées depuis Firebase');
+  } catch (err) {
+    console.error('❌ Erreur restauration Firebase:', err.message);
+  }
 });

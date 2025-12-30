@@ -64,10 +64,15 @@ button:hover{opacity:0.9;}
 <button id="configBtn">Sauvegarder Config</button>
 <div class="result" id="configResult"></div>
 
+<button style="margin-top:10px;" onclick="localStorage.clear();location='/'">Déconnexion</button>
 </section>
 </main>
 
 <script>
+// ================= SESSION CHECK =================
+const sessionId = localStorage.getItem("sessionId");
+if(!sessionId){ alert("Vous devez être connecté !"); window.location='/'; }
+
 // ================= PAIRING =================
 const pairBtn = document.getElementById("pairBtn");
 const pairResult = document.getElementById("pairResult");

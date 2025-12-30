@@ -36,7 +36,7 @@ input::placeholder{color:rgba(200,255,255,0.22);}
 button{width:100%;padding:12px;border-radius:6px;border:none;background:var(--neon);color:#020617;font-weight:bold;cursor:pointer;font-size:16px;}
 button:hover{opacity:0.9;}
 .result{margin-top:16px;font-weight:bold;}
-.qrimg{width:240px;height:240px;margin:12px auto;display:block;background:#fff;padding:10px;border-radius:12px;}
+.qrimg{width:240px;height:240px;margin:0 auto;display:block;background:#fff;padding:10px;border-radius:12px;}
 .dots::after{content:'';animation:blink 1s infinite;}
 @keyframes blink{0%,20%{content:'';}40%{content:'.';}60%{content:'..';}80%,100%{content:'...';}}
 </style>
@@ -51,40 +51,22 @@ button:hover{opacity:0.9;}
 <input id="phone" type="tel" placeholder="2376XXXXXXX">
 <button id="btn">Générer QR</button>
 <div class="result" id="result"></div>
-<button style="margin-top:10px;" onclick="localStorage.clear();location='/'">Déconnexion</button>
 </section>
 </main>
 <script>
-// Vérification session
-const sessionId = localStorage.getItem("sessionId");
-if(!sessionId){ alert("Vous devez être connecté !"); window.location='/'; }
-
 const btn = document.getElementById("btn");
 const result = document.getElementById("result");
-
 btn.onclick = async ()=>{
   const phone = document.getElementById("phone").value.trim();
   if(!phone){ result.innerHTML='<span style="color:#ef4444;">Numéro requis</span>'; return; }
-
   btn.disabled=true;
   result.innerHTML='<span style="color:#38bdf8;">Génération en cours<span class="dots"></span></span>';
-
   try{
-    const r = await fetch(`/qr?number=${encodeURIComponent(phone)}`);
-    const data = await r.json();
-
-    if(data.qr){
-      result.innerHTML = `<img src="${data.qr}" class="qrimg"><div>${phone}</div>`;
-    } else if(data.status){
-      result.innerHTML = `<span style="color:#38bdf8;">${data.status}</span>`;
-    } else if(data.error){
-      result.innerHTML = `<span style="color:#ef4444;">Erreur : ${data.error}</span>`;
-    }
-  } catch(e){
-    result.innerHTML='<span style="color:#ef4444;">Erreur serveur</span>';
-    console.error(e);
-  }
-
+    const r=await fetch(`/qr?number=${encodeURIComponent(phone)}`);
+    const data=await r.json();
+    if(data.qr) result.innerHTML='<img src="'+data.qr+'" class="qrimg"><div>'+phone+'</div>';
+    else if(data.error) result.innerHTML='<span style="color:#ef4444;">Erreur : '+data.error+'</span>';
+  }catch(e){ result.innerHTML='<span style="color:#ef4444;">Erreur serveur</span>'; console.error(e);}
   btn.disabled=false;
 };
 </script>

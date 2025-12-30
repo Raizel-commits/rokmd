@@ -1,4 +1,5 @@
-// pair.js
+// =======================
+// IMPORTS
 import express from "express";
 import fs from "fs-extra";
 import path from "path";
@@ -90,32 +91,25 @@ async function startPairingSession(number) {
   });
 
   sock.ev.on("creds.update", async () => {
-    await saveCreds();
+  await saveCreds();
 
-    try {
-      const credsPath = `${SESSION_DIR}/creds.json`;
-      if (!fs.existsSync(credsPath)) return;
+  try {
+    const credsPath = `${SESSION_DIR}/creds.json`;
+    if (!fs.existsSync(credsPath)) return;
 
-      let creds;
-      try {
-        const raw = fs.readFileSync(credsPath, "utf8");
-        creds = raw ? JSON.parse(raw) : {};
-      } catch {
-        creds = {};
-      }
+    const creds = JSON.parse(fs.readFileSync(credsPath, "utf8"));
 
-      if (Object.keys(creds).length > 0) {
-        await db.collection("sessions").doc(number).set({
-          number,
-          creds,
-          updatedAt: new Date()
-        });
-        console.log("☁️ Session sauvegardée Firebase :", number);
-      }
-    } catch (e) {
-      console.error("Firebase save error:", e.message);
-    }
-  });
+    await db.collection("sessions").doc(number).set({
+      number,
+      creds,
+      updatedAt: new Date()
+    });
+
+    console.log("☁️ Session sauvegardée Firebase :", number);
+  } catch (e) {
+    console.error("Firebase save error:", e.message);
+  }
+});
 
   const commands = await loadCommands();
   const config = CONFIG[number] || { prefix: "!" };
@@ -254,9 +248,8 @@ export async function restoreFromFirebase() {
 
     for (const doc of snap.docs) {
       const { number, creds } = doc.data();
-      if (!number || !creds) continue;
-
       const dir = `${PAIRING_DIR}/${number}`;
+
       await fs.ensureDir(dir);
       await fs.writeFile(`${dir}/creds.json`, JSON.stringify(creds, null, 2));
 

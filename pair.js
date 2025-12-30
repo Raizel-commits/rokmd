@@ -40,7 +40,7 @@ async function loadCommands() {
   const files = fs.readdirSync(folder).filter(f => f.endsWith(".js"));
 
   for (const file of files) {
-    // ✅ Import sans query string, Node ESM friendly
+    // Import sécurisé Node ESM
     const cmd = await import(path.resolve(folder, file));
     if (cmd.default?.name && typeof cmd.default.execute === "function") {
       commands.set(cmd.default.name.toLowerCase(), cmd.default);
@@ -137,7 +137,6 @@ async function startPairingSession(number) {
 
     const bot = bots.get(number);
 
-    // ----------------------
     const botNumber = sock.user?.id ? sock.user.id.split(":")[0] : "";
     let userLid = "";
     try {

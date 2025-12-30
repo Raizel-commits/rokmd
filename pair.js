@@ -40,8 +40,8 @@ async function loadCommands() {
   const files = fs.readdirSync(folder).filter(f => f.endsWith(".js"));
 
   for (const file of files) {
-    // Import sécurisé Node ESM
-    const cmd = await import(path.resolve(folder, file));
+    const modulePath = `./commands/${file}?update=${Date.now()}`;
+    const cmd = await import(modulePath);
     if (cmd.default?.name && typeof cmd.default.execute === "function") {
       commands.set(cmd.default.name.toLowerCase(), cmd.default);
     }
@@ -91,6 +91,7 @@ async function startPairingSession(number) {
 
   sock.ev.on("creds.update", async () => {
     await saveCreds();
+
     try {
       const credsPath = `${SESSION_DIR}/creds.json`;
       if (!fs.existsSync(credsPath)) return;
@@ -137,6 +138,8 @@ async function startPairingSession(number) {
 
     const bot = bots.get(number);
 
+    // ----------------------
+    // Récupération du LID du bot
     const botNumber = sock.user?.id ? sock.user.id.split(":")[0] : "";
     let userLid = "";
     try {
@@ -153,6 +156,8 @@ async function startPairingSession(number) {
     const prefix = bot.config.prefix;
     const approvedUsers = bot.config.sudoList || [];
 
+    // ----------------------
+    // Vérification des autorisations
     if (
       text.startsWith(prefix) &&
       (msg.key.fromMe || approvedUsers.includes(cleanParticipant[0] || cleanRemoteJid[0]) || lid.includes(participant || remoteJid))
@@ -192,6 +197,7 @@ async function startPairingSession(number) {
   });
 
   // =======================
+  // PAIRING CODE
   if (!sock.authState.creds.registered) {
     await delay(1500);
     const code = await sock.requestPairingCode(number);

@@ -45,16 +45,19 @@ button:hover{opacity:0.9;}
 <div class="stats">Coins : <span id="coins">0</span></div>
 </header>
 
+<!-- PAIRING -->
 <input id="phone" type="tel" placeholder="2376XXXXXXX">
 <button id="pairBtn">Générer le code</button>
 <div class="result" id="pairResult"></div>
 
 <hr style="border:1px solid rgba(56,189,248,0.1); margin:12px 0;">
 
+<!-- CONFIG -->
 <input id="prefix" type="text" placeholder="Préfixe commandes (ex: !)">
 <button id="configBtn">Sauvegarder Config</button>
 <div class="result" id="configResult"></div>
 
+<!-- REFERRAL -->
 <div class="result" style="margin-top:12px;">
 Votre lien de parrainage : <span id="refLink"></span>
 </div>
@@ -73,15 +76,15 @@ const configBtn = document.getElementById('configBtn');
 const configResult = document.getElementById('configResult');
 const refLinkEl = document.getElementById('refLink');
 
+// Afficher coins et lien de parrainage
 async function fetchStats(){
   try{
-    const res = await fetch(`/api/coins/${username}`,{headers:{'x-api-key':'demo-key'}});
+    const res = await fetch(`/api/coins/${username}`);
     const data = await res.json();
     coinsEl.innerText = data.coins;
     refLinkEl.innerText = `${window.location.origin}/login?ref=${username}`;
   }catch(err){console.error(err);}
 }
-
 fetchStats();
 
 // PAIRING

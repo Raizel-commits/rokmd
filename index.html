@@ -14,26 +14,67 @@
   --card-w:400px;
 }
 *{box-sizing:border-box}
-html,body{height:100%;margin:0;font-family:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
-background:radial-gradient(1200px 600px at 10% 10%, rgba(56,189,248,0.03), transparent),
-            radial-gradient(900px 500px at 90% 85%, rgba(56,189,248,0.02), transparent),
-            linear-gradient(180deg,var(--bg-1),var(--bg-2));
-color:#dfffe6;overflow-x:hidden;}
-.stage{position:relative;height:100vh;display:flex;align-items:center;justify-content:center;padding:36px;}
+html,body{
+  height:100%;
+  margin:0;
+  font-family:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  background:radial-gradient(1200px 600px at 10% 10%, rgba(56,189,248,0.03), transparent),
+             radial-gradient(900px 500px at 90% 85%, rgba(56,189,248,0.02), transparent),
+             linear-gradient(180deg,var(--bg-1),var(--bg-2));
+  color:#dfffe6;
+  overflow-x:hidden;
+}
+.stage{
+  position:relative;
+  height:100vh;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:36px;
+}
 .glass-card{
-  width:var(--card-w);max-width:92vw;
+  width:var(--card-w);
+  max-width:92vw;
   background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
-  border-radius:18px;padding:22px;
+  border-radius:18px;
+  padding:22px;
   box-shadow:0 10px 40px rgba(0,0,0,0.7),0 0 40px rgba(56,189,248,0.05) inset;
   backdrop-filter: blur(10px) saturate(140%);
   border:1px solid var(--glass-border);
   text-align:center;
 }
-.card-header h1{font-family:"JetBrains Mono", monospace;font-size:22px;margin:0;color:var(--neon);text-transform:uppercase;text-shadow:0 0 18px rgba(56,189,248,0.22);}
-.stats{margin:20px 0;font-size:16px;}
-button{width:100%;padding:12px;border-radius:6px;border:none;background:var(--neon);color:#020617;font-weight:bold;cursor:pointer;font-size:16px;margin:8px 0;}
-button:hover{opacity:0.9;}
-.referral, .ref-list{margin-top:12px;font-size:14px;color:var(--muted);word-break:break-word;}
+.card-header h1{
+  font-family:"JetBrains Mono", monospace;
+  font-size:22px;
+  margin:0;
+  color:var(--neon);
+  text-transform:uppercase;
+  text-shadow:0 0 18px rgba(56,189,248,0.22);
+}
+.stats{
+  margin:20px 0;
+  font-size:16px;
+}
+button{
+  width:100%;
+  padding:12px;
+  border-radius:6px;
+  border:none;
+  background:var(--neon);
+  color:#020617;
+  font-weight:bold;
+  cursor:pointer;
+  font-size:16px;
+  margin:8px 0;
+  transition:0.2s;
+}
+button:hover{opacity:0.9; transform: scale(1.02);}
+.referral, .ref-list{
+  margin-top:12px;
+  font-size:14px;
+  color:var(--muted);
+  word-break:break-word;
+}
 </style>
 </head>
 <body>
@@ -58,7 +99,10 @@ button:hover{opacity:0.9;}
 
 <script>
 const username = localStorage.getItem('username');
-if(!username){ alert('Connectez-vous d\'abord !'); window.location.href='/login'; }
+if(!username){
+  alert('Connectez-vous d\'abord !');
+  window.location.href='/login';
+}
 
 const coinsEl = document.getElementById('coins');
 const deployBtn = document.getElementById('deployBtn');
@@ -76,6 +120,7 @@ async function fetchStats(){
   }catch(err){console.error(err);}
 }
 
+// Déploiement → redirection pair.html
 deployBtn.onclick = async ()=>{
   try{
     const res = await fetch('/api/deploy',{
@@ -84,11 +129,17 @@ deployBtn.onclick = async ()=>{
       body: JSON.stringify({username})
     });
     const data = await res.json();
-    alert(data.message);
-    fetchStats();
+    if(res.ok){
+      alert(data.message);
+      fetchStats();
+      window.location.href = '/pair';
+    } else {
+      alert(data.message);
+    }
   }catch(err){console.error(err);}
 }
 
+// Gagner 1 coin → redirection qr.html
 adBtn.onclick = async ()=>{
   try{
     const res = await fetch('/api/coins/add',{
@@ -97,12 +148,17 @@ adBtn.onclick = async ()=>{
       body: JSON.stringify({username})
     });
     const data = await res.json();
-    alert(data.message);
-    fetchStats();
+    if(res.ok){
+      alert(data.message);
+      fetchStats();
+      window.location.href = '/qrpage';
+    } else {
+      alert(data.message);
+    }
   }catch(err){console.error(err);}
 }
 
-// initial load
+// Initial stats load
 fetchStats();
 </script>
 </body>

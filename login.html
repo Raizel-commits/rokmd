@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ROK XD • Login / Inscription</title>
+<title>ROK XD • Connexion / Inscription</title>
 <style>
 :root{
   --bg-1:#020617;
@@ -11,102 +11,73 @@
   --neon:#38bdf8;
   --glass-border:rgba(56,189,248,0.22);
   --muted:rgba(255,255,255,0.45);
-  --card-w:400px;
+  --card-w:380px;
 }
 *{box-sizing:border-box}
-html,body{height:100%;margin:0;font-family:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
-background: radial-gradient(1200px 600px at 10% 10%, rgba(56,189,248,0.03), transparent),
-            radial-gradient(900px 500px at 90% 85%, rgba(56,189,248,0.02), transparent),
-            linear-gradient(180deg,var(--bg-1),var(--bg-2));
-color:#dfffe6;display:flex;align-items:center;justify-content:center;overflow:hidden;}
-.stage{width:100%;display:flex;justify-content:center;align-items:center;padding:20px;}
-.glass-card{
-  width:var(--card-w);
-  max-width:95vw;
-  background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
-  border-radius:18px;padding:30px;
-  box-shadow:0 10px 40px rgba(0,0,0,0.7),0 0 40px rgba(56,189,248,0.05) inset;
-  backdrop-filter: blur(12px) saturate(140%);
-  border:1px solid var(--glass-border);
-  text-align:center;
-}
-h1{font-family:"JetBrains Mono", monospace;font-size:24px;color:var(--neon);text-shadow:0 0 18px rgba(56,189,248,0.22);}
-form{display:flex;flex-direction:column;gap:12px;margin-top:20px;}
-input[type="text"], input[type="email"], input[type="password"]{
-  padding:12px;border-radius:6px;border:1px solid rgba(56,189,248,0.06);
-  background:rgba(255,255,255,0.02);color:#dfffe6;font-size:14px;outline:none;
-}
-input[type="submit"]{
-  padding:12px;font-weight:bold;color:#020617;background:var(--neon);border:none;border-radius:6px;cursor:pointer;
-}
-input[type="submit"]:hover{opacity:0.9;}
-.switch-btn{margin-top:10px;color:var(--neon);cursor:pointer;font-size:14px;text-decoration:underline;}
-.credits{font-size:12px;color:var(--muted);margin-top:20px;}
+html,body{height:100%;margin:0;font-family:"Inter",system-ui;-apple-system,"Segoe UI",Roboto,sans-serif;background:radial-gradient(1200px 600px at 10% 10%, rgba(56,189,248,0.03), transparent),radial-gradient(900px 500px at 90% 85%, rgba(56,189,248,0.02), transparent),linear-gradient(180deg,var(--bg-1),var(--bg-2));color:#dfffe6;overflow:hidden}
+.stage{position:relative;height:100vh;display:flex;align-items:center;justify-content:center;padding:36px}
+.glass-card{width:var(--card-w);max-width:92vw;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border-radius:18px;padding:22px;box-shadow:0 10px 40px rgba(0,0,0,0.7),0 0 40px rgba(56,189,248,0.05) inset;backdrop-filter: blur(10px) saturate(140%);border:1px solid var(--glass-border);text-align:center;transition:0.3s ease;}
+.card-header h1{font-family:"JetBrains Mono", monospace;font-size:24px;margin:0;color:var(--neon);text-transform:uppercase;text-shadow:0 0 18px rgba(56,189,248,0.22)}
+.card-header .small-url{font-size:12px;color:var(--muted);margin-top:6px}
+form{display:flex;flex-direction:column;gap:12px;margin-top:20px}
+input[type="email"],input[type="password"]{padding:10px;border-radius:6px;border:1px solid var(--glass-border);background:rgba(255,255,255,0.02);color:#dfffe6;font-size:14px}
+input[type="submit"]{padding:12px;font-weight:bold;color:#020617;background:var(--neon);border:none;border-radius:6px;cursor:pointer;transition:0.2s ease;}
+input[type="submit"]:hover{opacity:0.9}
+.switch{margin-top:15px;font-size:14px;color:var(--muted);cursor:pointer}
+.credits{font-size:12px;color:var(--muted);margin-top:20px}
 </style>
 </head>
 <body>
 <main class="stage">
 <section class="glass-card">
-<h1 id="formTitle">Connexion</h1>
+<header class="card-header">
+<h1>ROK XD</h1>
+<div class="small-url">WhatsApp Bot</div>
+</header>
+
 <form id="authForm">
-  <input type="text" id="username" name="username" placeholder="Nom d'utilisateur" style="display:none;">
-  <input type="email" id="email" name="email" placeholder="Email" required>
-  <input type="password" id="password" name="password" placeholder="Mot de passe" required>
-  <input type="submit" value="Se connecter">
+<input type="email" name="email" placeholder="Email" required>
+<input type="password" name="password" placeholder="Mot de passe" required>
+<input type="submit" value="Se connecter">
 </form>
-<div class="switch-btn" id="switchBtn">Pas de compte ? S'inscrire</div>
+
+<div class="switch" id="switchMode">Pas de compte ? Inscris-toi</div>
 <div class="credits">Développé par RAIZEL & KNUT</div>
 </section>
 </main>
 
 <script>
-let isLogin = true;
-const formTitle = document.getElementById('formTitle');
-const authForm = document.getElementById('authForm');
-const switchBtn = document.getElementById('switchBtn');
-const usernameInput = document.getElementById('username');
+let isLogin = true; // switch mode
 
-function getReferralFromURL(){
-  const params = new URLSearchParams(window.location.search);
-  return params.get('ref') || null;
-}
+const form = document.getElementById('authForm');
+const switchBtn = document.getElementById('switchMode');
 
-switchBtn.addEventListener('click', ()=>{
+switchBtn.addEventListener('click', () => {
   isLogin = !isLogin;
-  if(isLogin){
-    formTitle.textContent = 'Connexion';
-    usernameInput.style.display = 'none';
-    authForm.querySelector('input[type="submit"]').value = 'Se connecter';
-    switchBtn.textContent = "Pas de compte ? S'inscrire";
-  } else {
-    formTitle.textContent = "Inscription";
-    usernameInput.style.display = 'block';
-    authForm.querySelector('input[type="submit"]').value = "S'inscrire";
-    switchBtn.textContent = "Déjà un compte ? Se connecter";
-  }
+  form.querySelector('input[type="submit"]').value = isLogin ? "Se connecter" : "S'inscrire";
+  switchBtn.textContent = isLogin ? "Pas de compte ? Inscris-toi" : "Déjà un compte ? Connecte-toi";
 });
 
-authForm.addEventListener('submit', async e=>{
+form.addEventListener('submit', async e => {
   e.preventDefault();
   const data = {
-    username: usernameInput.value.trim(),
-    email: document.getElementById('email').value.trim(),
-    password: document.getElementById('password').value.trim(),
-    referral: getReferralFromURL()
+    email: form.email.value.trim(),
+    password: form.password.value.trim()
   };
   try {
     const res = await fetch('/api/login', {
-      method:'POST',
-      headers:{
+      method: 'POST',
+      headers: { 
         'Content-Type':'application/json',
         'x-api-key':'demo-key'
       },
       body: JSON.stringify(data)
     });
     const result = await res.json();
-    alert(result.message + (result.coins?` | Coins: ${result.coins}`:''));
-  } catch(err){
-    alert('Erreur serveur'); console.error(err);
+    alert(result.message + (result.coins ? ` | Coins: ${result.coins}` : ''));
+  } catch(err) {
+    alert('Erreur serveur');
+    console.error(err);
   }
 });
 </script>

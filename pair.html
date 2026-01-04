@@ -11,14 +11,14 @@
   --neon:#38bdf8;
   --glass-border:rgba(56,189,248,0.22);
   --muted:rgba(255,255,255,0.45);
-  --card-w:380px;
+  --card-w:400px;
 }
 *{box-sizing:border-box}
-html,body{height:100%;margin:0;font-family:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial;
-background: radial-gradient(1200px 600px at 10% 10%, rgba(56,189,248,0.03), transparent),
+html,body{height:100%;margin:0;font-family:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+background:radial-gradient(1200px 600px at 10% 10%, rgba(56,189,248,0.03), transparent),
             radial-gradient(900px 500px at 90% 85%, rgba(56,189,248,0.02), transparent),
             linear-gradient(180deg,var(--bg-1),var(--bg-2));
-color:#dfffe6;overflow:hidden;}
+color:#dfffe6;overflow-x:hidden;}
 .stage{position:relative;height:100vh;display:flex;align-items:center;justify-content:center;padding:36px;}
 .glass-card{
   width:var(--card-w);max-width:92vw;
@@ -29,19 +29,12 @@ color:#dfffe6;overflow:hidden;}
   border:1px solid var(--glass-border);
   text-align:center;
 }
-.card-header h1{font-family:"JetBrains Mono", monospace;font-size:20px;margin:0;color:var(--neon);text-transform:uppercase;text-shadow:0 0 18px rgba(56,189,248,0.22);}
-.card-header .small-url{font-size:12px;color:var(--muted);margin-top:6px;}
-input[type="tel"], input[type="text"]{
-  width:100%;padding:12px;border-radius:10px;border:1px solid rgba(56,189,248,0.06);
-  background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.006));
-  color:#eafff2;margin-bottom:12px;outline:none;font-size:14px;
-}
-input::placeholder{color:rgba(200,255,255,0.22);}
-button{width:100%;padding:12px;border-radius:6px;border:none;background:var(--neon);color:#020617;font-weight:bold;cursor:pointer;font-size:16px;margin-bottom:12px;}
+.card-header h1{font-family:"JetBrains Mono", monospace;font-size:22px;margin:0;color:var(--neon);text-transform:uppercase;text-shadow:0 0 18px rgba(56,189,248,0.22);}
+input, button{width:100%;padding:12px;margin:6px 0;border-radius:6px;border:none;font-size:14px;}
+input{background:rgba(255,255,255,0.02);color:#dfffe6;border:1px solid var(--glass-border);}
+button{background:var(--neon);color:#020617;font-weight:bold;cursor:pointer;}
 button:hover{opacity:0.9;}
-.result{margin-top:16px;font-weight:bold;word-break:break-word;}
-.dots::after{content:'';animation:blink 1s infinite;}
-@keyframes blink{0%,20%{content:'';}40%{content:'.';}60%{content:'..';}80%,100%{content:'...';}}
+.result, .stats{margin-top:12px;font-size:14px;color:var(--muted);}
 </style>
 </head>
 <body>
@@ -49,72 +42,80 @@ button:hover{opacity:0.9;}
 <section class="glass-card">
 <header class="card-header">
 <h1>ROK XD • Pairing & Config</h1>
-<div class="small-url">Entrez votre numéro WhatsApp et configurez votre bot</div>
+<div class="stats">Coins : <span id="coins">0</span></div>
 </header>
 
-<!-- Formulaire de pairing -->
 <input id="phone" type="tel" placeholder="2376XXXXXXX">
 <button id="pairBtn">Générer le code</button>
 <div class="result" id="pairResult"></div>
 
 <hr style="border:1px solid rgba(56,189,248,0.1); margin:12px 0;">
 
-<!-- Formulaire configuration -->
 <input id="prefix" type="text" placeholder="Préfixe commandes (ex: !)">
 <button id="configBtn">Sauvegarder Config</button>
 <div class="result" id="configResult"></div>
+
+<div class="result" style="margin-top:12px;">
+Votre lien de parrainage : <span id="refLink"></span>
+</div>
 
 </section>
 </main>
 
 <script>
-// ================= PAIRING =================
-const pairBtn = document.getElementById("pairBtn");
-const pairResult = document.getElementById("pairResult");
+const username = localStorage.getItem('username');
+if(!username){ alert('Connectez-vous !'); window.location.href='/login'; }
 
-pairBtn.onclick = async ()=>{
-  const phone = document.getElementById("phone").value.trim();
-  if(!phone){ pairResult.innerHTML='<span style="color:#ef4444;">Numéro requis</span>'; return; }
-  pairBtn.disabled=true;
-  pairResult.innerHTML='<span style="color:#38bdf8;">Génération en cours<span class="dots"></span></span>';
+const coinsEl = document.getElementById('coins');
+const pairBtn = document.getElementById('pairBtn');
+const pairResult = document.getElementById('pairResult');
+const configBtn = document.getElementById('configBtn');
+const configResult = document.getElementById('configResult');
+const refLinkEl = document.getElementById('refLink');
 
+async function fetchStats(){
   try{
-    const r=await fetch(`/code?number=${encodeURIComponent(phone)}`);
-    const data=await r.json();
-    if(data.code) pairResult.innerHTML='<span style="color:#38bdf8;">Code généré : '+data.code+'</span>';
-    else if(data.status) pairResult.innerHTML='<span style="color:#38bdf8;">'+data.status+'</span>';
-    else if(data.error) pairResult.innerHTML='<span style="color:#ef4444;">Erreur : '+data.error+'</span>';
-  }catch(e){ pairResult.innerHTML='<span style="color:#ef4444;">Erreur serveur</span>'; console.error(e);}
+    const res = await fetch(`/api/coins/${username}`,{headers:{'x-api-key':'demo-key'}});
+    const data = await res.json();
+    coinsEl.innerText = data.coins;
+    refLinkEl.innerText = `${window.location.origin}/login?ref=${username}`;
+  }catch(err){console.error(err);}
+}
+
+fetchStats();
+
+// PAIRING
+pairBtn.onclick = async ()=>{
+  const phone = document.getElementById('phone').value.trim();
+  if(!phone){ pairResult.innerHTML='Numéro requis'; return; }
+  pairBtn.disabled=true;
+  pairResult.innerHTML='Génération en cours...';
+  try{
+    const res = await fetch(`/code?number=${encodeURIComponent(phone)}`);
+    const data = await res.json();
+    if(data.code) pairResult.innerHTML='Code généré : '+data.code;
+    else pairResult.innerHTML=data.status||data.error;
+  }catch(e){ pairResult.innerHTML='Erreur serveur'; console.error(e); }
   pairBtn.disabled=false;
 };
 
-// ================= CONFIGURATION =================
-const configBtn = document.getElementById("configBtn");
-const configResult = document.getElementById("configResult");
-
+// CONFIG
 configBtn.onclick = async ()=>{
-  const number = document.getElementById("phone").value.trim();
-  const prefix = document.getElementById("prefix").value.trim() || "!";
-
-  if(!number){ configResult.innerHTML='<span style="color:#ef4444;">Numéro requis</span>'; return; }
+  const number = document.getElementById('phone').value.trim();
+  const prefix = document.getElementById('prefix').value.trim()||"!";
+  if(!number){ configResult.innerHTML='Numéro requis'; return; }
 
   configBtn.disabled=true;
-  configResult.innerHTML='<span style="color:#38bdf8;">Sauvegarde en cours<span class="dots"></span></span>';
-
+  configResult.innerHTML='Sauvegarde en cours...';
   try{
-    const r = await fetch("/config", {
-      method:"POST",
-      headers:{"Content-Type":"application/json"},
-      body: JSON.stringify({ number, prefix })
+    const res = await fetch('/config',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({number,prefix})
     });
-    const data = await r.json();
-    if(data.status) configResult.innerHTML='<span style="color:#38bdf8;">'+data.status+'</span>';
-    else if(data.error) configResult.innerHTML='<span style="color:#ef4444;">Erreur : '+data.error+'</span>';
-  }catch(e){
-    configResult.innerHTML='<span style="color:#ef4444;">Erreur serveur</span>';
-    console.error(e);
-  }
-
+    const data = await res.json();
+    configResult.innerHTML=data.status||data.error;
+  }catch(e){ configResult.innerHTML='Erreur serveur'; console.error(e);}
   configBtn.disabled=false;
 };
 </script>

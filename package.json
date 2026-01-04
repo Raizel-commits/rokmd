@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "RAIZEL XMD WhatsApp bot avec QR et Pairing",
   "type": "module",
-  "main": "server.js",
+  "main": "index.js",
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js"
@@ -13,20 +13,27 @@
   "dependencies": {
     "@whiskeysockets/baileys": "^6.7.21",
     "awesome-phonenumber": "^2.21.1",
+    "bluebird": "^3.7.2",
     "body-parser": "^1.20.2",
     "chalk": "^5.3.0",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
+    "bcryptjs": "^2.4.3",
     "express": "^4.18.2",
+    "express-rate-limit": "^7.0.0",
     "ffmpeg-static": "^5.2.0",
+    "firebase-admin": "^12.0.0",
     "fluent-ffmpeg": "^2.1.2",
     "form-data": "^4.0.0",
+    "fs-extra": "^11.1.1",
     "google-it": "^1.6.0",
     "gtts": "^0.2.1",
+    "helmet": "^7.0.0",
     "image-to-base64": "^2.2.0",
     "jsdom": "^24.0.0",
     "mime-types": "^2.1.35",
     "moment-timezone": "^0.5.45",
+    "ngrok": "^5.0.0-beta.2",
     "node-fetch": "^3.3.2",
     "pino": "^8.21.0",
     "pino-pretty": "^10.3.0",
@@ -34,10 +41,7 @@
     "qrcode": "^1.5.1",
     "qrcode-terminal": "^0.12.0",
     "sharp": "^0.33.1",
-    "wa-sticker-formatter": "^4.4.4",
-    "fs-extra": "^11.1.1",
-    "bluebird": "^3.7.2",
-    "firebase-admin": "^12.0.0"
+    "wa-sticker-formatter": "^4.4.4"
   },
   "devDependencies": {
     "nodemon": "^3.1.0"

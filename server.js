@@ -3,6 +3,7 @@
 // =======================
 import express from 'express';
 import path from 'path';
+import { fileURLToPath } from 'url';
 import bodyParser from 'body-parser';
 import cors from 'cors';
 import fs from 'fs';
@@ -17,7 +18,7 @@ dotenv.config();
 // =======================
 // PATH & PORT
 // =======================
-const __filename = path.fileURLToPath(import.meta.url);
+const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const PORT = Number(process.env.PORT || 3000);
 const API_KEY = process.env.API_KEY || "demo-key";
@@ -36,7 +37,7 @@ app.use(helmet());
 // RATE LIMIT SUR API
 // =======================
 const apiLimiter = rateLimit({
-  windowMs: 60 * 1000, 
+  windowMs: 60 * 1000,
   max: 10,
   message: { error: "Trop de requêtes, réessaye plus tard." }
 });
@@ -44,7 +45,6 @@ app.use("/api/", apiLimiter);
 
 // =======================
 // API KEY middleware (sur /api seulement)
-// =======================
 app.use("/api", (req, res, next) => {
   const key = req.header("x-api-key");
   if (!key || key !== API_KEY) return res.status(401).json({ error: "Non autorisé" });
@@ -53,28 +53,19 @@ app.use("/api", (req, res, next) => {
 
 // =======================
 // USERS DATA
-// =======================
 const USERS_FILE = path.join(__dirname, 'users.json');
 
-const loadUsers = () => {
-  if (!fs.existsSync(USERS_FILE)) return {};
-  return JSON.parse(fs.readFileSync(USERS_FILE, 'utf-8'));
-};
-
-const saveUsers = (users) => {
-  fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2));
-};
+const loadUsers = () => fs.existsSync(USERS_FILE) ? JSON.parse(fs.readFileSync(USERS_FILE, 'utf-8')) : {};
+const saveUsers = (users) => fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2));
 
 // =======================
 // API ROUTES
-// =======================
 const router = express.Router();
 
-// --- LOGIN / REGISTER
+// --- LOGIN / REGISTER avec email et parrainage
 router.post('/login', async (req, res) => {
   const { username, email, password, referral } = req.body;
-  if (!username || !email || !password)
-    return res.status(400).json({ message: 'Champs manquants' });
+  if (!username || !email || !password) return res.status(400).json({ message: 'Champs manquants' });
 
   const users = loadUsers();
   const user = users[username];
@@ -104,7 +95,6 @@ router.post('/login', async (req, res) => {
   }
 
   saveUsers(users);
-
   return res.json({ message: 'Compte créé ! 10 coins attribués', coins: 10 });
 });
 
@@ -150,7 +140,7 @@ router.post('/deploy', (req,res)=>{
   res.json({message:'Déploiement réussi ! 3 coins dépensés', coins: user.coins});
 });
 
-// --- PAIR LINK
+// --- PAIR LINK (gagner coins via inscription filleul)
 router.post('/pair', (req,res)=>{
   const { username } = req.body;
   const users = loadUsers();
@@ -162,7 +152,6 @@ router.post('/pair', (req,res)=>{
 
 // =======================
 // ROUTES STATIC
-// =======================
 app.use('/api', router);
 app.get('/', (_, res) => res.sendFile(path.join(__dirname, 'index.html')));
 app.get('/login', (_, res) => res.sendFile(path.join(__dirname, 'login.html')));
@@ -171,7 +160,6 @@ app.get('/qrpage', (_, res) => res.sendFile(path.join(__dirname, 'qr.html')));
 
 // =======================
 // START SERVER
-// =======================
 app.listen(PORT, () => {
-  console.log(chalk.cyanBright(`🚀 Serveur Render actif sur le port ${PORT}`));
+  console.log(chalk.cyanBright(`🚀 Serveur actif sur le port ${PORT}`));
 });

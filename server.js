@@ -3,6 +3,7 @@
 // =======================
 import express from 'express';
 import path from 'path';
+import { fileURLToPath } from 'url';
 import bodyParser from 'body-parser';
 import cors from 'cors';
 import fs from 'fs';
@@ -12,15 +13,16 @@ import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
 import bcrypt from 'bcryptjs';
 
-// Import des routers
 import qrRouter from './qr.js';
 import pairRouter from './pair.js';
 
 dotenv.config();
 
 // =======================
-// CONFIG
+// PATH & PORT
 // =======================
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 const PORT = Number(process.env.PORT || 3000);
 const API_KEY = process.env.API_KEY || "demo-key";
 
@@ -31,8 +33,8 @@ const app = express();
 app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
+app.use(express.static(__dirname));
 app.use(helmet());
-app.use(express.static('./')); // tout à la racine
 
 // =======================
 // RATE LIMIT SUR API
@@ -55,7 +57,8 @@ app.use("/api", (req, res, next) => {
 // =======================
 // USERS DATA
 // =======================
-const USERS_FILE = './users.json';
+const USERS_FILE = path.join(__dirname, 'users.json');
+
 const loadUsers = () => fs.existsSync(USERS_FILE) ? JSON.parse(fs.readFileSync(USERS_FILE, 'utf-8')) : {};
 const saveUsers = (users) => fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2));
 
@@ -64,23 +67,24 @@ const saveUsers = (users) => fs.writeFileSync(USERS_FILE, JSON.stringify(users, 
 // =======================
 const router = express.Router();
 
-// --- LOGIN / REGISTER via email
+// --- LOGIN / REGISTER avec email et parrainage
 router.post('/login', async (req, res) => {
   const { email, password, referral } = req.body;
   if (!email || !password) return res.status(400).json({ message: 'Champs manquants' });
 
   const users = loadUsers();
-  let user = Object.values(users).find(u => u.email === email);
+  const user = Object.values(users).find(u => u.email === email);
 
   if (user) {
     const valid = await bcrypt.compare(password, user.password);
     if (!valid) return res.status(401).json({ message: 'Mot de passe incorrect' });
-    return res.json({ message: 'Connecté', coins: user.coins, email: user.email });
+    return res.json({ message: 'Connecté', coins: user.coins });
   }
 
-  // Nouveau compte
+  // Création d'un nouvel utilisateur
+  const username = email.split('@')[0];
   const hashed = await bcrypt.hash(password, 10);
-  const username = email.split('@')[0]; // nom d’utilisateur simplifié
+
   users[username] = {
     email,
     password: hashed,
@@ -96,22 +100,22 @@ router.post('/login', async (req, res) => {
   }
 
   saveUsers(users);
-  return res.json({ message: 'Compte créé ! 10 coins attribués', coins: 10, email });
+  return res.json({ message: 'Compte créé ! 10 coins attribués', coins: 10 });
 });
 
 // --- GET COINS
-router.get('/coins/:email', (req,res)=>{
+router.get('/coins/:username', (req,res)=>{
   const users = loadUsers();
-  const user = Object.values(users).find(u => u.email === req.params.email);
+  const user = users[req.params.username];
   if(!user) return res.status(404).json({message:'Utilisateur introuvable'});
   res.json({coins: user.coins, referrals: user.referrals});
 });
 
 // --- ADD COIN VIA PUB
 router.post('/coins/add', (req,res)=>{
-  const { email } = req.body;
+  const { username } = req.body;
   const users = loadUsers();
-  const user = Object.values(users).find(u => u.email === email);
+  const user = users[username];
   if(!user) return res.status(404).json({message:'Utilisateur introuvable'});
 
   const now = Date.now();
@@ -128,9 +132,9 @@ router.post('/coins/add', (req,res)=>{
 
 // --- DEPLOY
 router.post('/deploy', (req,res)=>{
-  const { email } = req.body;
+  const { username } = req.body;
   const users = loadUsers();
-  const user = Object.values(users).find(u => u.email === email);
+  const user = users[username];
   if(!user) return res.status(404).json({message:'Utilisateur introuvable'});
 
   if(user.coins < 3) return res.status(400).json({message:'Pas assez de coins pour déployer (3 coins requis)'});
@@ -143,27 +147,26 @@ router.post('/deploy', (req,res)=>{
 
 // --- PAIR LINK
 router.post('/pair', (req,res)=>{
-  const { email } = req.body;
+  const { username } = req.body;
   const users = loadUsers();
-  const user = Object.values(users).find(u => u.email === email);
+  const user = users[username];
   if(!user) return res.status(404).json({message:'Utilisateur introuvable'});
 
   res.json({message:'Lien de parrainage généré ! (5 coins seront ajoutés à chaque filleul)', coins: user.coins});
 });
 
 // =======================
-// MOUNT API
-app.use('/api', router);
-
+// ROUTES
 // =======================
-// AUTRES ROUTES
+app.use('/api', router);
 app.use('/qr', qrRouter);        // panel QR
 app.use('/', pairRouter);        // panel Pairing
 
-app.get('/', (_, res) => res.sendFile(path.join('./', 'index.html')));
-app.get('/login', (_, res) => res.sendFile(path.join('./', 'login.html')));
-app.get('/pair', (_, res) => res.sendFile(path.join('./', 'pair.html')));
-app.get('/qrpage', (_, res) => res.sendFile(path.join('./', 'qr.html')));
+// HTML statiques (chemins absolus)
+app.get('/', (_, res) => res.sendFile(path.resolve('index.html')));
+app.get('/login', (_, res) => res.sendFile(path.resolve('login.html')));
+app.get('/pair', (_, res) => res.sendFile(path.resolve('pair.html')));
+app.get('/qrpage', (_, res) => res.sendFile(path.resolve('qr.html')));
 
 // =======================
 // START SERVER

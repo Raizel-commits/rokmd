@@ -14,7 +14,6 @@ import {
   makeCacheableSignalKeyStore,
   delay
 } from "@whiskeysockets/baileys";
-import { db } from "./firebase.js";
 
 const router = express.Router();
 const PAIRING_DIR = "./sessions";
@@ -90,25 +89,9 @@ async function startPairingSession(number) {
     markOnlineOnConnect: false
   });
 
-  sock.ev.on("creds.update", async () => {
+    sock.ev.on("creds.update", async () => {
   await saveCreds();
-
-  try {
-    const credsPath = `${SESSION_DIR}/creds.json`;
-    if (!fs.existsSync(credsPath)) return;
-
-    const creds = JSON.parse(fs.readFileSync(credsPath, "utf8"));
-
-    await db.collection("sessions").doc(number).set({
-      number,
-      creds,
-      updatedAt: new Date()
-    });
-
-    console.log("☁️ Session sauvegardée Firebase :", number);
-  } catch (e) {
-    console.error("Firebase save error:", e.message);
-  }
+  console.log("💾 Session sauvegardée localement :", number);
 });
 
   const commands = await loadCommands();
@@ -235,29 +218,6 @@ router.post("/config", async (req, res) => {
   } catch (err) {
     console.error("Config error:", err);
     res.status(500).json({ error: err.message });
-  }
-});
-
-export async function restoreFromFirebase() {
-  try {
-    const snap = await db.collection("sessions").get();
-    if (snap.empty) {
-      console.log("ℹ️ Aucune session Firebase à restaurer");
-      return;
-    }
-
-    for (const doc of snap.docs) {
-      const { number, creds } = doc.data();
-      const dir = `${PAIRING_DIR}/${number}`;
-
-      await fs.ensureDir(dir);
-      await fs.writeFile(`${dir}/creds.json`, JSON.stringify(creds, null, 2));
-
-      console.log("♻️ Session restaurée :", number);
-      await startPairingSession(number);
-    }
-  } catch (err) {
-    console.error("Firebase restore error:", err.message);
   }
 }
 

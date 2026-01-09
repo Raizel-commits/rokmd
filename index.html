@@ -1,138 +1,127 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ROK XD • Dashboard</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ROK XD • Panel</title>
+  <style>
+    :root {
+      --bg-1: #020617;
+      --bg-2: #0f172a;
+      --neon: #38bdf8;
+      --glass-border: rgba(56, 189, 248, 0.2);
+    }
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: var(--bg-1);
+      color: #fff;
+    }
+    header {
+      display: flex;
+      justify-content: space-between;
+      padding: 10px 20px;
+      background: var(--bg-2);
+      border-bottom: 1px solid var(--glass-border);
+    }
+    header a {
+      color: var(--neon);
+      text-decoration: none;
+      margin: 0 10px;
+    }
+    header a:hover {
+      text-decoration: underline;
+    }
+    #user-info {
+      font-weight: bold;
+    }
+    main {
+      padding: 20px;
+      text-align: center;
+    }
+    button {
+      padding: 10px 20px;
+      margin: 10px;
+      background: var(--neon);
+      border: none;
+      border-radius: 5px;
+      color: #020617;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    button:hover {
+      background: #0ea5e9;
+    }
+    #ads-container {
+      margin-top: 20px;
+    }
+  </style>
 
-<!-- AdSense -->
-<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2875755643885097"
+  <!-- Google AdSense -->
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2875755643885097"
      crossorigin="anonymous"></script>
-
-<style>
-:root{
-  --bg-1:#020617;
-  --bg-2:#0f172a;
-  --neon:#38bdf8;
-  --glass-border:rgba(56,189,248,0.22);
-  --muted:rgba(255,255,255,0.45);
-  --card-w:400px;
-}
-*{box-sizing:border-box}
-html,body{height:100%;margin:0;font-family:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial;
-background: radial-gradient(1200px 600px at 10% 10%, rgba(56,189,248,0.03), transparent),
-            radial-gradient(900px 500px at 90% 85%, rgba(56,189,248,0.02), transparent),
-            linear-gradient(180deg,var(--bg-1),var(--bg-2));
-color:#dfffe6;overflow-x:hidden;}
-.stage{position:relative;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:36px;}
-.glass-card{
-  width:var(--card-w);max-width:95vw;
-  background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
-  border-radius:18px;padding:22px;
-  box-shadow:0 10px 40px rgba(0,0,0,0.7),0 0 40px rgba(56,189,248,0.05) inset;
-  backdrop-filter: blur(10px) saturate(140%);
-  border:1px solid var(--glass-border);
-  text-align:center;
-}
-.card-header h1{font-family:"JetBrains Mono", monospace;font-size:24px;margin:0;color:var(--neon);text-transform:uppercase;text-shadow:0 0 18px rgba(56,189,248,0.22);}
-.card-header .small-url{font-size:12px;color:var(--muted);margin-top:6px;}
-.btn{
-  display:block;width:100%;padding:12px;margin:8px 0;font-size:16px;font-weight:bold;color:#020617;
-  background:var(--neon);border:none;border-radius:6px;text-decoration:none;cursor:pointer;
-}
-.btn:hover{opacity:0.9;}
-.option-box{margin:16px 0;text-align:left;}
-.option-box h3{color:var(--neon);margin-bottom:8px;}
-.option-box select,input[type="number"]{width:100%;padding:10px;border-radius:8px;border:1px solid rgba(56,189,248,0.1);margin-bottom:8px;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.006));color:#dfffe6;}
-.coins-display{margin-bottom:16px;font-weight:bold;font-size:16px;color:#38bdf8;}
-hr{border:1px solid rgba(56,189,248,0.1);}
-</style>
 </head>
 <body>
-<main class="stage">
-<section class="glass-card">
-  <header class="card-header">
-    <h1>ROK XD Dashboard</h1>
-    <div class="small-url">Bienvenue !</div>
+  <header>
+    <div>
+      <a href="/">Accueil</a>
+      <a href="/qrpage">Panel QR</a>
+      <a href="/pair">Panel Pair</a>
+    </div>
+    <div id="user-info">Chargement...</div>
   </header>
 
-  <div class="coins-display">Coins disponibles : <span id="userCoins">0</span></div>
+  <main>
+    <h1>Bienvenue sur ROK XD Panel</h1>
+    <p>Gérez vos bots WhatsApp et gagnez des coins.</p>
 
-  <hr>
+    <button id="watch-ad">Regarder une pub pour 5 coins</button>
 
-  <div class="option-box">
-    <h3>Pairing & QR</h3>
-    <a href="pair.html" class="btn">Panel Pairing</a>
-    <a href="qrpage" class="btn">Panel QR</a>
-  </div>
+    <div id="ads-container">
+      <!-- Ici Google injectera l'annonce -->
+      <ins class="adsbygoogle"
+           style="display:block"
+           data-ad-client="ca-pub-2875755643885097"
+           data-ad-slot="1234567890"
+           data-ad-format="auto"
+           data-full-width-responsive="true"></ins>
+      <script>
+        (adsbygoogle = window.adsbygoogle || []).push({});
+      </script>
+    </div>
+  </main>
 
-  <hr>
+  <script>
+    // Récupérer info utilisateur
+    async function getUserInfo() {
+      const res = await fetch("/auth/me", { credentials: "same-origin" });
+      if (res.ok) {
+        const data = await res.json();
+        document.getElementById("user-info").innerText = `Connecté : ${data.email} | Coins : ${data.coins}`;
+      } else {
+        document.getElementById("user-info").innerText = "Non connecté";
+      }
+    }
+    getUserInfo();
 
-  <div class="option-box">
-    <h3>Déployer le bot</h3>
-    <label for="duration">Durée de déploiement :</label>
-    <select id="duration">
-      <option value="1">24h - 20 coins / 200F</option>
-      <option value="3">3 jours - 50 coins / 500F</option>
-      <option value="5">5 jours - 80 coins / 800F</option>
-      <option value="7">7 jours - 120 coins / 1200F</option>
-    </select>
-    <button id="deployBtn" class="btn">Déployer</button>
-    <div id="deployResult" style="margin-top:12px;font-weight:bold;"></div>
-  </div>
-
-  <hr>
-
-  <div class="option-box">
-    <h3>Paiement Money Fusion</h3>
-    <input type="number" id="moneyAmount" placeholder="Montant à payer (F CFA)">
-    <button id="payBtn" class="btn">Payer</button>
-    <div id="payResult" style="margin-top:12px;font-weight:bold;"></div>
-  </div>
-
-</section>
-</main>
-
-<script>
-// Afficher coins utilisateur
-async function loadCoins(){
-  try{
-    const res = await fetch("/api/coins", {method:"GET"});
-    const data = await res.json();
-    document.getElementById("userCoins").innerText = data.coins || 0;
-  }catch(e){
-    console.error(e);
-  }
-}
-loadCoins();
-
-// Déploiement
-document.getElementById("deployBtn").onclick = async () => {
-  const duration = document.getElementById("duration").value;
-  const coinsNeeded = {1:20,3:50,5:80,7:120}[duration];
-  const res = await fetch("/api/buy", {
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body: JSON.stringify({coins: -coinsNeeded})
-  });
-  const data = await res.json();
-  document.getElementById("deployResult").innerText = data.status ? `Bot déployé pour ${duration} jour(s)` : data.error;
-  loadCoins();
-};
-
-// Paiement Money Fusion (simulé)
-document.getElementById("payBtn").onclick = async () => {
-  const amount = document.getElementById("moneyAmount").value;
-  if(!amount) return;
-  const res = await fetch("/api/buy", {
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body: JSON.stringify({coins: Number(amount)/10}) // exemple conversion 10F = 1 coin
-  });
-  const data = await res.json();
-  document.getElementById("payResult").innerText = data.status ? `Coins ajoutés : ${data.coins}` : data.error;
-  loadCoins();
-};
-</script>
+    // Bouton regarder pub pour gagner des coins
+    document.getElementById("watch-ad").addEventListener("click", async () => {
+      try {
+        const res = await fetch("/api/earn-coins", {
+          method: "POST",
+          credentials: "same-origin"
+        });
+        const data = await res.json();
+        if (data.status === "success") {
+          alert(`🎉 Vous avez gagné ${data.coinsAdded} coins !`);
+          getUserInfo(); // mettre à jour coins
+        } else {
+          alert(data.error || "Erreur serveur");
+        }
+      } catch (err) {
+        alert("Erreur serveur");
+      }
+    });
+  </script>
 </body>
 </html>

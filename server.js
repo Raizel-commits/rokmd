@@ -1,4 +1,6 @@
-// server.js
+// =======================
+// IMPORTS
+// =======================
 import express from "express";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -13,17 +15,17 @@ import authRouter, { authMiddleware } from "./auth.js";
 import qrRouter from "./qr.js";
 import pairRouter from "./pair.js";
 
-// ================= PATH
+// ================= PATH FIX
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // ================= APP
 const app = express();
 
-// ================= RENDER PROXY FIX
+// ================= TRUST PROXY (Render)
 app.set("trust proxy", 1);
 
-// ================= MONGODB (INTÉGRÉ DIRECT)
+// ================= MONGODB (direct)
 mongoose.connect(
   "mongodb+srv://rokxd_raizel:Sangoku77@cluster0.0g3b0yp.mongodb.net/rokxd?retryWrites=true&w=majority"
 )
@@ -37,12 +39,13 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.use(helmet());
 
-// ================= RATE LIMIT (AUTH UNIQUEMENT)
+// ================= RATE LIMIT (AUTH uniquement)
 app.use(
   "/auth",
   rateLimit({
     windowMs: 60 * 1000,
     max: 20,
+    message: { error: "Trop de requêtes, réessayez plus tard" }
   })
 );
 
@@ -53,37 +56,24 @@ app.use("/auth", authRouter);
 app.get("/", (_, res) => res.redirect("/login"));
 
 // LOGIN
-app.get("/login", (_, res) =>
-  res.sendFile(path.join(__dirname, "login.html"))
-);
-app.get("/login.html", (_, res) =>
-  res.sendFile(path.join(__dirname, "login.html"))
-);
+app.get("/login", (_, res) => res.sendFile(path.join(__dirname, "login.html")));
+app.get("/login.html", (_, res) => res.sendFile(path.join(__dirname, "login.html")));
 
 // REGISTER
-app.get("/register", (_, res) =>
-  res.sendFile(path.join(__dirname, "register.html"))
-);
-app.get("/register.html", (_, res) =>
-  res.sendFile(path.join(__dirname, "register.html"))
-);
+app.get("/register", (_, res) => res.sendFile(path.join(__dirname, "register.html")));
+app.get("/register.html", (_, res) => res.sendFile(path.join(__dirname, "register.html")));
 
 // ================= PAGES PROTÉGÉES
-app.get("/panel", authMiddleware, (_, res) =>
-  res.sendFile(path.join(__dirname, "index.html"))
-);
+app.get("/panel", authMiddleware, (_, res) => res.sendFile(path.join(__dirname, "index.html")));
+app.get("/pair-page", authMiddleware, (_, res) => res.sendFile(path.join(__dirname, "pair.html")));
+app.get("/qr-page", authMiddleware, (_, res) => res.sendFile(path.join(__dirname, "qr.html")));
 
-app.get("/pair-page", authMiddleware, (_, res) =>
-  res.sendFile(path.join(__dirname, "pair.html"))
-);
-
-app.get("/qr-page", authMiddleware, (_, res) =>
-  res.sendFile(path.join(__dirname, "qr.html"))
-);
-
-// ================= ROUTES BOT (COMME TU AS DEMANDÉ)
+// ================= ROUTES BOT (protégées)
 app.use("/qr", authMiddleware, qrRouter);
 app.use("/", authMiddleware, pairRouter);
+
+// ================= STATIC FILES (CSS/JS si besoin)
+app.use(express.static(__dirname));
 
 // ================= START SERVER
 const PORT = process.env.PORT || 3000;

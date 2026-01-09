@@ -3,8 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ROK XD • Register</title>
+<title>ROK XD • Login</title>
 
+<!-- AdSense -->
 <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2875755643885097"
      crossorigin="anonymous"></script>
 
@@ -52,24 +53,24 @@ input[type="email"], input[type="password"]{
 <main class="stage">
 <section class="glass-card">
   <header class="card-header">
-    <h1>Register</h1>
-    <div class="small-url">Crée ton compte ROK XD</div>
+    <h1>Login</h1>
+    <div class="small-url">Bienvenue sur ROK XD</div>
   </header>
 
   <div class="error" id="errorMsg"></div>
 
   <input type="email" id="email" placeholder="Email">
-  <input type="password" id="password" placeholder="Mot de passe (min 8 caractères)">
-  <button id="registerBtn" class="btn">S'inscrire</button>
+  <input type="password" id="password" placeholder="Mot de passe">
+  <button id="loginBtn" class="btn">Se connecter</button>
 
   <div style="margin-top:12px;">
-    Déjà un compte ? <a href="/login" class="link">Se connecter</a>
+    Pas de compte ? <a href="/register" class="link">S'inscrire</a>
   </div>
 </section>
 </main>
 
 <script>
-document.getElementById("registerBtn").onclick = async () => {
+document.getElementById("loginBtn").onclick = async () => {
   const email = document.getElementById("email").value;
   const password = document.getElementById("password").value;
   const errorDiv = document.getElementById("errorMsg");
@@ -81,7 +82,7 @@ document.getElementById("registerBtn").onclick = async () => {
   }
 
   try{
-    const res = await fetch("/auth/register", {
+    const res = await fetch("/auth/login", {
       method:"POST",
       headers:{"Content-Type":"application/json"},
       body: JSON.stringify({email,password})

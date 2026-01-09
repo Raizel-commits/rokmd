@@ -1,11 +1,10 @@
-// User.js
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
 
 const userSchema = new mongoose.Schema({
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true },
-  coins: { type: Number, default: 20 }, // coins gratuits à l'inscription
+  coins: { type: Number, default: 20 }, // Coins gratuits à l'inscription
   createdAt: { type: Date, default: Date.now }
 });
 

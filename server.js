@@ -80,13 +80,16 @@ app.get("/logout", (req, res) => req.session.destroy(() => res.redirect("/login"
 
 /* ================= PROTECTED ROUTES ================= */
 app.get("/", requireAuth, (_, res) => res.sendFile(path.join(__dirname, 'index.html')));
+app.get("/pair", requireAuth, (_, res) => res.sendFile(path.join(__dirname, 'pair.html')));
+app.get("/qrpage", requireAuth, (_, res) => res.sendFile(path.join(__dirname, 'qr.html')));
 
 /* ================= ROUTERS ================= */
 import qrRouter from "./qr.js";
 import pairRouter from "./pair.js";
 
-app.use('/qr', qrRouter);        // 
-app.use('/', pairRouter);      // actif
+// Les routers restent actifs si tu veux les utiliser pour d’autres routes
+app.use('/qr', requireAuth, qrRouter);
+app.use('/', requireAuth, pairRouter);
 
 /* ================= SERVER ================= */
 app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));

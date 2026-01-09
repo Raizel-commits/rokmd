@@ -13,11 +13,9 @@ import authRouter, { authMiddleware } from "./auth.js";
 import { connectDB } from "./db.js";
 
 import qrRouter from "./qr.js";
-import pairRouter, { restoreFromFirebase } from "./pair.js";
-import ngrokModule from "ngrok";
+import pairRouter from "./pair.js";
 
-dotenv.config();
-connectDB();
+connectDB(); // Connexion MongoDB
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -32,32 +30,34 @@ app.use(helmet());
 app.use(cookieParser());
 
 // RATE LIMIT API
-app.use("/api", rateLimit({ windowMs: 60 * 1000, max: 10, message: { error: "Trop de requêtes" } }));
+app.use(
+  "/api",
+  rateLimit({
+    windowMs: 60 * 1000,
+    max: 10,
+    message: { error: "Trop de requêtes" },
+  })
+);
 
 // ROUTES AUTH
 app.use("/auth", authRouter);
 
 // PROTÉGER LES PAGES
-app.get("/", authMiddleware, (_, res) => res.sendFile(path.join(__dirname, "index.html")));
-app.get("/pair", authMiddleware, (_, res) => res.sendFile(path.join(__dirname, "pair.html")));
-app.get("/qrpage", authMiddleware, (_, res) => res.sendFile(path.join(__dirname, "qr.html")));
+app.get("/", authMiddleware, (_, res) =>
+  res.sendFile(path.join(__dirname, "index.html"))
+);
+app.get("/pair", authMiddleware, (_, res) =>
+  res.sendFile(path.join(__dirname, "pair.html"))
+);
+app.get("/qrpage", authMiddleware, (_, res) =>
+  res.sendFile(path.join(__dirname, "qr.html"))
+);
 
 // BOT ROUTES
 app.use("/qr", qrRouter);
 app.use("/", pairRouter);
 
-// START NGROK
-async function startNgrok() {
-  try {
-    const url = await ngrokModule.connect({ proto: "http", addr: PORT, authtoken: process.env.NGROK_AUTHTOKEN, region: process.env.NGROK_REGION });
-    console.log(`🌐 Tunnel Ngrok actif : ${url}`);
-  } catch (err) {
-    console.error("Erreur Ngrok :", err.message);
-  }
-}
-
+// Démarrage serveur
 app.listen(PORT, () => {
   console.log(`🚀 Serveur actif sur le port ${PORT}`);
-  restoreFromFirebase();
-  startNgrok();
 });

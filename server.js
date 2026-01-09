@@ -13,21 +13,22 @@ import authRouter, { authMiddleware } from "./auth.js";
 import qrRouter from "./qr.js";
 import pairRouter from "./pair.js";
 
-const app = express();
-
 // ================= PATH
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// ================= TRUST PROXY (RENDER)
+// ================= APP
+const app = express();
+
+// ================= RENDER PROXY FIX
 app.set("trust proxy", 1);
 
-// ================= MONGODB
+// ================= MONGODB (INTÉGRÉ DIRECT)
 mongoose.connect(
   "mongodb+srv://rokxd_raizel:Sangoku77@cluster0.0g3b0yp.mongodb.net/rokxd?retryWrites=true&w=majority"
 )
 .then(() => console.log("✅ MongoDB connecté"))
-.catch(err => console.error("❌ MongoDB :", err.message));
+.catch(err => console.error("❌ MongoDB error :", err.message));
 
 // ================= MIDDLEWARE
 app.use(cors());
@@ -37,25 +38,35 @@ app.use(cookieParser());
 app.use(helmet());
 
 // ================= RATE LIMIT (AUTH UNIQUEMENT)
-app.use("/auth", rateLimit({
-  windowMs: 60 * 1000,
-  max: 20
-}));
+app.use(
+  "/auth",
+  rateLimit({
+    windowMs: 60 * 1000,
+    max: 20,
+  })
+);
 
-// ================= ROUTES AUTH
+// ================= AUTH ROUTES
 app.use("/auth", authRouter);
 
 // ================= PAGES PUBLIQUES
+app.get("/", (_, res) => res.redirect("/login"));
+
+// LOGIN
 app.get("/login", (_, res) =>
   res.sendFile(path.join(__dirname, "login.html"))
 );
+app.get("/login.html", (_, res) =>
+  res.sendFile(path.join(__dirname, "login.html"))
+);
 
+// REGISTER
 app.get("/register", (_, res) =>
   res.sendFile(path.join(__dirname, "register.html"))
 );
-
-// ================= RACINE → LOGIN
-app.get("/", (_, res) => res.redirect("/login"));
+app.get("/register.html", (_, res) =>
+  res.sendFile(path.join(__dirname, "register.html"))
+);
 
 // ================= PAGES PROTÉGÉES
 app.get("/panel", authMiddleware, (_, res) =>
@@ -70,12 +81,12 @@ app.get("/qr-page", authMiddleware, (_, res) =>
   res.sendFile(path.join(__dirname, "qr.html"))
 );
 
-// ================= ROUTES BOT (COMME TU VEUX)
-app.use("/qr", authMiddleware, qrRouter);   // ✅ inchangé
-app.use("/", authMiddleware, pairRouter);   // ✅ inchangé MAIS protégé
+// ================= ROUTES BOT (COMME TU AS DEMANDÉ)
+app.use("/qr", authMiddleware, qrRouter);
+app.use("/", authMiddleware, pairRouter);
 
 // ================= START SERVER
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`🚀 Serveur actif sur le port ${PORT}`);
+  console.log(`🚀 Serveur lancé sur le port ${PORT}`);
 });

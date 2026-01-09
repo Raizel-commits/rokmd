@@ -1,43 +1,77 @@
+// =======================
+// IMPORTS
+// =======================
 import express from "express";
 import path from "path";
-import { fileURLToPath } from "url";
-import bodyParser from "body-parser";
 import cors from "cors";
-import helmet from "helmet";
-import dotenv from "dotenv";
+import bodyParser from "body-parser";
+import { fileURLToPath } from "url";
 
-import qrRouter from "./qr.js";
+// ROUTERS (RESTENT INTACTS)
 import pairRouter from "./pair.js";
+import qrRouter from "./qr.js";
 
-dotenv.config();
+// =======================
+// CONFIG
+// =======================
+const app = express();
+const PORT = process.env.PORT || 3000;
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const app = express();
-const PORT = process.env.PORT || 3000;
-
+// =======================
+// MIDDLEWARES
+// =======================
 app.use(cors());
 app.use(bodyParser.json());
-app.use(express.static(__dirname));
-app.use(helmet());
+app.use(bodyParser.urlencoded({ extended: true }));
 
-// Pages
-app.get("/",(_,res)=>res.sendFile(path.join(__dirname,"login.html")));
-app.get("/dashboard",(_,res)=>res.sendFile(path.join(__dirname,"dashboard.html")));
-app.get("/pair",(_,res)=>res.sendFile(path.join(__dirname,"pair.html")));
-app.get("/qrpage",(_,res)=>res.sendFile(path.join(__dirname,"qr.html")));
-
-// MoneyFusion callback (IMPORTANT)
-app.post("/api/payment/callback",(req,res)=>{
-  console.log("💰 MoneyFusion:",req.body);
-  res.status(200).json({received:true});
+// =======================
+// FRONTEND
+// =======================
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "index.html"));
 });
 
-// Bot routes
-app.use("/qr", qrRouter);
+// =======================
+// API ROUTES
+// =======================
+
+// Pairing Code
 app.use("/", pairRouter);
 
-app.listen(PORT, ()=>{
-  console.log("🚀 ROK XD en ligne sur le port", PORT);
+// QR Code
+app.use("/", qrRouter);
+
+// =======================
+// CONFIG SAVE (simple)
+// =======================
+const configs = {};
+
+app.post("/config", (req, res) => {
+  const { number, prefix } = req.body;
+  if (!number) return res.json({ error: "Numéro requis" });
+
+  configs[number] = { prefix: prefix || "!" };
+
+  res.json({
+    status: "Configuration sauvegardée",
+    number,
+    prefix: configs[number].prefix
+  });
+});
+
+// =======================
+// 404
+// =======================
+app.use((req, res) => {
+  res.status(404).json({ error: "Route introuvable" });
+});
+
+// =======================
+// START SERVER
+// =======================
+app.listen(PORT, () => {
+  console.log(`🚀 ROK XD server running on port ${PORT}`);
 });

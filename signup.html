@@ -1,302 +1,122 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="fr">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ROK-XD • Sign Up</title>
+<title>ROK XD • Sign Up</title>
+
 <style>
 :root{
-  --black:#020617;
-  --navy:#020b2d;
-  --blue:#2563eb;
-  --bubble-dark:rgba(37,99,235,.25);
-  --bubble-light:rgba(37,99,235,.35);
-  --muted:rgba(255,255,255,.55);
-  --light-bg:#e0f0ff;
-  --light-card:#ffffffcc;
-  --light-text:#020617;
-  --theme-icon-color:#2563eb;
+  --bg-1:#020617;
+  --bg-2:#0f172a;
+  --neon:#38bdf8;
+  --glass-border:rgba(56,189,248,0.22);
+  --muted:rgba(255,255,255,0.45);
 }
 
-/* Dark / Light mode */
-body[data-theme="dark"]{
-  --bg:linear-gradient(180deg,var(--black),var(--navy));
-  --card-bg:rgba(255,255,255,.03);
-  --text-color:#eaf2ff;
-  --btn-text:#020617;
-  --btn-bg:var(--blue);
-  --bubble-color:var(--bubble-dark);
-}
-body[data-theme="light"]{
-  --bg:linear-gradient(180deg,#d0e6ff,#f0f8ff);
-  --card-bg:var(--light-card);
-  --text-color:var(--light-text);
-  --btn-text:#020617;
-  --btn-bg:#2563eb;
-  --bubble-color:var(--bubble-light);
-}
-
-*{box-sizing:border-box;}
+*{box-sizing:border-box}
 html,body{
   height:100%;
   margin:0;
-  font-family:"Inter",system-ui,-apple-system,"Segoe UI",Roboto;
-  background:var(--bg);
-  color:var(--text-color);
-  overflow:hidden;
-  transition:background .5s, color .5s;
+  font-family:Inter,system-ui;
+  background:linear-gradient(180deg,var(--bg-1),var(--bg-2));
+  color:#eafff2;
 }
 
-/* Bubbles */
-.bubbles{
-  position:fixed;
-  inset:0;
-  overflow:hidden;
-  z-index:0;
-}
-.bubbles span{
-  position:absolute;
-  bottom:-120px;
-  border-radius:50%;
-  background:radial-gradient(circle at 30% 30%, #ffffff60, var(--bubble-color));
-  animation:rise linear infinite;
-  box-shadow:0 0 25px rgba(37,99,235,.45);
-  opacity:.8;
-}
-.bubbles span:nth-child(1){left:5%; width:14px;height:14px;animation-duration:16s;}
-.bubbles span:nth-child(2){left:10%; width:22px;height:22px;animation-duration:18s;}
-.bubbles span:nth-child(3){left:15%; width:18px;height:18px;animation-duration:20s;}
-.bubbles span:nth-child(4){left:20%; width:28px;height:28px;animation-duration:22s;}
-.bubbles span:nth-child(5){left:25%; width:16px;height:16px;animation-duration:19s;}
-.bubbles span:nth-child(6){left:30%; width:24px;height:24px;animation-duration:23s;}
-.bubbles span:nth-child(7){left:35%; width:20px;height:20px;animation-duration:17s;}
-.bubbles span:nth-child(8){left:40%; width:32px;height:32px;animation-duration:21s;}
-.bubbles span:nth-child(9){left:45%; width:18px;height:18px;animation-duration:16s;}
-.bubbles span:nth-child(10){left:50%; width:26px;height:26px;animation-duration:22s;}
-.bubbles span:nth-child(11){left:55%; width:20px;height:20px;animation-duration:19s;}
-.bubbles span:nth-child(12){left:60%; width:30px;height:30px;animation-duration:24s;}
-.bubbles span:nth-child(13){left:65%; width:22px;height:22px;animation-duration:18s;}
-.bubbles span:nth-child(14){left:70%; width:16px;height:16px;animation-duration:20s;}
-.bubbles span:nth-child(15){left:75%; width:28px;height:28px;animation-duration:23s;}
-.bubbles span:nth-child(16){left:80%; width:18px;height:18px;animation-duration:17s;}
-.bubbles span:nth-child(17){left:85%; width:24px;height:24px;animation-duration:21s;}
-.bubbles span:nth-child(18){left:90%; width:14px;height:14px;animation-duration:19s;}
-.bubbles span:nth-child(19){left:93%; width:20px;height:20px;animation-duration:22s;}
-.bubbles span:nth-child(20){left:97%; width:26px;height:26px;animation-duration:25s;}
-
-@keyframes rise{
-  from{transform:translateY(0) rotate(0deg); opacity:0;}
-  10%{opacity:.7;}
-  to{transform:translateY(-120vh) rotate(360deg); opacity:0;}
-}
-
-/* Header */
-.header{
-  position:fixed;
-  top:0;
-  left:0;
-  width:100%;
-  height:60px;
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  padding:0 20px;
-  backdrop-filter:blur(12px);
-  background:rgba(255,255,255,.2);
-  z-index:2;
-  border-bottom:1px solid rgba(37,99,235,.25);
-}
-.lang-btn{
-  display:flex;
-  align-items:center;
-  cursor:pointer;
-  padding:6px 12px;
-  background:rgba(37,99,235,.15);
-  border-radius:6px;
-  font-size:13px;
-  color:var(--theme-icon-color);
-  transition:.3s;
-}
-.lang-btn span{margin-right:6px;}
-.lang-btn:hover{background:rgba(37,99,235,.3);}
-.theme-switch{
-  cursor:pointer;
-  font-size:20px;
-  color:var(--theme-icon-color);
-  margin-left:10px;
-  transition:.2s;
-}
-.theme-switch:hover{color:var(--blue);}
-
-/* Card */
 .stage{
   height:100vh;
   display:flex;
   align-items:center;
   justify-content:center;
-  padding:32px;
-  position:relative;
-  z-index:1;
 }
+
 .card{
   width:380px;
-  max-width:92vw;
-  background:var(--card-bg);
-  border-radius:22px;
-  padding:32px 26px;
+  padding:26px;
+  border-radius:18px;
+  background:rgba(255,255,255,.02);
+  border:1px solid var(--glass-border);
+  backdrop-filter:blur(10px);
+  box-shadow:0 0 50px rgba(56,189,248,.08);
   text-align:center;
-  backdrop-filter:blur(14px);
-  box-shadow:0 30px 70px rgba(0,0,0,.2);
-  transition:background .5s, color .5s;
 }
+
 .avatar{
-  width:120px;
-  height:120px;
-  margin:0 auto 18px;
+  width:110px;
+  height:110px;
   border-radius:50%;
   overflow:hidden;
-  border:3px solid var(--blue);
-  box-shadow:0 0 35px rgba(37,99,235,.6);
+  margin:0 auto 14px;
+  border:2px solid var(--neon);
 }
-.avatar img{width:100%;height:100%;object-fit:cover;}
-h1{margin:0;font-size:22px;letter-spacing:1.2px;transition:color .5s;}
-.subtitle{font-size:13px;margin-top:6px;color:var(--muted);transition:color .5s;}
-.actions{margin-top:20px;}
-form{display:flex;flex-direction:column;gap:12px;}
-input{padding:12px;border-radius:6px;border:1px solid rgba(37,99,235,.5);outline:none; transition:.2s;}
-input:focus{border-color:var(--blue);}
-input.error{border-color:red;}
-.error-msg{color:red;font-size:12px;margin-top:-8px;margin-bottom:6px; text-align:left;}
-.btn-submit{
-  padding:14px;
+.avatar img{width:100%;height:100%;object-fit:cover}
+
+input{
+  width:100%;
+  padding:12px;
+  margin:8px 0;
+  border-radius:8px;
+  border:1px solid rgba(56,189,248,.25);
+  background:rgba(255,255,255,.02);
+  color:#eafff2;
+}
+
+button{
+  width:100%;
+  padding:12px;
+  margin-top:10px;
+  background:var(--neon);
+  color:#020617;
   border:none;
   border-radius:8px;
-  background:var(--btn-bg);
-  color:var(--btn-text);
-  font-weight:600;
+  font-weight:700;
   cursor:pointer;
-  transition:.25s;
 }
-.btn-submit:hover{transform:translateY(-2px); box-shadow:0 10px 30px rgba(37,99,235,.45);}
-.footer{margin-top:20px;font-size:12px;color:var(--muted);transition:color .5s;}
+
+.error{color:#ef4444;font-size:13px;margin-top:8px}
 </style>
 </head>
-<body data-theme="dark">
 
-<div class="bubbles">
-  <span></span><span></span><span></span><span></span>
-  <span></span><span></span><span></span><span></span>
-  <span></span><span></span><span></span><span></span>
-  <span></span><span></span><span></span><span></span>
-  <span></span><span></span><span></span><span></span>
-</div>
-
-<div class="header">
-  <div class="lang-btn" onclick="toggleLang()">
-    <span>Language:</span><span id="lang-text">EN</span>
-  </div>
-  <div class="theme-switch" onclick="toggleTheme()">🌙 / ☀️</div>
-</div>
-
-<main class="stage">
-  <section class="card">
+<body>
+<div class="stage">
+  <div class="card">
     <div class="avatar">
-      <img src="https://files.catbox.moe/t1pogr.jpg" alt="ROK-XD Avatar">
+      <img src="https://files.catbox.moe/t1pogr.jpg">
     </div>
-    <h1 id="title">Sign Up to ROK-XD</h1>
-    <div class="subtitle" id="subtitle">Create your account</div>
 
-    <div class="actions">
-      <form id="signup-form" onsubmit="return validateForm()">
-        <input type="text" id="name" placeholder="Name / Username">
-        <div class="error-msg" id="name-error"></div>
+    <h2>Créer un compte</h2>
 
-        <input type="email" id="email" placeholder="Email">
-        <div class="error-msg" id="email-error"></div>
+    <input id="username" placeholder="Nom d'utilisateur">
+    <input id="email" placeholder="Email">
+    <input id="password" type="password" placeholder="Mot de passe">
 
-        <input type="password" id="password" placeholder="Password">
-        <div class="error-msg" id="password-error"></div>
-
-        <button type="submit" class="btn-submit" id="signup-btn">S'inscrire</button>
-      </form>
-    </div>
-    <div class="footer" id="footer">© RAIZEL & KNUT</div>
-  </section>
-</main>
+    <button onclick="signup()">Inscription</button>
+    <div class="error" id="error"></div>
+  </div>
+</div>
 
 <script>
-let lang = 'en';
-function toggleTheme(){
-  const body = document.body;
-  body.setAttribute('data-theme', body.getAttribute('data-theme')==='dark'?'light':'dark');
-}
+async function signup(){
+  const username = usernameInput.value.trim();
+  const email = emailInput.value.trim();
+  const password = passwordInput.value;
 
-function toggleLang(){
-  lang = (lang==='en')?'fr':'en';
-  document.getElementById('lang-text').innerText = lang.toUpperCase();
-  if(lang==='en'){
-    document.getElementById('title').innerText = "Sign Up to ROK-XD";
-    document.getElementById('subtitle').innerText = "Create your account";
-    document.getElementById('name').placeholder = "Name / Username";
-    document.getElementById('email').placeholder = "Email";
-    document.getElementById('password').placeholder = "Password";
-    document.getElementById('signup-btn').innerText = "Sign Up";
-    document.getElementById('footer').innerText = "© RAIZEL & KNUT";
-  } else {
-    document.getElementById('title').innerText = "Inscription sur ROK-XD";
-    document.getElementById('subtitle').innerText = "Créez votre compte";
-    document.getElementById('name').placeholder = "Nom / Pseudo";
-    document.getElementById('email').placeholder = "Email";
-    document.getElementById('password').placeholder = "Mot de passe";
-    document.getElementById('signup-btn').innerText = "S'inscrire";
-    document.getElementById('footer').innerText = "© RAIZEL & KNUT";
+  const res = await fetch("/api/signup",{
+    method:"POST",
+    headers:{ "Content-Type":"application/json" },
+    body:JSON.stringify({ username,email,password })
+  });
+
+  const data = await res.json();
+  if(data.success){
+    window.location.href="/login";
+  }else{
+    document.getElementById("error").innerText=data.error;
   }
 }
-
-/* Validation frontend */
-function validateForm(){
-  let valid = true;
-
-  const name = document.getElementById('name');
-  const email = document.getElementById('email');
-  const password = document.getElementById('password');
-
-  // Reset errors
-  document.getElementById('name-error').innerText = "";
-  document.getElementById('email-error').innerText = "";
-  document.getElementById('password-error').innerText = "";
-  name.classList.remove("error");
-  email.classList.remove("error");
-  password.classList.remove("error");
-
-  if(name.value.trim() === ""){
-    valid = false;
-    name.classList.add("error");
-    document.getElementById('name-error').innerText = "Name is required";
-  }
-
-  if(email.value.trim() === ""){
-    valid = false;
-    email.classList.add("error");
-    document.getElementById('email-error').innerText = "Email is required";
-  } else if(!/\S+@\S+\.\S+/.test(email.value)){
-    valid = false;
-    email.classList.add("error");
-    document.getElementById('email-error').innerText = "Invalid email format";
-  }
-
-  if(password.value.length < 8){
-    valid = false;
-    password.classList.add("error");
-    document.getElementById('password-error').innerText = "Password must be at least 8 characters";
-  } else if(!/[A-Z]/.test(password.value)){
-    valid = false;
-    password.classList.add("error");
-    document.getElementById('password-error').innerText = "Password must contain at least one uppercase letter";
-  }
-
-  return valid;
-}
+const usernameInput=document.getElementById("username");
+const emailInput=document.getElementById("email");
+const passwordInput=document.getElementById("password");
 </script>
 </body>
 </html>

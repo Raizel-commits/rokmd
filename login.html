@@ -2,66 +2,15 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ROK XD • Login</title>
-<style>
-:root{
-  --bg-1:#020617;
-  --bg-2:#0f172a;
-  --neon:#38bdf8;
-  --glass-border:rgba(56,189,248,0.22);
-}
-*{box-sizing:border-box}
-html,body{height:100%;margin:0;font-family:Inter,system-ui;background:linear-gradient(180deg,var(--bg-1),var(--bg-2));color:#eafff2}
-.stage{height:100vh;display:flex;align-items:center;justify-content:center}
-.card{width:380px;padding:26px;border-radius:18px;background:rgba(255,255,255,.02);border:1px solid var(--glass-border);backdrop-filter:blur(10px);box-shadow:0 0 50px rgba(56,189,248,.08);text-align:center}
-.avatar{width:110px;height:110px;border-radius:50%;overflow:hidden;margin:0 auto 14px;border:2px solid var(--neon)}
-.avatar img{width:100%;height:100%;object-fit:cover}
-input{width:100%;padding:12px;margin:8px 0;border-radius:8px;border:1px solid rgba(56,189,248,.25);background:rgba(255,255,255,.02);color:#eafff2}
-button{width:100%;padding:12px;margin-top:10px;background:var(--neon);color:#020617;border:none;border-radius:8px;font-weight:700;cursor:pointer}
-.error{color:#ef4444;font-size:13px;margin-top:8px}
-</style>
+<title>Login</title>
 </head>
 <body>
-<div class="stage">
-  <div class="card">
-    <div class="avatar">
-      <img src="https://files.catbox.moe/t1pogr.jpg">
-    </div>
-    <h2>Connexion</h2>
-    <input id="username" placeholder="Email ou nom d'utilisateur">
-    <input id="password" type="password" placeholder="Mot de passe">
-    <button onclick="login()">Connexion</button>
-    <div class="error" id="error"></div>
-    <p style="margin-top:10px;">Pas de compte ? <a href="/signup.html" style="color:var(--neon);">Inscription</a></p>
-  </div>
-</div>
-
-<script>
-async function login(){
-  const identifier = document.getElementById("username").value.trim();
-  const password = document.getElementById("password").value.trim();
-  const error = document.getElementById("error");
-  error.textContent="";
-
-  if(!identifier || !password){ error.textContent="Champs requis"; return; }
-
-  try{
-    const res = await fetch("/api/login", {
-      method:"POST",
-      headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({identifier, password})
-    });
-    const data = await res.json();
-    if(data.success){
-      window.location.href="/accueil";
-    } else {
-      error.textContent=data.error || "Connexion refusée";
-    }
-  } catch(e){
-    error.textContent="Erreur serveur";
-  }
-}
-</script>
+<h2>Connexion</h2>
+<form method="POST" action="/login">
+    <input type="text" name="username" placeholder="Username" required><br><br>
+    <input type="password" name="password" placeholder="Password" required><br><br>
+    <button type="submit">Login</button>
+</form>
+<p><a href="/register">Créer un compte</a></p>
 </body>
 </html>

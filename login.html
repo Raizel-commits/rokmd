@@ -2,75 +2,102 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<title>ROKXD • Login</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ROK XD • Login</title>
+
+<!-- AdSense -->
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2875755643885097"
+     crossorigin="anonymous"></script>
 
 <style>
-body{
-  background: radial-gradient(circle at top, #0f172a, #020617);
-  font-family: Arial, sans-serif;
-  display:flex;
-  justify-content:center;
-  align-items:center;
-  height:100vh;
-  color:#e5e7eb;
+:root{
+  --bg-1:#020617;
+  --bg-2:#0f172a;
+  --neon:#38bdf8;
+  --glass-border:rgba(56,189,248,0.22);
+  --muted:rgba(255,255,255,0.45);
+  --card-w:400px;
 }
-.box{
-  background:rgba(255,255,255,0.05);
-  backdrop-filter: blur(12px);
-  padding:30px;
-  border-radius:16px;
-  width:320px;
-  box-shadow:0 0 30px rgba(56,189,248,.4);
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;font-family:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial;
+background: radial-gradient(1200px 600px at 10% 10%, rgba(56,189,248,0.03), transparent),
+            radial-gradient(900px 500px at 90% 85%, rgba(56,189,248,0.02), transparent),
+            linear-gradient(180deg,var(--bg-1),var(--bg-2));
+color:#dfffe6;overflow-x:hidden;}
+.stage{position:relative;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:36px;}
+.glass-card{
+  width:var(--card-w);max-width:95vw;
+  background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+  border-radius:18px;padding:22px;
+  box-shadow:0 10px 40px rgba(0,0,0,0.7),0 0 40px rgba(56,189,248,0.05) inset;
+  backdrop-filter: blur(10px) saturate(140%);
+  border:1px solid var(--glass-border);
+  text-align:center;
 }
-h2{text-align:center;color:#38bdf8}
-input,button{
-  width:100%;
-  padding:12px;
-  margin-top:10px;
-  border:none;
-  border-radius:8px;
+.card-header h1{font-family:"JetBrains Mono", monospace;font-size:24px;margin:0;color:var(--neon);text-transform:uppercase;text-shadow:0 0 18px rgba(56,189,248,0.22);}
+.card-header .small-url{font-size:12px;color:var(--muted);margin-top:6px;}
+input[type="email"], input[type="password"]{
+  width:100%;padding:12px;margin:8px 0;border-radius:8px;border:1px solid rgba(56,189,248,0.1);
+  background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.006));color:#dfffe6;
 }
-input{background:#020617;color:#fff}
-button{
-  background:#38bdf8;
-  font-weight:bold;
-  cursor:pointer;
+.btn{
+  display:block;width:100%;padding:12px;margin:8px 0;font-size:16px;font-weight:bold;color:#020617;
+  background:var(--neon);border:none;border-radius:6px;text-decoration:none;cursor:pointer;
 }
-a{color:#38bdf8;text-decoration:none}
-.error{color:#f87171;margin-top:10px}
+.btn:hover{opacity:0.9;}
+.error{color:#ff6b6b;margin:8px 0;font-weight:bold;}
+.link{color:var(--neon);text-decoration:none;font-size:14px;}
 </style>
 </head>
-
 <body>
-<div class="box">
-<h2>Connexion</h2>
+<main class="stage">
+<section class="glass-card">
+  <header class="card-header">
+    <h1>Login</h1>
+    <div class="small-url">Bienvenue sur ROK XD</div>
+  </header>
 
-<input id="email" type="email" placeholder="Email">
-<input id="password" type="password" placeholder="Mot de passe">
+  <div class="error" id="errorMsg"></div>
 
-<button onclick="login()">Se connecter</button>
-<p class="error" id="err"></p>
-<p style="text-align:center;margin-top:10px">
-<a href="/register">Créer un compte</a>
-</p>
-</div>
+  <input type="email" id="email" placeholder="Email">
+  <input type="password" id="password" placeholder="Mot de passe">
+  <button id="loginBtn" class="btn">Se connecter</button>
+
+  <div style="margin-top:12px;">
+    Pas de compte ? <a href="/register" class="link">S'inscrire</a>
+  </div>
+</section>
+</main>
 
 <script>
-async function login(){
-  const email = email.value;
-  const password = password.value;
+document.getElementById("loginBtn").onclick = async () => {
+  const email = document.getElementById("email").value;
+  const password = document.getElementById("password").value;
+  const errorDiv = document.getElementById("errorMsg");
+  errorDiv.innerText = "";
 
-  const res = await fetch("/auth/login",{
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({email,password})
-  });
+  if(!email || !password){
+    errorDiv.innerText = "Veuillez remplir tous les champs";
+    return;
+  }
 
-  const data = await res.json();
-  if(data.success) location.href="/panel";
-  else err.textContent = data.error;
-}
+  try{
+    const res = await fetch("/auth/login", {
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({email,password})
+    });
+    const data = await res.json();
+    if(data.success){
+      window.location.href = "/panel";
+    } else {
+      errorDiv.innerText = data.error || "Erreur inconnue";
+    }
+  }catch(e){
+    errorDiv.innerText = "Erreur serveur";
+    console.error(e);
+  }
+};
 </script>
 </body>
 </html>

@@ -4,7 +4,7 @@ import bodyParser from "body-parser";
 import path from "path";
 import { fileURLToPath } from "url";
 import mongoose from "mongoose";
-import bcrypt from "bcrypt";
+import bcrypt from 'bcryptjs';
 
 /* ================= DEBUG ================= */
 process.on("uncaughtException", err => console.error("UNCAUGHT EXCEPTION:", err));

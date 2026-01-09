@@ -33,12 +33,12 @@ app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-// Fichiers statiques (HTML / CSS / JS)
+// Fichiers statiques
 app.use(express.static(__dirname));
 
 // =======================
-// RATE LIMIT (API protection)
-// =======================
+// RATE LIMIT (API)
+– =======================
 const limiter = rateLimit({
   windowMs: 60 * 1000,
   max: 20,
@@ -49,11 +49,7 @@ app.use("/api", limiter);
 // ROUTES HTML
 // =======================
 app.get("/", (req, res) =>
-  res.sendFile(path.join(__dirname, "pair.html"))
-);
-
-app.get("/qr", (req, res) =>
-  res.sendFile(path.join(__dirname, "qr.html"))
+  res.sendFile(path.join(__dirname, "index.html"))
 );
 
 app.get("/login", (req, res) =>
@@ -68,14 +64,22 @@ app.get("/accueil", (req, res) =>
   res.sendFile(path.join(__dirname, "accueil.html"))
 );
 
+app.get("/pair", (req, res) =>
+  res.sendFile(path.join(__dirname, "pair.html"))
+);
+
+app.get("/qr", (req, res) =>
+  res.sendFile(path.join(__dirname, "qr.html"))
+);
+
 // =======================
 // ROUTERS
 // =======================
 
-// Panel QR
+// QR panel
 app.use("/qr", qrRouter);
 
-// Panel Pairing (racine)
+// Pairing panel
 app.use("/", pairRouter);
 
 // =======================

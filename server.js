@@ -5,7 +5,7 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 
-/* ===== DEBUG RENDER ===== */
+/* ================= DEBUG (Render) ================= */
 process.on("uncaughtException", err => {
   console.error("UNCAUGHT EXCEPTION:", err);
 });
@@ -13,21 +13,32 @@ process.on("unhandledRejection", err => {
   console.error("UNHANDLED REJECTION:", err);
 });
 
+/* ================= PATH ================= */
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+/* ================= APP ================= */
 const app = express();
-
-/* ✅ PORT RENDER */
 const PORT = process.env.PORT || 3000;
 
-/* ===== USERS FILE ===== */
+/* ================= USERS FILE ================= */
 const usersFile = path.join(__dirname, "users.json");
 if (!fs.existsSync(usersFile)) {
   fs.writeFileSync(usersFile, JSON.stringify([]));
 }
 
-/* ===== MIDDLEWARE ===== */
+/* ================= HELPERS ================= */
+function loadUsers() {
+  try {
+    const data = fs.readFileSync(usersFile, "utf-8");
+    const parsed = JSON.parse(data);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+/* ================= MIDDLEWARE ================= */
 app.set("trust proxy", 1);
 
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -42,7 +53,7 @@ app.use(session({
   }
 }));
 
-/* ===== AUTH MIDDLEWARE ===== */
+/* ================= AUTH MIDDLEWARE ================= */
 function requireAuth(req, res, next) {
   if (!req.session.user) {
     return res.redirect("/login");
@@ -50,7 +61,7 @@ function requireAuth(req, res, next) {
   next();
 }
 
-/* ===== PUBLIC ROUTES ===== */
+/* ================= PUBLIC ROUTES ================= */
 app.get("/login", (req, res) => {
   res.sendFile(path.join(__dirname, "login.html"));
 });
@@ -59,16 +70,16 @@ app.get("/register", (req, res) => {
   res.sendFile(path.join(__dirname, "register.html"));
 });
 
-/* ===== REGISTER ===== */
+/* ================= REGISTER ================= */
 app.post("/register", (req, res) => {
   const { username, password } = req.body;
-  const users = JSON.parse(fs.readFileSync(usersFile, "utf-8"));
+  const users = loadUsers();
 
   if (!username || !password) {
     return res.status(400).send("Champs manquants");
   }
 
-  if (users.find(u => u.username === username)) {
+  if (users.some(u => u.username === username)) {
     return res.status(400).send("Utilisateur déjà existant");
   }
 
@@ -78,10 +89,10 @@ app.post("/register", (req, res) => {
   res.redirect("/login");
 });
 
-/* ===== LOGIN ===== */
+/* ================= LOGIN ================= */
 app.post("/login", (req, res) => {
   const { username, password } = req.body;
-  const users = JSON.parse(fs.readFileSync(usersFile, "utf-8"));
+  const users = loadUsers();
 
   const user = users.find(
     u => u.username === username && u.password === password
@@ -95,14 +106,14 @@ app.post("/login", (req, res) => {
   res.redirect("/");
 });
 
-/* ===== LOGOUT ===== */
+/* ================= LOGOUT ================= */
 app.get("/logout", (req, res) => {
   req.session.destroy(() => {
     res.redirect("/login");
   });
 });
 
-/* ===== PROTECTED ROUTES ===== */
+/* ================= PROTECTED ROUTES ================= */
 app.get("/", requireAuth, (req, res) => {
   res.sendFile(path.join(__dirname, "index.html"));
 });
@@ -115,7 +126,7 @@ app.get("/qr", requireAuth, (req, res) => {
   res.sendFile(path.join(__dirname, "qr.html"));
 });
 
-/* ===== SERVER ===== */
+/* ================= SERVER ================= */
 app.listen(PORT, () => {
   console.log(`✅ Server running on port ${PORT}`);
 });

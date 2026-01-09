@@ -1,11 +1,11 @@
 import express from "express";
 import session from "express-session";
 import bodyParser from "body-parser";
-import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
+import mongoose from "mongoose";
 
-/* ================= DEBUG (Render) ================= */
+/* ================= DEBUG ================= */
 process.on("uncaughtException", err => console.error("UNCAUGHT EXCEPTION:", err));
 process.on("unhandledRejection", err => console.error("UNHANDLED REJECTION:", err));
 
@@ -17,19 +17,19 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-/* ================= USERS FILE ================= */
-const usersFile = path.join(__dirname, "users.json");
-if (!fs.existsSync(usersFile)) fs.writeFileSync(usersFile, JSON.stringify([]));
+/* ================= MONGODB ================= */
+mongoose.connect(
+  "mongodb+srv://rokxd_raizel:Sangoku77@cluster0.0g3b0yp.mongodb.net/rokxd?retryWrites=true&w=majority"
+)
+.then(() => console.log("✅ MongoDB connecté"))
+.catch(err => console.error("❌ MongoDB error :", err.message));
 
-/* ================= HELPERS ================= */
-function loadUsers() {
-  try {
-    const data = fs.readFileSync(usersFile, "utf-8");
-    return Array.isArray(JSON.parse(data)) ? JSON.parse(data) : [];
-  } catch {
-    return [];
-  }
-}
+/* ================= SCHEMA UTILISATEUR ================= */
+const userSchema = new mongoose.Schema({
+  username: { type: String, required: true, unique: true },
+  password: { type: String, required: true }
+});
+const User = mongoose.model("User", userSchema);
 
 /* ================= MIDDLEWARE ================= */
 app.set("trust proxy", 1);
@@ -53,26 +53,36 @@ app.get("/login", (req, res) => res.sendFile(path.join(__dirname, "login.html"))
 app.get("/register", (req, res) => res.sendFile(path.join(__dirname, "register.html")));
 
 /* ================= REGISTER ================= */
-app.post("/register", (req, res) => {
+app.post("/register", async (req, res) => {
   const { username, password } = req.body;
-  const users = loadUsers();
   if (!username || !password) return res.status(400).send("Champs manquants");
-  if (users.some(u => u.username === username)) return res.status(400).send("Utilisateur déjà existant");
 
-  users.push({ username, password });
-  fs.writeFileSync(usersFile, JSON.stringify(users, null, 2));
-  res.redirect("/login");
+  try {
+    const exists = await User.findOne({ username });
+    if (exists) return res.status(400).send("Utilisateur déjà existant");
+
+    const user = new User({ username, password });
+    await user.save();
+    res.redirect("/login");
+  } catch (err) {
+    console.error(err);
+    res.status(500).send("Erreur serveur");
+  }
 });
 
 /* ================= LOGIN ================= */
-app.post("/login", (req, res) => {
+app.post("/login", async (req, res) => {
   const { username, password } = req.body;
-  const users = loadUsers();
-  const user = users.find(u => u.username === username && u.password === password);
-  if (!user) return res.status(401).send("Identifiants incorrects");
+  try {
+    const user = await User.findOne({ username, password });
+    if (!user) return res.status(401).send("Identifiants incorrects");
 
-  req.session.user = user;
-  res.redirect("/");
+    req.session.user = user;
+    res.redirect("/");
+  } catch (err) {
+    console.error(err);
+    res.status(500).send("Erreur serveur");
+  }
 });
 
 /* ================= LOGOUT ================= */
@@ -87,7 +97,6 @@ app.get("/qrpage", requireAuth, (_, res) => res.sendFile(path.join(__dirname, 'q
 import qrRouter from "./qr.js";
 import pairRouter from "./pair.js";
 
-// Les routers restent actifs si tu veux les utiliser pour d’autres routes
 app.use('/qr', requireAuth, qrRouter);
 app.use('/', requireAuth, pairRouter);
 

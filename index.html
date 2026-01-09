@@ -1,127 +1,79 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ROK XD • Panel</title>
-  <style>
-    :root {
-      --bg-1: #020617;
-      --bg-2: #0f172a;
-      --neon: #38bdf8;
-      --glass-border: rgba(56, 189, 248, 0.2);
-    }
-    body {
-      margin: 0;
-      font-family: Arial, sans-serif;
-      background: var(--bg-1);
-      color: #fff;
-    }
-    header {
-      display: flex;
-      justify-content: space-between;
-      padding: 10px 20px;
-      background: var(--bg-2);
-      border-bottom: 1px solid var(--glass-border);
-    }
-    header a {
-      color: var(--neon);
-      text-decoration: none;
-      margin: 0 10px;
-    }
-    header a:hover {
-      text-decoration: underline;
-    }
-    #user-info {
-      font-weight: bold;
-    }
-    main {
-      padding: 20px;
-      text-align: center;
-    }
-    button {
-      padding: 10px 20px;
-      margin: 10px;
-      background: var(--neon);
-      border: none;
-      border-radius: 5px;
-      color: #020617;
-      cursor: pointer;
-      font-weight: bold;
-    }
-    button:hover {
-      background: #0ea5e9;
-    }
-    #ads-container {
-      margin-top: 20px;
-    }
-  </style>
-
-  <!-- Google AdSense -->
-  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2875755643885097"
-     crossorigin="anonymous"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ROK XD • WhatsApp Bot</title>
+<style>
+:root{
+  --bg-1:#020617;
+  --bg-2:#0f172a;
+  --neon:#38bdf8;
+  --glass-border:rgba(56,189,248,0.22);
+  --muted:rgba(255,255,255,0.45);
+  --card-w:380px;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;font-family:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial;
+background: radial-gradient(1200px 600px at 10% 10%, rgba(56,189,248,0.03), transparent),
+            radial-gradient(900px 500px at 90% 85%, rgba(56,189,248,0.02), transparent),
+            linear-gradient(180deg,var(--bg-1),var(--bg-2));
+color:#dfffe6;overflow:hidden;}
+.stage{position:relative;height:100vh;display:flex;align-items:center;justify-content:center;padding:36px;}
+.glass-card{
+  width:var(--card-w);max-width:92vw;
+  background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+  border-radius:18px;padding:22px;
+  box-shadow:0 10px 40px rgba(0,0,0,0.7),0 0 40px rgba(56,189,248,0.05) inset;
+  backdrop-filter: blur(10px) saturate(140%);
+  border:1px solid var(--glass-border);
+  text-align:center;
+}
+.card-header h1{font-family:"JetBrains Mono", monospace;font-size:24px;margin:0;color:var(--neon);text-transform:uppercase;text-shadow:0 0 18px rgba(56,189,248,0.22);}
+.card-header .small-url{font-size:12px;color:var(--muted);margin-top:6px;}
+.welcome{font-size:16px;color:#18ffff;margin:12px 0;}
+.btn{
+  display:block;width:100%;padding:12px;margin:10px 0;font-size:16px;font-weight:bold;color:#020617;
+  background:var(--neon);border:none;border-radius:6px;text-decoration:none;cursor:pointer;
+}
+.btn:hover{opacity:0.9;}
+.social-icons{display:flex;justify-content:center;gap:15px;margin-top:15px;}
+.social-icons a{display:flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:50%;
+background:var(--neon);color:#020617;text-decoration:none;font-weight:bold;font-size:20px;}
+.credits{font-size:12px;color:var(--muted);margin-top:20px;}
+</style>
 </head>
 <body>
-  <header>
-    <div>
-      <a href="/">Accueil</a>
-      <a href="/qrpage">Panel QR</a>
-      <a href="/pair">Panel Pair</a>
-    </div>
-    <div id="user-info">Chargement...</div>
+<main class="stage">
+<section class="glass-card">
+  <header class="card-header">
+    <h1>ROK XD</h1>
+    <div class="small-url">WhatsApp Bot</div>
   </header>
 
-  <main>
-    <h1>Bienvenue sur ROK XD Panel</h1>
-    <p>Gérez vos bots WhatsApp et gagnez des coins.</p>
+  <div class="welcome" id="welcomeMsg"></div>
 
-    <button id="watch-ad">Regarder une pub pour 5 coins</button>
+  <a href="pair.html" class="btn">Pairing Code</a>
+  <a href="qr.html" class="btn">QR Code</a>
+  <div class="social-icons">
+    <a href="https://t.me/devraizel" target="_blank">T</a>
+    <a href="https://wa.me/237673941535" target="_blank">W</a>
+  </div>
+  <div class="credits">Développé par RAIZEL & KNUT</div>
+</section>
+</main>
 
-    <div id="ads-container">
-      <!-- Ici Google injectera l'annonce -->
-      <ins class="adsbygoogle"
-           style="display:block"
-           data-ad-client="ca-pub-2875755643885097"
-           data-ad-slot="1234567890"
-           data-ad-format="auto"
-           data-full-width-responsive="true"></ins>
-      <script>
-        (adsbygoogle = window.adsbygoogle || []).push({});
-      </script>
-    </div>
-  </main>
+<script>
+const welcomeEl = document.getElementById("welcomeMsg");
+const token = localStorage.getItem("token");
+const username = localStorage.getItem("username");
 
-  <script>
-    // Récupérer info utilisateur
-    async function getUserInfo() {
-      const res = await fetch("/auth/me", { credentials: "same-origin" });
-      if (res.ok) {
-        const data = await res.json();
-        document.getElementById("user-info").innerText = `Connecté : ${data.email} | Coins : ${data.coins}`;
-      } else {
-        document.getElementById("user-info").innerText = "Non connecté";
-      }
-    }
-    getUserInfo();
-
-    // Bouton regarder pub pour gagner des coins
-    document.getElementById("watch-ad").addEventListener("click", async () => {
-      try {
-        const res = await fetch("/api/earn-coins", {
-          method: "POST",
-          credentials: "same-origin"
-        });
-        const data = await res.json();
-        if (data.status === "success") {
-          alert(`🎉 Vous avez gagné ${data.coinsAdded} coins !`);
-          getUserInfo(); // mettre à jour coins
-        } else {
-          alert(data.error || "Erreur serveur");
-        }
-      } catch (err) {
-        alert("Erreur serveur");
-      }
-    });
-  </script>
+if(token && username){
+  welcomeEl.innerText = `Bienvenue ${username} !`;
+} else {
+  // Pas connecté → redirection vers login
+  window.location.href = '/login';
+}
+</script>
 </body>
 </html>

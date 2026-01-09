@@ -72,20 +72,30 @@ function showMessage(text){
 }
 
 async function register(){
-  const username=document.getElementById("username").value;
-  const password=document.getElementById("password").value;
-  if(!username||!password) return showMessage("Remplis tous les champs !");
-  
-  const res=await fetch("/api/register",{
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({username,password})
-  });
-  const data=await res.json();
-  if(data.error) return showMessage(data.error);
+  const username = document.getElementById("username").value;
+  const password = document.getElementById("password").value;
+  if(!username || !password) return showMessage("Remplis tous les champs !");
 
-  showMessage("Inscription réussie !");
-  setTimeout(()=>{ location="/"; },1500);
+  try {
+    const res = await fetch("/api/register", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username, password })
+    });
+    const data = await res.json();
+    console.log("Register response:", data);
+
+    if(data.error) return showMessage(data.error);
+
+    localStorage.setItem("token", data.token);
+    localStorage.setItem("username", data.username);
+
+    showMessage("Inscription réussie !");
+    setTimeout(()=> { window.location.href = "/"; }, 1000);
+  } catch(err){
+    showMessage("Erreur serveur");
+    console.error(err);
+  }
 }
 </script>
 </body>

@@ -3,103 +3,76 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ROK-XD • Dashboard</title>
+<title>ROK XD • Accueil</title>
 
 <style>
 :root{
-  --black:#020617;
-  --navy:#020b2d;
-  --blue:#2563eb;
-  --muted:rgba(255,255,255,.55);
+  --bg-1:#020617;
+  --bg-2:#0f172a;
+  --neon:#38bdf8;
+  --glass-border:rgba(56,189,248,0.22);
+  --muted:rgba(255,255,255,0.45);
+  --card-w:380px;
 }
 
-/* Reset */
 *{box-sizing:border-box}
 
 html,body{
-  margin:0;
   height:100%;
+  margin:0;
   font-family:"Inter",system-ui,-apple-system,"Segoe UI",Roboto;
   background:
-    radial-gradient(800px 400px at 10% 10%, rgba(37,99,235,.06), transparent),
-    radial-gradient(700px 350px at 90% 90%, rgba(37,99,235,.04), transparent),
-    linear-gradient(180deg,var(--black),var(--navy));
-  color:#eaf2ff;
+    radial-gradient(1200px 600px at 10% 10%, rgba(56,189,248,0.03), transparent),
+    radial-gradient(900px 500px at 90% 85%, rgba(56,189,248,0.02), transparent),
+    linear-gradient(180deg,var(--bg-1),var(--bg-2));
+  color:#dfffe6;
 }
 
-body::before{
-  content:"";
-  position:fixed;
-  inset:0;
-  background:radial-gradient(circle at 50% 50%, rgba(37,99,235,.05), transparent 60%);
-  pointer-events:none;
-}
-
-/* Layout */
 .stage{
-  min-height:100vh;
+  height:100vh;
   display:flex;
   align-items:center;
   justify-content:center;
-  padding:32px;
-  position:relative;
+  padding:36px;
 }
 
-/* Solde haut droit */
-.balance{
-  position:absolute;
-  top:24px;
-  right:24px;
-  display:flex;
-  align-items:center;
-  background:rgba(255,255,255,0.05);
-  padding:6px 12px;
-  border-radius:12px;
-  border:1px solid rgba(37,99,235,0.4);
-  backdrop-filter:blur(12px);
-  font-weight:600;
-}
-
-.balance button{
-  margin-left:8px;
-  background:var(--blue);
-  color:#020617;
-  border:none;
-  border-radius:6px;
-  width:24px;
-  height:24px;
-  cursor:pointer;
-  font-weight:bold;
-}
-
-/* Carte principale */
-.card{
-  width:380px;
+.glass-card{
+  width:var(--card-w);
   max-width:92vw;
-  background:rgba(255,255,255,.02);
-  border:1px solid rgba(37,99,235,.25);
-  border-radius:22px;
-  padding:32px 26px;
+  background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+  border-radius:18px;
+  padding:28px 22px;
+  box-shadow:0 10px 40px rgba(0,0,0,0.7),0 0 40px rgba(56,189,248,0.05) inset;
+  backdrop-filter: blur(10px) saturate(140%);
+  border:1px solid var(--glass-border);
   text-align:center;
-  backdrop-filter:blur(14px);
-  box-shadow:0 30px 70px rgba(0,0,0,.85);
-  animation:fadeUp .8s ease forwards;
 }
 
-@keyframes fadeUp{
-  from{opacity:0;transform:translateY(20px) scale(0.95);}
-  to{opacity:1;transform:translateY(0) scale(1);}
+/* Header */
+header h1{
+  font-family:"JetBrains Mono", monospace;
+  font-size:22px;
+  margin:0;
+  color:var(--neon);
+  text-transform:uppercase;
+  text-shadow:0 0 18px rgba(56,189,248,0.22);
+}
+
+header .small-url{
+  font-size:12px;
+  color:var(--muted);
+  margin-top:6px;
 }
 
 /* Avatar */
 .avatar{
   width:120px;
   height:120px;
-  margin:0 auto 18px;
+  margin:20px auto;
   border-radius:50%;
   overflow:hidden;
-  border:3px solid var(--blue);
-  box-shadow:0 0 35px rgba(37,99,235,.45);
+  border:2px solid var(--neon);
+  box-shadow:0 0 30px rgba(56,189,248,0.35);
 }
 
 .avatar img{
@@ -108,119 +81,32 @@ body::before{
   object-fit:cover;
 }
 
-/* Textes */
-h1{
-  margin:0;
-  font-size:22px;
-  letter-spacing:1.2px;
-  color:#dbeafe;
-}
-
-.subtitle{
-  font-size:13px;
-  margin-top:6px;
-  color:var(--muted);
-}
-
-/* Boutons */
-.actions{
-  margin-top:26px;
-  display:flex;
-  flex-direction:column;
-}
-
+/* Buttons */
 .btn{
   display:block;
   width:100%;
-  padding:14px;
-  margin:8px 0;
+  padding:12px;
+  margin:10px 0;
   border-radius:8px;
-  font-weight:600;
-  letter-spacing:.5px;
-  cursor:pointer;
-  transition:.25s ease;
   border:none;
-}
-
-.btn.main{
-  background:var(--blue);
+  background:var(--neon);
   color:#020617;
-}
-
-.btn.support{
-  background:transparent;
-  color:#bfdbfe;
-  border:1px solid rgba(37,99,235,.4);
-}
-
-.btn.logout{
-  background:#f87171;
-  color:#020617;
-  margin-top:12px;
+  font-weight:700;
+  text-decoration:none;
+  cursor:pointer;
+  transition:.25s;
 }
 
 .btn:hover{
-  transform:translateY(-2px);
-  box-shadow:0 10px 30px rgba(37,99,235,.35);
+  opacity:.9;
+  transform:translateY(-1px);
 }
 
-/* Footer */
-.footer{
-  margin-top:26px;
+/* Social */
+.social-icons{
+  margin-top:18px;
   font-size:12px;
   color:var(--muted);
-}
-
-/* Modal */
-.modal-backdrop{
-  display:none;
-  position:fixed;
-  inset:0;
-  background:rgba(0,0,0,0.5);
-  justify-content:center;
-  align-items:center;
-}
-
-.modal{
-  background:rgba(255,255,255,0.05);
-  padding:24px 20px;
-  border-radius:16px;
-  border:1px solid rgba(37,99,235,0.4);
-  backdrop-filter:blur(14px);
-  width:300px;
-  text-align:center;
-  box-shadow:0 20px 50px rgba(0,0,0,0.7);
-}
-
-.modal input{
-  width:100%;
-  padding:10px;
-  border-radius:8px;
-  border:1px solid rgba(37,99,235,0.4);
-  margin:14px 0;
-  text-align:center;
-  background:rgba(255,255,255,0.02);
-  color:#eaf2ff;
-}
-
-.modal-actions{
-  display:flex;
-  justify-content:space-between;
-}
-
-.modal-actions .btn{
-  width:48%;
-}
-
-.modal-actions .confirm{
-  background:var(--blue);
-  color:#020617;
-}
-
-.modal-actions .cancel{
-  background:transparent;
-  color:#bfdbfe;
-  border:1px solid rgba(37,99,235,.4);
 }
 </style>
 </head>
@@ -228,73 +114,26 @@ h1{
 <body>
 <main class="stage">
 
-  <!-- Solde -->
-  <div class="balance">
-    <span id="balance">120 ⛂</span>
-    <button onclick="openModal()">+</button>
-  </div>
+  <section class="glass-card">
 
-  <!-- Carte principale -->
-  <section class="card">
+    <header>
+      <h1>ROK XD</h1>
+      <div class="small-url">WhatsApp Bot</div>
+    </header>
 
     <div class="avatar">
       <img src="https://files.catbox.moe/t1pogr.jpg" alt="Avatar">
     </div>
 
-    <h1>ROK-XD Dashboard</h1>
-    <div class="subtitle">Secure WhatsApp Bot Platform</div>
+    <a href="/pair" class="btn">Pairing Code</a>
+    <a href="/qr" class="btn">QR Code</a>
 
-    <div class="actions">
-      <button class="btn main">Pairing Code</button>
-      <button class="btn main">Code QR</button>
-      <button class="btn main">Infos Compte</button>
-      <button class="btn support">Help & Support</button>
+    <div class="social-icons">
+      © RAIZEL • Secure Platform
     </div>
 
-    <div class="footer">©️ RAIZEL & KNUT</div>
-
-    <button class="btn logout" onclick="logout()">Déconnexion</button>
   </section>
 
-  <!-- Modal ajout coins -->
-  <div class="modal-backdrop" id="modal">
-    <div class="modal">
-      <h2>Ajouter des coins</h2>
-      <input type="number" id="coinAmount" placeholder="Entrez le montant">
-      <div class="modal-actions">
-        <button class="btn confirm" onclick="addCoins()">Ajouter</button>
-        <button class="btn cancel" onclick="closeModal()">Annuler</button>
-      </div>
-    </div>
-  </div>
-
 </main>
-
-<script>
-function openModal(){
-  document.getElementById('modal').style.display = 'flex';
-}
-
-function closeModal(){
-  document.getElementById('modal').style.display = 'none';
-  document.getElementById('coinAmount').value = '';
-}
-
-function addCoins(){
-  const input = document.getElementById('coinAmount');
-  const value = parseInt(input.value);
-  if(isNaN(value) || value <= 0) return;
-  const balanceElem = document.getElementById('balance');
-  let current = parseInt(balanceElem.innerText);
-  balanceElem.innerText = (current + value) + ' ⛂';
-  closeModal();
-}
-
-function logout(){
-  alert("Vous êtes déconnecté !");
-  // ici tu peux rediriger vers login.html
-}
-</script>
-
 </body>
 </html>

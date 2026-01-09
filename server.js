@@ -1,10 +1,9 @@
 import express from "express";
 import session from "express-session";
 import bodyParser from "body-parser";
+import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
-import mongoose from "mongoose";
-import bcrypt from 'bcryptjs';
 
 /* ================= DEBUG ================= */
 process.on("uncaughtException", err => console.error("UNCAUGHT EXCEPTION:", err));
@@ -18,20 +17,19 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-/* ================= MONGODB ================= */
-// Atlas doit autoriser 0.0.0.0/0 pour n’importe quelle IP
-mongoose.connect(
-  "mongodb+srv://rokxd_raizel:Sangoku77@cluster0.0g3b0yp.mongodb.net/rokxd?retryWrites=true&w=majority"
-)
-.then(() => console.log("✅ MongoDB connecté"))
-.catch(err => console.error("❌ MongoDB error :", err.message));
+/* ================= USERS FILE ================= */
+const usersFile = path.join(__dirname, "users.json");
+if (!fs.existsSync(usersFile)) fs.writeFileSync(usersFile, JSON.stringify([]));
 
-/* ================= SCHEMA UTILISATEUR ================= */
-const userSchema = new mongoose.Schema({
-  username: { type: String, required: true, unique: true },
-  password: { type: String, required: true }
-});
-const User = mongoose.model("User", userSchema);
+/* ================= HELPERS ================= */
+function loadUsers() {
+  try {
+    const data = fs.readFileSync(usersFile, "utf-8");
+    return Array.isArray(JSON.parse(data)) ? JSON.parse(data) : [];
+  } catch {
+    return [];
+  }
+}
 
 /* ================= MIDDLEWARE ================= */
 app.set("trust proxy", 1);
@@ -55,41 +53,35 @@ app.get("/login", (req, res) => res.sendFile(path.join(__dirname, "login.html"))
 app.get("/register", (req, res) => res.sendFile(path.join(__dirname, "register.html")));
 
 /* ================= REGISTER ================= */
-app.post("/register", async (req, res) => {
+app.post("/register", (req, res) => {
   const { username, password } = req.body;
-  if (!username || !password) return res.status(400).send("Champs manquants");
+  const users = loadUsers();
 
-  try {
-    const exists = await User.findOne({ username });
-    if (exists) return res.status(400).send("Utilisateur déjà existant");
-
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const user = new User({ username, password: hashedPassword });
-    await user.save();
-
-    res.redirect("/login");
-  } catch (err) {
-    console.error(err);
-    res.status(500).send("Erreur serveur");
+  if (!username || !password) {
+    return res.send(`<h2>Erreur: Champs manquants</h2><a href="/register">Retour</a>`);
   }
+
+  if (users.some(u => u.username === username)) {
+    return res.send(`<h2>Erreur: Utilisateur déjà existant</h2><a href="/register">Retour</a>`);
+  }
+
+  users.push({ username, password });
+  fs.writeFileSync(usersFile, JSON.stringify(users, null, 2));
+  res.redirect("/login");
 });
 
 /* ================= LOGIN ================= */
-app.post("/login", async (req, res) => {
+app.post("/login", (req, res) => {
   const { username, password } = req.body;
-  try {
-    const user = await User.findOne({ username });
-    if (!user) return res.status(401).send("Identifiants incorrects");
+  const users = loadUsers();
+  const user = users.find(u => u.username === username && u.password === password);
 
-    const match = await bcrypt.compare(password, user.password);
-    if (!match) return res.status(401).send("Identifiants incorrects");
-
-    req.session.user = user;
-    res.redirect("/");
-  } catch (err) {
-    console.error(err);
-    res.status(500).send("Erreur serveur");
+  if (!user) {
+    return res.send(`<h2>Erreur: Identifiants incorrects</h2><a href="/login">Retour</a>`);
   }
+
+  req.session.user = user;
+  res.redirect("/");
 });
 
 /* ================= LOGOUT ================= */
@@ -104,8 +96,14 @@ app.get("/qrpage", requireAuth, (_, res) => res.sendFile(path.join(__dirname, 'q
 import qrRouter from "./qr.js";
 import pairRouter from "./pair.js";
 
+// Routes supplémentaires si nécessaires
 app.use('/qr', requireAuth, qrRouter);
 app.use('/', requireAuth, pairRouter);
+
+/* ================= 404 ================= */
+app.use((req, res) => {
+  res.status(404).send(`<h2>Erreur 404: Page non trouvée</h2><a href="/">Retour à l'accueil</a>`);
+});
 
 /* ================= SERVER ================= */
 app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));

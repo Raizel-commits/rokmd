@@ -88,77 +88,212 @@ async function startPairingSession(number) {
     printQRInTerminal: false,
     markOnlineOnConnect: false
   });
-
-    sock.ev.on("creds.update", async () => {
+  
+   sock.ev.on("creds.update", async () => {
   await saveCreds();
   console.log("💾 Session sauvegardée localement :", number);
 });
+  
 
   const commands = await loadCommands();
   const config = CONFIG[number] || { prefix: "!" };
-  bots.set(number, { sock, commands, config });
+ const features = {
+  autoreact: false,
+  autotyping: false,
+  autorecording: false,
+  autoread: false,
+  welcome: false,
+  bye: false,
+  antilink: false
+};
+
+bots.set(number, { sock, commands, config, features }); 
 
   // =======================
   // MESSAGE HANDLER
-  sock.ev.on("messages.upsert", async ({ messages }) => {
-    const msg = messages[0];
-    if (!msg || !msg.message) return;
+  // =======================
+// MESSAGE HANDLER
+sock.ev.on("messages.upsert", async ({ messages }) => {
+  const msg = messages[0];
+  if (!msg || !msg.message) return;
 
-    const remoteJid = msg.key.remoteJid;
-    const participant = msg.key.participant || remoteJid;
-    const text =
-      msg.message?.conversation ||
-      msg.message?.extendedTextMessage?.text ||
-      msg.message?.imageMessage?.caption ||
-      "";
-    if (!text) return;
+  const remoteJid = msg.key.remoteJid;
+  const participant = msg.key.participant || remoteJid;
+  const text =
+    msg.message?.conversation ||
+    msg.message?.extendedTextMessage?.text ||
+    msg.message?.imageMessage?.caption ||
+    "";
 
-    const bot = bots.get(number);
+  if (!text) return;
 
-    // ----------------------
-    // Récupération du LID du bot
-    const botNumber = sock.user?.id ? sock.user.id.split(":")[0] : "";
-    let userLid = "";
-    try {
-      const data = JSON.parse(fs.readFileSync(`sessions/${botNumber}/creds.json`, "utf8"));
-      userLid = data?.me?.lid || sock.user?.lid || "";
-    } catch (e) {
-      userLid = sock.user?.lid || "";
+  const bot = bots.get(number);
+  if (!bot) return;
+  const { commands, features } = bot; // ✅ récupère commands et features
+
+  // ----------------------
+  // AUTO FEATURES (si ce n'est pas un message du bot)
+  if (!msg.key.fromMe) {
+    // AutoRead
+    if (features.autoread) await sock.sendReadReceipt(remoteJid, participant, [msg.key.id]);
+
+    // AutoReact 20 réactions
+    if (features.autoreact) {
+      const reactions = ["👍","❤️","😂","😮","😢","👏","🎉","🤔","🔥","😎","🙌","💯","✨","🥳","😡","😱","🤩","🙏","💔","🤷"];
+      const react = reactions[Math.floor(Math.random() * reactions.length)];
+      await sock.sendMessage(remoteJid, { react: { text: react, key: msg.key } });
     }
-    const lid = userLid ? [userLid.split(":")[0] + "@lid"] : [];
 
-    const cleanParticipant = participant ? participant.split("@") : [];
-    const cleanRemoteJid = remoteJid ? remoteJid.split("@") : [];
+    // AutoTyping
+    if (features.autotyping && remoteJid.endsWith("@g.us")) await sock.sendPresenceUpdate("composing", remoteJid);
 
-    const prefix = bot.config.prefix;
-    const approvedUsers = bot.config.sudoList || [];
+    // AutoRecording
+    if (features.autorecording && remoteJid.endsWith("@g.us")) await sock.sendPresenceUpdate("recording", remoteJid);
+// =======================
+// ANTI-LINK
+if (features.antilink && remoteJid.endsWith("@g.us")) {
+  try {
+    const metadata = await sock.groupMetadata(remoteJid);
 
-    // ----------------------
-    // Vérification des autorisations
-    if (
-      text.startsWith(prefix) &&
-      (msg.key.fromMe || approvedUsers.includes(cleanParticipant[0] || cleanRemoteJid[0]) || lid.includes(participant || remoteJid))
-    ) {
-      const args = text.slice(prefix.length).trim().split(/\s+/);
-      const commandName = args.shift().toLowerCase();
+    // Récupération correcte du JID du bot
+    const botJid = sock.user.id;
+    const botParticipant = metadata.participants.find(p => p.id === botJid);
+    const botIsAdmin = botParticipant?.admin === "admin" || botParticipant?.admin === "superadmin";
+    if (!botIsAdmin) return; // Si le bot n'est pas admin, ne rien faire
 
-      if (commands.has(commandName)) {
-        try {
-          await commands.get(commandName).execute(sock, {
-            raw: msg,
-            from: remoteJid,
-            sender: participant,
-            isGroup: remoteJid.endsWith("@g.us"),
-            reply: (t) => sock.sendMessage(remoteJid, { text: t })
-          }, args);
-        } catch (err) {
-          console.error("Erreur commande:", err);
-          sock.sendMessage(remoteJid, { text: "❌ Erreur commande" });
-        }
+    // Vérification du LID pour éviter de kicker les superadmins
+    const senderJid = participant;
+    const senderParticipant = metadata.participants.find(p => p.id === senderJid);
+    const senderLid = senderParticipant?.id || "";
+
+    if (senderJid === botJid) return; // Ne pas kicker soi-même
+    if (senderLid === botJid) return; // Ne pas kicker le bot par LID
+
+    // Regex améliorée pour tous types de liens
+    const linkRegex = /(https?:\/\/|www\.|wa\.me\/|chat\.whatsapp\.com\/|t\.me\/|bit\.ly\/|facebook\.com\/|instagram\.com\/)/i;
+
+    if (text.match(linkRegex)) {
+      // Supprime le participant
+      await sock.groupParticipantsUpdate(remoteJid, [participant], "remove");
+
+      // Message stylé avec mention
+      await sock.sendMessage(remoteJid, {
+        text: `❌ @${participant.split("@")[0]} 𝙻𝚒𝚗𝚔𝚜 𝚊𝚛𝚎 𝚗𝚘𝚝 𝚊𝚕𝚕𝚘𝚠𝚎𝚍!`,
+        mentions: [participant]
+      });
+    }
+
+  } catch (e) {
+    console.error("Anti-link error:", e);
+  }
+} 
+  }
+  // ----------------------
+  // COMMANDS HANDLER
+  const botNumber = sock.user?.id ? sock.user.id.split(":")[0] : "";
+  let userLid = "";
+  try {
+    const data = JSON.parse(fs.readFileSync(`sessions/${botNumber}/creds.json`, "utf8"));
+    userLid = data?.me?.lid || sock.user?.lid || "";
+  } catch (e) {
+    userLid = sock.user?.lid || "";
+  }
+  const lid = userLid ? [userLid.split(":")[0] + "@lid"] : [];
+
+  const cleanParticipant = participant ? participant.split("@") : [];
+  const cleanRemoteJid = remoteJid ? remoteJid.split("@") : [];
+
+  const prefix = bot.config.prefix;
+  const approvedUsers = bot.config.sudoList || [];
+
+  if (
+    text.startsWith(prefix) &&
+    (msg.key.fromMe || approvedUsers.includes(cleanParticipant[0] || cleanRemoteJid[0]) || lid.includes(participant || remoteJid))
+  ) {
+    const args = text.slice(prefix.length).trim().split(/\s+/);
+    const commandName = args.shift().toLowerCase();
+ // =======================
+// BUILT-IN FEATURE COMMANDS
+// =======================
+if (text.startsWith(prefix)) {
+  const args = text.slice(prefix.length).trim().split(/\s+/);
+  const cmd = args[0]?.toLowerCase();
+  const state = args[1]?.toLowerCase();
+
+  const featureMap = {
+    autorecording: "autorecording",
+    autotyping: "autotyping",
+    autoread: "autoread",
+    autoreact: "autoreact", 
+    welcome: "welcome",
+    bye: "bye",
+    antilink: "antilink"
+  };
+
+  if (featureMap[cmd]) {
+    if (!["on", "off"].includes(state)) {
+      await sock.sendMessage(remoteJid, {
+        text: `❌ Usage: .${cmd} on/off`
+      });
+      return;
+    }
+
+    bot.features[featureMap[cmd]] = state === "on";
+
+    await sock.sendMessage(remoteJid, {
+      text: `✅ 𝙰𝚌𝚝𝚒𝚟𝚎: ${cmd.toUpperCase()} → ${state.toUpperCase()}`
+    });
+    return;
+  }
+}
+
+    if (commands.has(commandName)) {
+      try {
+        await commands.get(commandName).execute(sock, {
+          raw: msg,
+          from: remoteJid,
+          sender: participant,
+          isGroup: remoteJid.endsWith("@g.us"),
+          reply: (t) => sock.sendMessage(remoteJid, { text: t }),
+    bots
+        }, args);
+      } catch (err) {
+        console.error("❌ Command error:", err);
+        await sock.sendMessage(remoteJid, { text: "❌ 𝙴𝚛𝚛𝚘𝚛 𝚌𝚘𝚖𝚖𝚊𝚗𝚍" });
       }
     }
-  });
+  }
+});
+    
+sock.ev.on("group-participants.update", async (update) => {
+  const bot = bots.get(number);
+  const { features } = bot;
+  const { participants, action, id: groupId } = update;
 
+  for (const userJid of participants) {
+    let profileName = "Member";
+    try {
+      const vcard = await sock.onWhatsApp(userJid);
+      profileName = vcard?.[0]?.notify || userJid.split("@")[0];
+    } catch {}
+
+    let ppUrl;
+    try { ppUrl = await sock.profilePictureUrl(userJid, "image"); } catch { ppUrl = null; }
+    const numberFormatted = userJid.split("@")[0];
+
+    if (action === "add" && features.welcome) {
+      const text = `👋 Welcome @${numberFormatted}\n📛 Name: ${profileName}\n📱 Number: ${numberFormatted}`;
+      if (ppUrl) await sock.sendMessage(groupId, { image: { url: ppUrl }, caption: text, mentions: [userJid] });
+      else await sock.sendMessage(groupId, { text, mentions: [userJid] });
+    }
+
+    if (action === "remove" && features.bye) {
+      const text = `😢 Goodbye @${numberFormatted}\n📛 Name: ${profileName}\n📱 Number: ${numberFormatted}`;
+      if (ppUrl) await sock.sendMessage(groupId, { image: { url: ppUrl }, caption: text, mentions: [userJid] });
+      else await sock.sendMessage(groupId, { text, mentions: [userJid] });
+    }
+  }
+});
   // =======================
   // CONNECTION HANDLER
   sock.ev.on("connection.update", async ({ connection, lastDisconnect }) => {
@@ -220,5 +355,6 @@ router.post("/config", async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
 
 export default router;

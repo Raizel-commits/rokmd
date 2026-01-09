@@ -2,61 +2,75 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
+<title>ROKXD • Login</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ROK XD • Login</title>
+
 <style>
-:root{
-  --bg-1:#020617; --bg-2:#0f172a; --neon:#38bdf8; --glass-border:rgba(56,189,248,0.22); --muted:rgba(255,255,255,0.45); --card-w:380px;
+body{
+  background: radial-gradient(circle at top, #0f172a, #020617);
+  font-family: Arial, sans-serif;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  height:100vh;
+  color:#e5e7eb;
 }
-*{box-sizing:border-box;}
-html,body{height:100%;margin:0;font-family:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial;
-background: radial-gradient(1200px 600px at 10% 10%, rgba(56,189,248,0.03), transparent),
-            radial-gradient(900px 500px at 90% 85%, rgba(56,189,248,0.02), transparent),
-            linear-gradient(180deg,var(--bg-1),var(--bg-2));
-color:#dfffe6;overflow:hidden;}
-.stage{position:relative;height:100vh;display:flex;align-items:center;justify-content:center;padding:36px;}
-.glass-card{
-  width:var(--card-w);max-width:92vw;
-  background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
-  border-radius:18px;padding:22px;
-  box-shadow:0 10px 40px rgba(0,0,0,0.7),0 0 40px rgba(56,189,248,0.05) inset;
-  backdrop-filter: blur(10px) saturate(140%);
-  border:1px solid var(--glass-border);
-  text-align:center;
+.box{
+  background:rgba(255,255,255,0.05);
+  backdrop-filter: blur(12px);
+  padding:30px;
+  border-radius:16px;
+  width:320px;
+  box-shadow:0 0 30px rgba(56,189,248,.4);
 }
-input[type="email"], input[type="password"]{width:100%;padding:12px;border-radius:10px;border:1px solid rgba(56,189,248,0.06);background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.006));color:#eafff2;margin-bottom:12px;outline:none;font-size:14px;}
-input::placeholder{color:rgba(200,255,255,0.22);}
-button{width:100%;padding:12px;border-radius:6px;border:none;background:var(--neon);color:#020617;font-weight:bold;cursor:pointer;font-size:16px;margin-bottom:12px;}
-button:hover{opacity:0.9;}
-.result{margin-top:16px;font-weight:bold;}
+h2{text-align:center;color:#38bdf8}
+input,button{
+  width:100%;
+  padding:12px;
+  margin-top:10px;
+  border:none;
+  border-radius:8px;
+}
+input{background:#020617;color:#fff}
+button{
+  background:#38bdf8;
+  font-weight:bold;
+  cursor:pointer;
+}
+a{color:#38bdf8;text-decoration:none}
+.error{color:#f87171;margin-top:10px}
 </style>
 </head>
+
 <body>
-<main class="stage">
-<section class="glass-card">
-<h1>Login</h1>
-<input type="email" id="email" placeholder="Email">
-<input type="password" id="password" placeholder="Mot de passe">
-<button id="loginBtn">Connexion</button>
-<div class="result" id="loginResult"></div>
-<p>Pas de compte ? <a href="register.html" style="color:var(--neon)">Inscription</a></p>
-</section>
-</main>
+<div class="box">
+<h2>Connexion</h2>
+
+<input id="email" type="email" placeholder="Email">
+<input id="password" type="password" placeholder="Mot de passe">
+
+<button onclick="login()">Se connecter</button>
+<p class="error" id="err"></p>
+<p style="text-align:center;margin-top:10px">
+<a href="/register">Créer un compte</a>
+</p>
+</div>
+
 <script>
-const loginBtn = document.getElementById("loginBtn");
-loginBtn.onclick = async ()=>{
-  const email=document.getElementById("email").value.trim();
-  const password=document.getElementById("password").value.trim();
-  if(!email||!password){document.getElementById("loginResult").innerHTML="Email et mot de passe requis";return;}
-  loginBtn.disabled=true;
-  try{
-    const r=await fetch("/auth/login",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email,password})});
-    const data=await r.json();
-    if(data.status==="success"){window.location.href="/";}
-    else{document.getElementById("loginResult").innerHTML=data.error||"Erreur";}
-  }catch(e){document.getElementById("loginResult").innerHTML="Erreur serveur";console.error(e);}
-  loginBtn.disabled=false;
-};
+async function login(){
+  const email = email.value;
+  const password = password.value;
+
+  const res = await fetch("/auth/login",{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({email,password})
+  });
+
+  const data = await res.json();
+  if(data.success) location.href="/panel";
+  else err.textContent = data.error;
+}
 </script>
 </body>
 </html>

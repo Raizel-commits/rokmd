@@ -1,163 +1,188 @@
+// =======================
+// IMPORTS
+// =======================
 import express from "express";
 import path from "path";
+import { fileURLToPath } from "url";
+import fs from "fs";
 import bodyParser from "body-parser";
 import cors from "cors";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import cookieParser from "cookie-parser";
-import jwt from "jsonwebtoken";
 import mongoose from "mongoose";
-import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
 
 import qrRouter from "./qr.js";
 import pairRouter from "./pair.js";
 
+// ================= PATH FIX
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// ================= APP
 const app = express();
-const PORT = process.env.PORT || 3000;
+app.set("trust proxy", 1);
 
-// ====== MONGO ======
+// ================= MONGODB
 mongoose.connect(
-  "mongodb+srv://rokxd_raizel:Sangoku77@cluster0.0g3b0yp.mongodb.net/?retryWrites=true&w=majority",
-  { useNewUrlParser: true, useUnifiedTopology: true }
+  "mongodb+srv://rokxd_raizel:Sangoku77@cluster0.0g3b0yp.mongodb.net/rokxd?retryWrites=true&w=majority"
 )
-.then(() => console.log("✅ MongoDB connectée"))
-.catch(err => console.error("❌ Erreur MongoDB :", err.message));
+.then(() => console.log("✅ MongoDB connecté"))
+.catch(err => console.error("❌ MongoDB error :", err.message));
 
-// ====== USER MODEL ======
-const userSchema = new mongoose.Schema({
-  email: { type: String, required: true, unique: true },
-  password: { type: String, required: true },
-  coins: { type: Number, default: 20 }
-});
-
-// Hash du mot de passe
-userSchema.pre("save", async function (next) {
-  if (!this.isModified("password")) return next();
-  const salt = await bcrypt.genSalt(10);
-  this.password = await bcrypt.hash(this.password, salt);
-  next();
-});
-
-// Comparer mot de passe
-userSchema.methods.comparePassword = async function (candidatePassword) {
-  return await bcrypt.compare(candidatePassword, this.password);
-};
-
-const User = mongoose.model("User", userSchema);
-
-// ====== MIDDLEWARE ======
+// ================= MIDDLEWARE
 app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
-app.use(helmet());
 app.use(cookieParser());
+app.use(helmet());
 
-// Trust proxy pour Render / Heroku
-app.set("trust proxy", 1);
+// ================= RATE LIMIT (API)
+app.use(
+  "/api",
+  rateLimit({
+    windowMs: 60 * 1000,
+    max: 20,
+    message: { error: "Trop de requêtes, réessayez plus tard" }
+  })
+);
 
-// ====== RATE LIMIT ======
-app.use("/api", rateLimit({
-  windowMs: 60 * 1000,
-  max: 10,
-  message: { error: "Trop de requêtes" }
-}));
+// ================= JWT SECRET
+const JWT_SECRET = process.env.JWT_SECRET || "SECRET_STORY_KEY";
 
-// ====== AUTH MIDDLEWARE ======
-function authMiddleware(req, res, next) {
-  const token = req.cookies.token;
-  if (!token) return res.redirect("/login.html");
+// ================= MONGODB USER MODEL
+const userSchema = new mongoose.Schema({
+  username: { type: String, required: true, unique: true },
+  password: { type: String, required: true },
+}, { timestamps: true });
+
+const User = mongoose.model("User", userSchema);
+
+// ================= JWT VERIFICATION MIDDLEWARE
+function verifyToken(req, res, next) {
+  const token = req.cookies.token || req.headers["authorization"]?.split(" ")[1] || req.query.token;
+  if (!token) return res.redirect('/login');
 
   try {
-    const decoded = jwt.verify(token, "secret_jwt_123");
-    req.user = decoded;
+    req.user = jwt.verify(token, JWT_SECRET);
     next();
   } catch {
-    res.clearCookie("token");
-    return res.redirect("/login.html");
+    res.clearCookie('token');
+    return res.redirect('/login');
   }
 }
 
-// ====== STATIC ======
-app.use(express.static(path.resolve("./")));
+// =======================
+// ROUTES API AUTH
+// =======================
 
-// ====== ROUTES AUTH ======
-app.post("/auth/register", async (req, res) => {
-  const { email, password } = req.body;
-  if (!email || !password || password.length < 8)
-    return res.status(400).json({ error: "Email et mot de passe (min 8 caractères) requis" });
+// Register
+app.post("/api/register", async (req, res) => {
+  const { username, password } = req.body;
+  if (!username || !password) return res.json({ error: "Remplis tous les champs !" });
 
   try {
-    const existing = await User.findOne({ email });
-    if (existing) return res.status(400).json({ error: "Email déjà utilisé" });
+    const exists = await User.findOne({ username });
+    if (exists) return res.json({ error: "Nom d'utilisateur déjà pris" });
 
-    const user = new User({ email, password, coins: 20 });
-    await user.save();
+    const newUser = new User({ username, password });
+    await newUser.save();
 
-    const token = jwt.sign({ id: user._id, email: user.email }, "secret_jwt_123", { expiresIn: "7d" });
-    res.cookie("token", token, { httpOnly: true });
-    res.json({ status: "success", coins: user.coins });
+    const token = jwt.sign({ username: newUser.username }, JWT_SECRET, { expiresIn: "1h" });
+    res.cookie('token', token, { httpOnly: true });
+    res.json({ token, username: newUser.username });
+  } catch (err) {
+    res.json({ error: "Erreur serveur : " + err.message });
+  }
+});
+
+// Login
+app.post("/api/login", async (req, res) => {
+  const { username, password } = req.body;
+  if (!username || !password) return res.json({ error: "Remplis tous les champs !" });
+
+  try {
+    const user = await User.findOne({ username, password });
+    if (!user) return res.json({ error: "Utilisateur ou mot de passe incorrect" });
+
+    const token = jwt.sign({ username: user.username }, JWT_SECRET, { expiresIn: "1h" });
+    res.cookie('token', token, { httpOnly: true });
+    res.json({ token, username: user.username });
+  } catch (err) {
+    res.json({ error: "Erreur serveur : " + err.message });
+  }
+});
+
+// Logout
+app.get("/logout", (req, res) => {
+  res.clearCookie('token');
+  res.redirect('/login');
+});
+
+// =======================
+// PAGES
+// =======================
+
+// Pages QR / Pairing
+app.use('/qr', qrRouter);
+app.use('/', pairRouter);
+app.get('/pair', (_, res) => res.sendFile(path.join(__dirname, 'pair.html')));
+app.get('/qrpage', (_, res) => res.sendFile(path.join(__dirname, 'qr.html')));
+
+// Auth pages
+app.get('/login', (_, res) => res.sendFile(path.join(__dirname, 'login.html')));
+app.get('/register', (_, res) => res.sendFile(path.join(__dirname, 'register.html')));
+
+// Accueil bot protégé
+app.get('/', verifyToken, (_, res) => {
+  res.sendFile(path.join(__dirname, 'index.html'));
+});
+
+// Dashboard protégé
+app.get('/dashboard', verifyToken, (req, res) => {
+  res.send(`<h1>Bienvenue ${req.user.username} sur ton dashboard !</h1><a href="/logout">Se déconnecter</a>`);
+});
+
+// =======================
+// LOAD COMMANDS DYNAMIQUES
+// =======================
+const loadCommands = async () => {
+  const commands = new Map();
+  const folder = path.join(__dirname, 'commands');
+  if (!fs.existsSync(folder)) return commands;
+
+  for (const file of fs.readdirSync(folder).filter(f => f.endsWith('.js'))) {
+    const cmd = await import(`./commands/${file}?update=${Date.now()}`);
+    if (cmd.default?.name && typeof cmd.default.execute === 'function') {
+      commands.set(cmd.default.name.toLowerCase(), cmd.default);
+    }
+  }
+  return commands;
+};
+
+let commands = new Map();
+(async () => {
+  commands = await loadCommands();
+  console.log(`📂 Commands loaded: ${[...commands.keys()].join(', ')}`);
+})();
+
+app.get('/reload-commands', async (_, res) => {
+  try {
+    commands = await loadCommands();
+    res.json({ status: '✅ Commands reloaded', list: [...commands.keys()] });
+    console.log('📂 Commands reloaded');
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Erreur serveur" });
+    res.status(500).json({ status: '❌ Error reloading commands', error: err.message });
   }
 });
 
-app.post("/auth/login", async (req, res) => {
-  const { email, password } = req.body;
-  if (!email || !password) return res.status(400).json({ error: "Email et mot de passe requis" });
+// ================= STATIC FILES
+app.use(express.static(__dirname));
 
-  try {
-    const user = await User.findOne({ email });
-    if (!user) return res.status(400).json({ error: "Email ou mot de passe incorrect" });
-
-    const match = await user.comparePassword(password);
-    if (!match) return res.status(400).json({ error: "Email ou mot de passe incorrect" });
-
-    const token = jwt.sign({ id: user._id, email: user.email }, "secret_jwt_123", { expiresIn: "7d" });
-    res.cookie("token", token, { httpOnly: true });
-    res.json({ status: "success", coins: user.coins });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Erreur serveur" });
-  }
-});
-
-app.get("/auth/logout", (req, res) => {
-  res.clearCookie("token");
-  res.redirect("/login.html");
-});
-
-app.get("/auth/me", authMiddleware, async (req, res) => {
-  try {
-    const user = await User.findById(req.user.id).select("email coins");
-    res.json(user);
-  } catch {
-    res.json({});
-  }
-});
-
-// ====== EARN COINS (pub) ======
-app.post("/api/earn-coins", authMiddleware, async (req, res) => {
-  try {
-    const user = await User.findById(req.user.id);
-    user.coins += 5; // exemple : 5 coins par pub
-    await user.save();
-    res.json({ status: "success", coins: user.coins });
-  } catch {
-    res.status(500).json({ error: "Erreur serveur" });
-  }
-});
-
-// ====== PAGES ======
-app.get("/", authMiddleware, (req, res) => res.sendFile(path.resolve("index.html")));
-app.get("/pair", authMiddleware, (req, res) => res.sendFile(path.resolve("pair.html")));
-app.get("/qrpage", authMiddleware, (req, res) => res.sendFile(path.resolve("qr.html")));
-
-// ====== BOT ROUTES ======
-app.use("/qr", qrRouter);
-app.use("/", pairRouter);
-
-// ====== START SERVER ======
+// ================= START SERVER
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`🚀 Serveur actif sur le port ${PORT}`);
+  console.log(`🚀 Serveur lancé sur le port ${PORT}`);
 });

@@ -1,73 +1,92 @@
 // auth.js
 import express from "express";
-import User from "./User.js";
 import jwt from "jsonwebtoken";
+import User from "./User.js";
 
 const router = express.Router();
+const JWT_SECRET = "rokxd_secret_2025";
 
-// Middleware pour protéger les pages
+// ================= AUTH MIDDLEWARE
 export function authMiddleware(req, res, next) {
   const token = req.cookies.token;
-  if (!token) return res.redirect("/login.html");
+  if (!token) return res.redirect("/login");
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || "secret123");
+    const decoded = jwt.verify(token, JWT_SECRET);
     req.user = decoded;
     next();
   } catch {
     res.clearCookie("token");
-    return res.redirect("/login.html");
+    return res.redirect("/login");
   }
 }
 
-// REGISTER
+// ================= REGISTER
 router.post("/register", async (req, res) => {
   const { email, password } = req.body;
-  if (!email || !password || password.length < 8)
-    return res.status(400).json({ error: "Email et mot de passe (min 8 caractères) requis" });
+
+  if (!email || !password || password.length < 8) {
+    return res.status(400).json({ error: "Mot de passe min 8 caractères" });
+  }
 
   try {
-    const existing = await User.findOne({ email });
-    if (existing) return res.status(400).json({ error: "Email déjà utilisé" });
+    const exists = await User.findOne({ email });
+    if (exists) {
+      return res.status(400).json({ error: "Email déjà utilisé" });
+    }
 
-    const user = new User({ email, password, coins: 20 });
+    const user = new User({ email, password }); // coins auto = 20
     await user.save();
 
-    // JWT
-    const token = jwt.sign({ id: user._id, email: user.email }, process.env.JWT_SECRET || "secret123", { expiresIn: "7d" });
+    const token = jwt.sign(
+      { id: user._id, email: user.email },
+      JWT_SECRET,
+      { expiresIn: "7d" }
+    );
+
     res.cookie("token", token, { httpOnly: true });
-    res.json({ status: "success", coins: user.coins });
+    res.json({ success: true, coins: user.coins });
+
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Erreur serveur" });
   }
 });
 
-// LOGIN
+// ================= LOGIN
 router.post("/login", async (req, res) => {
   const { email, password } = req.body;
-  if (!email || !password) return res.status(400).json({ error: "Email et mot de passe requis" });
 
   try {
     const user = await User.findOne({ email });
-    if (!user) return res.status(400).json({ error: "Email ou mot de passe incorrect" });
+    if (!user) {
+      return res.status(400).json({ error: "Identifiants invalides" });
+    }
 
-    const match = await user.comparePassword(password);
-    if (!match) return res.status(400).json({ error: "Email ou mot de passe incorrect" });
+    const valid = await user.comparePassword(password);
+    if (!valid) {
+      return res.status(400).json({ error: "Identifiants invalides" });
+    }
 
-    const token = jwt.sign({ id: user._id, email: user.email }, process.env.JWT_SECRET || "secret123", { expiresIn: "7d" });
+    const token = jwt.sign(
+      { id: user._id, email: user.email },
+      JWT_SECRET,
+      { expiresIn: "7d" }
+    );
+
     res.cookie("token", token, { httpOnly: true });
-    res.json({ status: "success", coins: user.coins });
+    res.json({ success: true, coins: user.coins });
+
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Erreur serveur" });
   }
 });
 
-// LOGOUT
+// ================= LOGOUT
 router.get("/logout", (req, res) => {
   res.clearCookie("token");
-  res.redirect("/login.html");
+  res.redirect("/login");
 });
 
 export default router;

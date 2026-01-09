@@ -4,6 +4,7 @@ import bodyParser from "body-parser";
 import path from "path";
 import { fileURLToPath } from "url";
 import mongoose from "mongoose";
+import bcrypt from "bcrypt";
 
 /* ================= DEBUG ================= */
 process.on("uncaughtException", err => console.error("UNCAUGHT EXCEPTION:", err));
@@ -18,6 +19,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 /* ================= MONGODB ================= */
+// Atlas doit autoriser 0.0.0.0/0 pour n’importe quelle IP
 mongoose.connect(
   "mongodb+srv://rokxd_raizel:Sangoku77@cluster0.0g3b0yp.mongodb.net/rokxd?retryWrites=true&w=majority"
 )
@@ -61,8 +63,10 @@ app.post("/register", async (req, res) => {
     const exists = await User.findOne({ username });
     if (exists) return res.status(400).send("Utilisateur déjà existant");
 
-    const user = new User({ username, password });
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const user = new User({ username, password: hashedPassword });
     await user.save();
+
     res.redirect("/login");
   } catch (err) {
     console.error(err);
@@ -74,8 +78,11 @@ app.post("/register", async (req, res) => {
 app.post("/login", async (req, res) => {
   const { username, password } = req.body;
   try {
-    const user = await User.findOne({ username, password });
+    const user = await User.findOne({ username });
     if (!user) return res.status(401).send("Identifiants incorrects");
+
+    const match = await bcrypt.compare(password, user.password);
+    if (!match) return res.status(401).send("Identifiants incorrects");
 
     req.session.user = user;
     res.redirect("/");

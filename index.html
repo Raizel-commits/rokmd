@@ -1,254 +1,159 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="fr">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ROK-XD • Welcome</title>
+<title>ROK XD • Welcome</title>
+
 <style>
 :root{
-  --black:#020617;
-  --navy:#020b2d;
-  --blue:#2563eb;
-  --bubble-dark:rgba(37,99,235,.25);
-  --bubble-light:rgba(37,99,235,.35);
-  --muted:rgba(255,255,255,.55);
-  --light-bg:#e0f0ff;
-  --light-card:#ffffffcc;
-  --light-text:#020617;
-  --theme-icon-color:#2563eb; /* icônes toujours bleu marine */
+  --bg-1:#020617;
+  --bg-2:#0f172a;
+  --neon:#38bdf8;
+  --glass-border:rgba(56,189,248,0.22);
+  --muted:rgba(255,255,255,0.45);
+  --card-w:380px;
 }
 
-/* ================= MODE DARK / LIGHT ================= */
-body[data-theme="dark"]{
-  --bg:linear-gradient(180deg,var(--black),var(--navy));
-  --card-bg:rgba(255,255,255,.03);
-  --text-color:#eaf2ff;
-  --btn-text:#020617;
-  --btn-bg:var(--blue);
-  --bubble-color:var(--bubble-dark);
-}
+*{box-sizing:border-box}
 
-body[data-theme="light"]{
-  --bg:linear-gradient(180deg,#d0e6ff,#f0f8ff);
-  --card-bg:var(--light-card);
-  --text-color:var(--light-text);
-  --btn-text:#020617;
-  --btn-bg:#2563eb;
-  --bubble-color:var(--bubble-light);
-}
-
-*{box-sizing:border-box;}
 html,body{
   height:100%;
   margin:0;
   font-family:"Inter",system-ui,-apple-system,"Segoe UI",Roboto;
-  background:var(--bg);
-  color:var(--text-color);
+  background:
+    radial-gradient(1200px 600px at 10% 10%, rgba(56,189,248,0.03), transparent),
+    radial-gradient(900px 500px at 90% 85%, rgba(56,189,248,0.02), transparent),
+    linear-gradient(180deg,var(--bg-1),var(--bg-2));
+  color:#dfffe6;
   overflow:hidden;
-  transition:background .5s, color .5s;
 }
 
-/* ================= BUBBLES ================= */
-.bubbles{
-  position:fixed;
-  inset:0;
-  overflow:hidden;
-  z-index:0;
-}
-.bubbles span{
-  position:absolute;
-  bottom:-120px;
-  border-radius:50%;
-  background:radial-gradient(circle at 30% 30%, #ffffff60, var(--bubble-color));
-  animation:rise linear infinite;
-  box-shadow:0 0 25px rgba(37,99,235,.45);
-  opacity:.8;
-}
-/* Génération de 20 bulles plus variées */
-.bubbles span:nth-child(1){left:5%; width:14px;height:14px;animation-duration:16s;}
-.bubbles span:nth-child(2){left:10%; width:22px;height:22px;animation-duration:18s;}
-.bubbles span:nth-child(3){left:15%; width:18px;height:18px;animation-duration:20s;}
-.bubbles span:nth-child(4){left:20%; width:28px;height:28px;animation-duration:22s;}
-.bubbles span:nth-child(5){left:25%; width:16px;height:16px;animation-duration:19s;}
-.bubbles span:nth-child(6){left:30%; width:24px;height:24px;animation-duration:23s;}
-.bubbles span:nth-child(7){left:35%; width:20px;height:20px;animation-duration:17s;}
-.bubbles span:nth-child(8){left:40%; width:32px;height:32px;animation-duration:21s;}
-.bubbles span:nth-child(9){left:45%; width:18px;height:18px;animation-duration:16s;}
-.bubbles span:nth-child(10){left:50%; width:26px;height:26px;animation-duration:22s;}
-.bubbles span:nth-child(11){left:55%; width:20px;height:20px;animation-duration:19s;}
-.bubbles span:nth-child(12){left:60%; width:30px;height:30px;animation-duration:24s;}
-.bubbles span:nth-child(13){left:65%; width:22px;height:22px;animation-duration:18s;}
-.bubbles span:nth-child(14){left:70%; width:16px;height:16px;animation-duration:20s;}
-.bubbles span:nth-child(15){left:75%; width:28px;height:28px;animation-duration:23s;}
-.bubbles span:nth-child(16){left:80%; width:18px;height:18px;animation-duration:17s;}
-.bubbles span:nth-child(17){left:85%; width:24px;height:24px;animation-duration:21s;}
-.bubbles span:nth-child(18){left:90%; width:14px;height:14px;animation-duration:19s;}
-.bubbles span:nth-child(19){left:93%; width:20px;height:20px;animation-duration:22s;}
-.bubbles span:nth-child(20){left:97%; width:26px;height:26px;animation-duration:25s;}
-
-@keyframes rise{
-  from{transform:translateY(0) rotate(0deg); opacity:0;}
-  10%{opacity:.7;}
-  to{transform:translateY(-120vh) rotate(360deg); opacity:0;}
-}
-
-/* ================= HEADER ================= */
-.header{
-  position:fixed;
-  top:0;
-  left:0;
-  width:100%;
-  height:60px;
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  padding:0 20px;
-  backdrop-filter:blur(12px);
-  background:rgba(255,255,255,.2);
-  z-index:2;
-  border-bottom:1px solid rgba(37,99,235,.25);
-  transition:background .5s;
-}
-.lang-btn{
-  display:flex;
-  align-items:center;
-  cursor:pointer;
-  padding:6px 12px;
-  background:rgba(37,99,235,.15);
-  border-radius:6px;
-  font-size:13px;
-  color:var(--theme-icon-color);
-  transition:.3s;
-}
-.lang-btn span{margin-right:6px;}
-.lang-btn:hover{background:rgba(37,99,235,.3);}
-.theme-switch{
-  cursor:pointer;
-  font-size:20px;
-  color:var(--theme-icon-color);
-  margin-left:10px;
-  transition:.2s;
-}
-.theme-switch:hover{color:var(--blue);}
-
-/* ================= CARD ================= */
 .stage{
   height:100vh;
   display:flex;
   align-items:center;
   justify-content:center;
-  padding:32px;
-  position:relative;
-  z-index:1;
+  padding:36px;
 }
-.card{
-  width:380px;
+
+.glass-card{
+  width:var(--card-w);
   max-width:92vw;
-  background:var(--card-bg);
-  border-radius:22px;
-  padding:32px 26px;
+  background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+  border-radius:18px;
+  padding:28px 22px;
+  box-shadow:
+    0 10px 40px rgba(0,0,0,0.7),
+    0 0 40px rgba(56,189,248,0.05) inset;
+  backdrop-filter: blur(10px) saturate(140%);
+  border:1px solid var(--glass-border);
   text-align:center;
-  backdrop-filter:blur(14px);
-  box-shadow:0 30px 70px rgba(0,0,0,.2);
-  transition:background .5s, color .5s;
 }
+
+/* Header */
+header h1{
+  font-family:"JetBrains Mono", monospace;
+  font-size:22px;
+  margin:0;
+  color:var(--neon);
+  text-transform:uppercase;
+  text-shadow:0 0 18px rgba(56,189,248,0.22);
+}
+
+header .small-url{
+  font-size:12px;
+  color:var(--muted);
+  margin-top:6px;
+}
+
+/* Avatar */
 .avatar{
   width:120px;
   height:120px;
-  margin:0 auto 18px;
+  margin:20px auto;
   border-radius:50%;
   overflow:hidden;
-  border:3px solid var(--blue);
-  box-shadow:0 0 35px rgba(37,99,235,.6);
+  border:2px solid var(--neon);
+  box-shadow:0 0 30px rgba(56,189,248,0.35);
 }
-.avatar img{width:100%;height:100%;object-fit:cover;}
-h1{margin:0;font-size:22px;letter-spacing:1.2px;transition:color .5s;}
-.subtitle{font-size:13px;margin-top:6px;color:var(--muted);transition:color .5s;}
-.actions{margin-top:26px;}
+
+.avatar img{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+}
+
+/* Text */
+.subtitle{
+  font-size:13px;
+  color:var(--muted);
+  margin-bottom:18px;
+}
+
+/* Buttons */
 .btn{
   display:block;
   width:100%;
-  padding:14px;
-  margin:12px 0;
+  padding:12px;
+  margin:10px 0;
   border-radius:8px;
+  border:none;
+  background:var(--neon);
+  color:#020617;
+  font-weight:700;
   text-decoration:none;
-  font-weight:600;
-  letter-spacing:.5px;
-  transition:.25s ease;
-  color:var(--btn-text);
-  background:var(--btn-bg);
+  cursor:pointer;
+  transition:.25s;
 }
-.btn.signup{
+
+.btn.secondary{
   background:transparent;
-  color:var(--btn-text);
-  border:1px solid rgba(37,99,235,.5);
+  color:#dfffe6;
+  border:1px solid var(--glass-border);
 }
+
 .btn:hover{
-  transform:translateY(-2px);
-  box-shadow:0 10px 30px rgba(37,99,235,.45);
+  opacity:.9;
+  transform:translateY(-1px);
 }
-.footer{margin-top:26px;font-size:12px;color:var(--muted);transition:color .5s;}
+
+/* Footer */
+.footer{
+  margin-top:18px;
+  font-size:12px;
+  color:var(--muted);
+}
 </style>
 </head>
-<body data-theme="dark">
 
-<!-- Background bubbles -->
-<div class="bubbles">
-  <span></span><span></span><span></span><span></span>
-  <span></span><span></span><span></span><span></span>
-  <span></span><span></span><span></span><span></span>
-  <span></span><span></span><span></span><span></span>
-  <span></span><span></span><span></span><span></span>
-</div>
-
-<!-- HEADER -->
-<div class="header">
-  <div class="lang-btn" onclick="toggleLang()">
-    <span>Language:</span><span id="lang-text">EN</span>
-  </div>
-  <div class="theme-switch" onclick="toggleTheme()">🌙 / ☀️</div>
-</div>
-
+<body>
 <main class="stage">
-  <section class="card">
+
+  <section class="glass-card">
+
+    <header>
+      <h1>ROK XD</h1>
+      <div class="small-url">WhatsApp Bot Platform</div>
+    </header>
+
     <div class="avatar">
       <img src="https://files.catbox.moe/t1pogr.jpg" alt="ROK-XD Avatar">
     </div>
-    <h1 id="title">Welcome to ROK-XD</h1>
-    <div class="subtitle" id="subtitle">Smart WhatsApp Bot Interface</div>
 
-    <div class="actions">
-      <a href="login.html" class="btn" id="login-btn">Login</a>
-      <a href="signup.html" class="btn signup" id="signup-btn">Sign Up</a>
+    <div class="subtitle">
+      Smart & Secure WhatsApp Bot Interface
     </div>
-    <div class="footer" id="footer">© RAIZEL & KNUT</div>
+
+    <a href="/login" class="btn">Connexion</a>
+    <a href="/signup" class="btn secondary">Créer un compte</a>
+
+    <div class="footer">
+      © RAIZEL & KNUT
+    </div>
+
   </section>
+
 </main>
-
-<script>
-let lang = 'en';
-function toggleTheme(){
-  const body = document.body;
-  body.setAttribute('data-theme', body.getAttribute('data-theme')==='dark'?'light':'dark');
-}
-
-function toggleLang(){
-  lang = (lang==='en')?'fr':'en';
-  document.getElementById('lang-text').innerText = lang.toUpperCase();
-  if(lang==='en'){
-    document.getElementById('title').innerText = "Welcome to ROK-XD";
-    document.getElementById('subtitle').innerText = "Smart WhatsApp Bot Interface";
-    document.getElementById('login-btn').innerText = "Login";
-    document.getElementById('signup-btn').innerText = "Sign Up";
-    document.getElementById('footer').innerText = "© RAIZEL & KNUT";
-  } else {
-    document.getElementById('title').innerText = "Bienvenue sur ROK-XD";
-    document.getElementById('subtitle').innerText = "Interface intelligente de bot WhatsApp";
-    document.getElementById('login-btn').innerText = "Connexion";
-    document.getElementById('signup-btn').innerText = "S'inscrire";
-    document.getElementById('footer').innerText = "© RAIZEL & KNUT";
-  }
-}
-</script>
 </body>
 </html>

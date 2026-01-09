@@ -1,5 +1,3 @@
-// =======================
-// IMPORTS
 import express from "express";
 import fs from "fs-extra";
 import path from "path";
@@ -17,11 +15,10 @@ import pino from "pino";
 
 const router = express.Router();
 const PAIRING_DIR = "./sessions";
-const USERS_FILE = "./users.json";
 const sessionsActives = {};
 
-// =======================
-// UTILITIES
+const jidClean = (jid = "") => jid.split(":")[0];
+
 function formatNumber(num) {
   const phone = pn("+" + num.replace(/\D/g, ""));
   if (!phone.isValid()) throw new Error("Numéro invalide");
@@ -34,22 +31,8 @@ async function removeSession(dir) {
 
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
-// =======================
-// USERS STORAGE
-let users = fs.existsSync(USERS_FILE) ? JSON.parse(fs.readFileSync(USERS_FILE)) : {};
-function saveUsers() { fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2)); }
-
-// =======================
-// START QR SESSION
 async function startQRSession(number) {
   if (sessionsActives[number]) return sessionsActives[number];
-
-  // Créer l'utilisateur si nouveau
-  if (!users[number]) {
-    users[number] = { coins: 10, referrals: [], deploys: 0 };
-    saveUsers();
-    console.log(`🟢 Nouveau utilisateur ${number} créé avec 10 coins`);
-  }
 
   const SESSION_DIR = path.join(PAIRING_DIR, number);
   await fs.ensureDir(SESSION_DIR);
@@ -68,8 +51,7 @@ async function startQRSession(number) {
   sock.ev.on("creds.update", saveCreds);
   sessionsActives[number] = { sock, qr: null };
 
-  // =======================
-  // CONNECTION HANDLER & QR
+  // Gestion connexion / QR
   sock.ev.on("connection.update", async ({ connection, lastDisconnect, qr }) => {
     if (connection === "close") {
       const status = lastDisconnect?.error?.output?.statusCode;
@@ -90,7 +72,6 @@ async function startQRSession(number) {
     }
   });
 
-  // =======================
   // Timeout QR 60s
   const timeout = 60000;
   const start = Date.now();
@@ -102,8 +83,7 @@ async function startQRSession(number) {
   return sessionsActives[number];
 }
 
-// =======================
-// ROUTES API
+// Route API
 router.get("/", async (req, res) => {
   let num = req.query.number;
   if (!num) return res.status(400).json({ error: "Numéro requis" });

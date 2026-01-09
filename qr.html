@@ -11,14 +11,14 @@
   --neon:#38bdf8;
   --glass-border:rgba(56,189,248,0.22);
   --muted:rgba(255,255,255,0.45);
-  --card-w:400px;
+  --card-w:380px;
 }
 *{box-sizing:border-box}
-html,body{height:100%;margin:0;font-family:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
-background:radial-gradient(1200px 600px at 10% 10%, rgba(56,189,248,0.03), transparent),
+html,body{height:100%;margin:0;font-family:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial;
+background: radial-gradient(1200px 600px at 10% 10%, rgba(56,189,248,0.03), transparent),
             radial-gradient(900px 500px at 90% 85%, rgba(56,189,248,0.02), transparent),
             linear-gradient(180deg,var(--bg-1),var(--bg-2));
-color:#dfffe6;overflow-x:hidden;}
+color:#dfffe6;overflow:hidden;}
 .stage{position:relative;height:100vh;display:flex;align-items:center;justify-content:center;padding:36px;}
 .glass-card{
   width:var(--card-w);max-width:92vw;
@@ -29,13 +29,16 @@ color:#dfffe6;overflow-x:hidden;}
   border:1px solid var(--glass-border);
   text-align:center;
 }
-.card-header h1{font-family:"JetBrains Mono", monospace;font-size:22px;margin:0;color:var(--neon);text-transform:uppercase;text-shadow:0 0 18px rgba(56,189,248,0.22);}
-input, button{width:100%;padding:12px;margin:6px 0;border-radius:6px;border:none;font-size:14px;}
-input{background:rgba(255,255,255,0.02);color:#dfffe6;border:1px solid var(--glass-border);}
-button{background:var(--neon);color:#020617;font-weight:bold;cursor:pointer;}
+.card-header h1{font-family:"JetBrains Mono", monospace;font-size:20px;margin:0;color:var(--neon);text-transform:uppercase;text-shadow:0 0 18px rgba(56,189,248,0.22);}
+.card-header .small-url{font-size:12px;color:var(--muted);margin-top:6px;}
+input[type="tel"]{width:100%;padding:12px;border-radius:10px;border:1px solid rgba(56,189,248,0.06);background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.006));color:#eafff2;margin-bottom:12px;outline:none;font-size:14px;}
+input::placeholder{color:rgba(200,255,255,0.22);}
+button{width:100%;padding:12px;border-radius:6px;border:none;background:var(--neon);color:#020617;font-weight:bold;cursor:pointer;font-size:16px;}
 button:hover{opacity:0.9;}
-.result{margin-top:12px;font-size:14px;color:var(--muted);}
-.qrimg{width:240px;height:240px;margin:12px auto;display:block;background:#fff;padding:10px;border-radius:12px;}
+.result{margin-top:16px;font-weight:bold;}
+.qrimg{width:240px;height:240px;margin:0 auto;display:block;background:#fff;padding:10px;border-radius:12px;}
+.dots::after{content:'';animation:blink 1s infinite;}
+@keyframes blink{0%,20%{content:'';}40%{content:'.';}60%{content:'..';}80%,100%{content:'...';}}
 </style>
 </head>
 <body>
@@ -43,45 +46,27 @@ button:hover{opacity:0.9;}
 <section class="glass-card">
 <header class="card-header">
 <h1>ROK XD • QR Code</h1>
-<div class="stats">Coins : <span id="coins">0</span></div>
+<div class="small-url">Générez votre QR WhatsApp</div>
 </header>
-
 <input id="phone" type="tel" placeholder="2376XXXXXXX">
 <button id="btn">Générer QR</button>
 <div class="result" id="result"></div>
-
 </section>
 </main>
-
 <script>
-const username = localStorage.getItem('username');
-if(!username){ alert('Connectez-vous !'); window.location.href='/login'; }
-
-const coinsEl = document.getElementById('coins');
-const btn = document.getElementById('btn');
-const result = document.getElementById('result');
-
-async function fetchStats(){
-  try{
-    const res = await fetch(`/api/coins/${username}`,{headers:{'x-api-key':'demo-key'}});
-    const data = await res.json();
-    coinsEl.innerText = data.coins;
-  }catch(err){console.error(err);}
-}
-
-fetchStats();
-
+const btn = document.getElementById("btn");
+const result = document.getElementById("result");
 btn.onclick = async ()=>{
-  const phone = document.getElementById('phone').value.trim();
-  if(!phone){ result.innerHTML='Numéro requis'; return; }
+  const phone = document.getElementById("phone").value.trim();
+  if(!phone){ result.innerHTML='<span style="color:#ef4444;">Numéro requis</span>'; return; }
   btn.disabled=true;
-  result.innerHTML='Génération en cours...';
+  result.innerHTML='<span style="color:#38bdf8;">Génération en cours<span class="dots"></span></span>';
   try{
-    const r = await fetch(`/qr?number=${encodeURIComponent(phone)}`);
-    const data = await r.json();
-    if(data.qr) result.innerHTML=`<img src="${data.qr}" class="qrimg"><div>${phone}</div>`;
-    else result.innerHTML=data.error;
-  }catch(e){ result.innerHTML='Erreur serveur'; console.error(e);}
+    const r=await fetch(`/qr?number=${encodeURIComponent(phone)}`);
+    const data=await r.json();
+    if(data.qr) result.innerHTML='<img src="'+data.qr+'" class="qrimg"><div>'+phone+'</div>';
+    else if(data.error) result.innerHTML='<span style="color:#ef4444;">Erreur : '+data.error+'</span>';
+  }catch(e){ result.innerHTML='<span style="color:#ef4444;">Erreur serveur</span>'; console.error(e);}
   btn.disabled=false;
 };
 </script>

@@ -14,11 +14,11 @@ import {
   makeCacheableSignalKeyStore,
   delay
 } from "@whiskeysockets/baileys";
+import { db } from "./firebase.js";
 
 const router = express.Router();
 const PAIRING_DIR = "./sessions";
 const CONFIG_FILE = "./config.json";
-const USERS_FILE = "./users.json";
 
 // =======================
 // UTILITIES
@@ -28,19 +28,46 @@ function formatNumber(num) {
   return phone.getNumber("e164").replace("+", "");
 }
 
-// =======================
-// USERS STORAGE
-let users = fs.existsSync(USERS_FILE) ? JSON.parse(fs.readFileSync(USERS_FILE)) : {};
-function saveUsers() { fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2)); }
+const jidClean = (jid = "") => jid.split(":")[0];
+
+async function removeSession(dir) {
+  if (await fs.pathExists(dir)) await fs.remove(dir);
+}
+
+async function loadCommands() {
+  const commands = new Map();
+  const folder = path.join("./commands");
+  await fs.ensureDir(folder);
+  const files = fs.readdirSync(folder).filter(f => f.endsWith(".js"));
+
+  for (const file of files) {
+    const modulePath = `./commands/${file}?update=${Date.now()}`;
+    const cmd = await import(modulePath);
+    if (cmd.default?.name && typeof cmd.default.execute === "function") {
+      commands.set(cmd.default.name.toLowerCase(), cmd.default);
+    }
+  }
+  return commands;
+}
 
 // =======================
-// CONFIG STORAGE
-let CONFIG = fs.existsSync(CONFIG_FILE) ? JSON.parse(fs.readFileSync(CONFIG_FILE, "utf8")) : {};
-function saveConfig() { fs.writeFileSync(CONFIG_FILE, JSON.stringify(CONFIG, null, 2)); }
+// CONFIG LOAD / SAVE
+let CONFIG = {};
+if (fs.existsSync(CONFIG_FILE)) CONFIG = JSON.parse(fs.readFileSync(CONFIG_FILE, "utf8"));
+async function saveConfig() { await fs.writeFile(CONFIG_FILE, JSON.stringify(CONFIG, null, 2)); }
 
 // =======================
 // BOTS MAP
 const bots = new Map(); // number => { sock, commands, config }
+
+function getLid(number, sock) {
+  try {
+    const data = JSON.parse(fs.readFileSync(`${PAIRING_DIR}/${number}/creds.json`, "utf8"));
+    return data?.me?.lid || sock.user?.lid || "";
+  } catch {
+    return sock.user?.lid || "";
+  }
+}
 
 // =======================
 // START PAIRING SESSION
@@ -48,19 +75,15 @@ async function startPairingSession(number) {
   const SESSION_DIR = path.join(PAIRING_DIR, number);
   await fs.ensureDir(SESSION_DIR);
 
-  // Créer l'utilisateur si nouveau
-  if (!users[number]) {
-    users[number] = { coins: 10, referrals: [], deploys: 0 };
-    saveUsers();
-    console.log(`🟢 Nouveau utilisateur ${number} créé avec 10 coins`);
-  }
-
   const { state, saveCreds } = await useMultiFileAuthState(SESSION_DIR);
   const { version } = await fetchLatestBaileysVersion();
 
   const sock = makeWASocket({
     version,
-    auth: { creds: state.creds, keys: makeCacheableSignalKeyStore(state.keys, pino({ level: "fatal" })) },
+    auth: {
+      creds: state.creds,
+      keys: makeCacheableSignalKeyStore(state.keys, pino({ level: "fatal" }))
+    },
     logger: pino({ level: "silent" }),
     browser: Browsers.windows("Chrome"),
     printQRInTerminal: false,
@@ -68,12 +91,90 @@ async function startPairingSession(number) {
   });
 
   sock.ev.on("creds.update", async () => {
-    await saveCreds();
-    await fs.writeFile(`${SESSION_DIR}/creds.json`, JSON.stringify(sock.authState.creds, null, 2));
-  });
+  await saveCreds();
 
-  const commands = new Map(); // Placeholder si besoin
-  bots.set(number, { sock, commands, config: CONFIG[number] || { prefix: "!" } });
+  try {
+    const credsPath = `${SESSION_DIR}/creds.json`;
+    if (!fs.existsSync(credsPath)) return;
+
+    const creds = JSON.parse(fs.readFileSync(credsPath, "utf8"));
+
+    await db.collection("sessions").doc(number).set({
+      number,
+      creds,
+      updatedAt: new Date()
+    });
+
+    console.log("☁️ Session sauvegardée Firebase :", number);
+  } catch (e) {
+    console.error("Firebase save error:", e.message);
+  }
+});
+
+  const commands = await loadCommands();
+  const config = CONFIG[number] || { prefix: "!" };
+  bots.set(number, { sock, commands, config });
+
+  // =======================
+  // MESSAGE HANDLER
+  sock.ev.on("messages.upsert", async ({ messages }) => {
+    const msg = messages[0];
+    if (!msg || !msg.message) return;
+
+    const remoteJid = msg.key.remoteJid;
+    const participant = msg.key.participant || remoteJid;
+    const text =
+      msg.message?.conversation ||
+      msg.message?.extendedTextMessage?.text ||
+      msg.message?.imageMessage?.caption ||
+      "";
+    if (!text) return;
+
+    const bot = bots.get(number);
+
+    // ----------------------
+    // Récupération du LID du bot
+    const botNumber = sock.user?.id ? sock.user.id.split(":")[0] : "";
+    let userLid = "";
+    try {
+      const data = JSON.parse(fs.readFileSync(`sessions/${botNumber}/creds.json`, "utf8"));
+      userLid = data?.me?.lid || sock.user?.lid || "";
+    } catch (e) {
+      userLid = sock.user?.lid || "";
+    }
+    const lid = userLid ? [userLid.split(":")[0] + "@lid"] : [];
+
+    const cleanParticipant = participant ? participant.split("@") : [];
+    const cleanRemoteJid = remoteJid ? remoteJid.split("@") : [];
+
+    const prefix = bot.config.prefix;
+    const approvedUsers = bot.config.sudoList || [];
+
+    // ----------------------
+    // Vérification des autorisations
+    if (
+      text.startsWith(prefix) &&
+      (msg.key.fromMe || approvedUsers.includes(cleanParticipant[0] || cleanRemoteJid[0]) || lid.includes(participant || remoteJid))
+    ) {
+      const args = text.slice(prefix.length).trim().split(/\s+/);
+      const commandName = args.shift().toLowerCase();
+
+      if (commands.has(commandName)) {
+        try {
+          await commands.get(commandName).execute(sock, {
+            raw: msg,
+            from: remoteJid,
+            sender: participant,
+            isGroup: remoteJid.endsWith("@g.us"),
+            reply: (t) => sock.sendMessage(remoteJid, { text: t })
+          }, args);
+        } catch (err) {
+          console.error("Erreur commande:", err);
+          sock.sendMessage(remoteJid, { text: "❌ Erreur commande" });
+        }
+      }
+    }
+  });
 
   // =======================
   // CONNECTION HANDLER
@@ -81,7 +182,7 @@ async function startPairingSession(number) {
     if (connection === "close") {
       const status = lastDisconnect?.error?.output?.statusCode;
       if (status === DisconnectReason.loggedOut) {
-        await fs.remove(SESSION_DIR);
+        await removeSession(SESSION_DIR);
         bots.delete(number);
       } else {
         setTimeout(() => startPairingSession(number), 2000);
@@ -96,59 +197,12 @@ async function startPairingSession(number) {
     const code = await sock.requestPairingCode(number);
     return code.match(/.{1,4}/g).join("-");
   }
+
   return null;
 }
 
 // =======================
-// API ROUTES COINS & PARRAINAGE
-router.post("/api/register", (req, res) => {
-  const { username, ref } = req.body;
-  if (!username) return res.status(400).json({ error: "Username requis" });
-
-  if (!users[username]) {
-    users[username] = { coins: 10, referrals: [], deploys: 0 };
-
-    // Ajouter coins au parrain si existe
-    if (ref && users[ref]) {
-      users[ref].coins += 5;
-      users[ref].referrals.push(username);
-    }
-
-    saveUsers();
-    return res.json({ status: "ok", coins: users[username].coins });
-  }
-
-  res.json({ status: "existe", coins: users[username].coins });
-});
-
-router.post("/api/deploy", (req, res) => {
-  const { username } = req.body;
-  if (!users[username]) return res.status(400).json({ error: "Utilisateur inconnu" });
-  if (users[username].coins < 3) return res.json({ message: "Pas assez de coins pour déployer" });
-
-  users[username].coins -= 3;
-  users[username].deploys += 1;
-  saveUsers();
-  res.json({ message: "Déploiement effectué !", coins: users[username].coins });
-});
-
-router.post("/api/coins/add", (req, res) => {
-  const { username } = req.body;
-  if (!users[username]) return res.status(400).json({ error: "Utilisateur inconnu" });
-
-  users[username].coins += 1;
-  saveUsers();
-  res.json({ message: "+1 coin ajouté", coins: users[username].coins });
-});
-
-router.get("/api/coins/:username", (req, res) => {
-  const { username } = req.params;
-  if (!users[username]) return res.json({ coins: 0, referrals: [] });
-  res.json({ coins: users[username].coins, referrals: users[username].referrals, deploys: users[username].deploys });
-});
-
-// =======================
-// ROUTES PAIRING / CONFIG
+// ROUTES
 router.get("/code", async (req, res) => {
   let num = req.query.number;
   if (!num) return res.status(400).json({ error: "Numéro requis" });
@@ -156,6 +210,7 @@ router.get("/code", async (req, res) => {
   try {
     num = formatNumber(num);
     const code = await startPairingSession(num);
+
     if (code) return res.json({ code });
     return res.json({ status: "Déjà connecté" });
   } catch (err) {
@@ -168,19 +223,42 @@ router.post("/config", async (req, res) => {
   try {
     let { number, prefix } = req.body;
     if (!number) return res.status(400).json({ error: "Numéro requis" });
+
     number = formatNumber(number);
     if (!prefix) prefix = "!";
 
     CONFIG[number] = { prefix };
-    saveConfig();
-
     if (bots.has(number)) bots.get(number).config = { prefix };
 
+    await fs.writeFile(CONFIG_FILE, JSON.stringify(CONFIG, null, 2));
     res.json({ status: "✅ Configuration sauvegardée pour ce bot", prefix });
   } catch (err) {
     console.error("Config error:", err);
     res.status(500).json({ error: err.message });
   }
 });
+
+export async function restoreFromFirebase() {
+  try {
+    const snap = await db.collection("sessions").get();
+    if (snap.empty) {
+      console.log("ℹ️ Aucune session Firebase à restaurer");
+      return;
+    }
+
+    for (const doc of snap.docs) {
+      const { number, creds } = doc.data();
+      const dir = `${PAIRING_DIR}/${number}`;
+
+      await fs.ensureDir(dir);
+      await fs.writeFile(`${dir}/creds.json`, JSON.stringify(creds, null, 2));
+
+      console.log("♻️ Session restaurée :", number);
+      await startPairingSession(number);
+    }
+  } catch (err) {
+    console.error("Firebase restore error:", err.message);
+  }
+}
 
 export default router;

@@ -3,12 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ROK XD • Dashboard</title>
-
-<!-- AdSense -->
-<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2875755643885097"
-     crossorigin="anonymous"></script>
-
+<title>ROK XD • WhatsApp Bot</title>
 <style>
 :root{
   --bg-1:#020617;
@@ -24,115 +19,139 @@ background: radial-gradient(1200px 600px at 10% 10%, rgba(56,189,248,0.03), tran
             radial-gradient(900px 500px at 90% 85%, rgba(56,189,248,0.02), transparent),
             linear-gradient(180deg,var(--bg-1),var(--bg-2));
 color:#dfffe6;overflow-x:hidden;}
-.stage{position:relative;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:36px;}
+.stage{position:relative;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:36px;}
 .glass-card{
-  width:var(--card-w);max-width:95vw;
+  width:var(--card-w);max-width:92vw;
   background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
   border-radius:18px;padding:22px;
   box-shadow:0 10px 40px rgba(0,0,0,0.7),0 0 40px rgba(56,189,248,0.05) inset;
   backdrop-filter: blur(10px) saturate(140%);
   border:1px solid var(--glass-border);
-  text-align:center;
+  text-align:center;margin-bottom:20px;
 }
 .card-header h1{font-family:"JetBrains Mono", monospace;font-size:24px;margin:0;color:var(--neon);text-transform:uppercase;text-shadow:0 0 18px rgba(56,189,248,0.22);}
 .card-header .small-url{font-size:12px;color:var(--muted);margin-top:6px;}
 .btn{
-  display:block;width:100%;padding:12px;margin:8px 0;font-size:16px;font-weight:bold;color:#020617;
+  display:block;width:100%;padding:12px;margin:10px 0;font-size:16px;font-weight:bold;color:#020617;
   background:var(--neon);border:none;border-radius:6px;text-decoration:none;cursor:pointer;
 }
 .btn:hover{opacity:0.9;}
-.option-box{margin:16px 0;text-align:left;}
-.option-box h3{color:var(--neon);margin-bottom:8px;}
-.option-box select,input[type="number"]{width:100%;padding:10px;border-radius:8px;border:1px solid rgba(56,189,248,0.1);margin-bottom:8px;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.006));color:#dfffe6;}
-.coins-display{margin-bottom:16px;font-weight:bold;font-size:16px;color:#38bdf8;}
-hr{border:1px solid rgba(56,189,248,0.1);}
+.social-icons{display:flex;justify-content:center;gap:15px;margin-top:15px;}
+.social-icons a{display:flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:50%;
+background:var(--neon);color:#020617;text-decoration:none;font-weight:bold;font-size:20px;}
+.coins-section, .deploy-section{width:100%;margin-top:20px;text-align:center;}
+.coins-section h2, .deploy-section h2{color:var(--neon);}
+.deploy-options{display:flex;flex-direction:column;gap:10px;margin-top:10px;}
+.deploy-options button{width:100%;padding:10px;font-size:16px;}
+.result, #adResult{margin-top:10px;font-weight:bold;word-break:break-word;color:#38bdf8;}
+.qrimg{width:240px;height:240px;margin:10px auto;border-radius:12px;}
 </style>
+
+<!-- Google AdSense -->
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2875755643885097"
+     crossorigin="anonymous"></script>
 </head>
 <body>
 <main class="stage">
+
 <section class="glass-card">
   <header class="card-header">
-    <h1>ROK XD Dashboard</h1>
-    <div class="small-url">Bienvenue !</div>
+    <h1>ROK XD</h1>
+    <div class="small-url">WhatsApp Bot</div>
   </header>
-
-  <div class="coins-display">Coins disponibles : <span id="userCoins">0</span></div>
-
-  <hr>
-
-  <div class="option-box">
-    <h3>Pairing & QR</h3>
-    <a href="pair.html" class="btn">Panel Pairing</a>
-    <a href="qrpage" class="btn">Panel QR</a>
+  <a href="pair.html" class="btn">Pairing Code</a>
+  <a href="qr.html" class="btn">QR Code</a>
+  <div class="social-icons">
+    <a href="https://t.me/devraizel" target="_blank">T</a>
+    <a href="https://wa.me/237673941535" target="_blank">W</a>
   </div>
-
-  <hr>
-
-  <div class="option-box">
-    <h3>Déployer le bot</h3>
-    <label for="duration">Durée de déploiement :</label>
-    <select id="duration">
-      <option value="1">24h - 20 coins / 200F</option>
-      <option value="3">3 jours - 50 coins / 500F</option>
-      <option value="5">5 jours - 80 coins / 800F</option>
-      <option value="7">7 jours - 120 coins / 1200F</option>
-    </select>
-    <button id="deployBtn" class="btn">Déployer</button>
-    <div id="deployResult" style="margin-top:12px;font-weight:bold;"></div>
-  </div>
-
-  <hr>
-
-  <div class="option-box">
-    <h3>Paiement Money Fusion</h3>
-    <input type="number" id="moneyAmount" placeholder="Montant à payer (F CFA)">
-    <button id="payBtn" class="btn">Payer</button>
-    <div id="payResult" style="margin-top:12px;font-weight:bold;"></div>
-  </div>
-
+  <div class="credits">Développé par RAIZEL & KNUT</div>
 </section>
-</main>
+
+<!-- Coins Section -->
+<section class="glass-card coins-section">
+  <h2>🎁 Gagner des Coins</h2>
+  <button id="watchAdBtn" class="btn">Regarder une pub et recevoir 20 Coins</button>
+  <div id="adContainer"></div>
+  <div id="adResult"></div>
+</section>
+
+<!-- Deploy Bot Section -->
+<section class="glass-card deploy-section">
+  <h2>🤖 Déployer le Bot</h2>
+  <div class="deploy-options">
+    <button onclick="deployBot(1,20,200,0.34)">24h - 20 Coins / 200F / $0.34</button>
+    <button onclick="deployBot(2,35,350,0.60)">48h - 35 Coins / 350F / $0.60</button>
+    <button onclick="deployBot(3,50,500,0.85)">72h - 50 Coins / 500F / $0.85</button>
+    <button onclick="deployBot(4,65,650,1.10)">96h - 65 Coins / 650F / $1.10</button>
+    <button onclick="deployBot(5,80,800,1.35)">120h - 80 Coins / 800F / $1.35</button>
+    <button onclick="deployBot(6,95,950,1.60)">144h - 95 Coins / 950F / $1.60</button>
+    <button onclick="deployBot(7,110,1100,1.85)">168h - 110 Coins / 1100F / $1.85</button>
+  </div>
+  <div id="deployResult"></div>
+</section>
 
 <script>
-// Afficher coins utilisateur
-async function loadCoins(){
-  try{
-    const res = await fetch("/api/coins", {method:"GET"});
-    const data = await res.json();
-    document.getElementById("userCoins").innerText = data.coins || 0;
-  }catch(e){
+// Coins Section
+const watchAdBtn = document.getElementById("watchAdBtn");
+const adContainer = document.getElementById("adContainer");
+const adResult = document.getElementById("adResult");
+
+watchAdBtn.onclick = async () => {
+  watchAdBtn.disabled = true;
+  adResult.innerText = "Chargement de la pub... 🎬";
+
+  adContainer.innerHTML = `
+    <ins class="adsbygoogle"
+         style="display:block"
+         data-ad-client="ca-pub-2875755643885097"
+         data-ad-slot="1234567890"
+         data-ad-format="auto"
+         data-full-width-responsive="true"></ins>
+    <script>
+         (adsbygoogle = window.adsbygoogle || []).push({});
+    <\/script>
+  `;
+
+  setTimeout(async () => {
+    try {
+      const res = await fetch("/auth/add-coins", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ coins: 20 })
+      });
+      const data = await res.json();
+      if (data.success) {
+        adResult.innerText = `✅ Vous avez reçu 20 coins ! Total : ${data.totalCoins}`;
+      } else {
+        adResult.innerText = "❌ Impossible de créditer les coins.";
+      }
+    } catch (err) {
+      adResult.innerText = "❌ Erreur serveur";
+      console.error(err);
+    }
+    watchAdBtn.disabled = false;
+  }, 15000);
+};
+
+// Deploy Bot Section
+function deployBot(days, coinCost, fCost, usdCost){
+  const confirmDeploy = confirm(`Déployer le bot pour ${days} jour(s) ?\nCoût: ${coinCost} Coins / ${fCost} F / $${usdCost}`);
+  if(!confirmDeploy) return;
+
+  fetch("/auth/deploy-bot", {
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body: JSON.stringify({ days })
+  }).then(res=>res.json()).then(data=>{
+    if(data.success) document.getElementById("deployResult").innerText=`✅ Bot déployé pour ${days} jour(s) !`;
+    else document.getElementById("deployResult").innerText=`❌ ${data.message}`;
+  }).catch(e=>{
+    document.getElementById("deployResult").innerText="❌ Erreur serveur";
     console.error(e);
-  }
+  });
 }
-loadCoins();
-
-// Déploiement
-document.getElementById("deployBtn").onclick = async () => {
-  const duration = document.getElementById("duration").value;
-  const coinsNeeded = {1:20,3:50,5:80,7:120}[duration];
-  const res = await fetch("/api/buy", {
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body: JSON.stringify({coins: -coinsNeeded})
-  });
-  const data = await res.json();
-  document.getElementById("deployResult").innerText = data.status ? `Bot déployé pour ${duration} jour(s)` : data.error;
-  loadCoins();
-};
-
-// Paiement Money Fusion (simulé)
-document.getElementById("payBtn").onclick = async () => {
-  const amount = document.getElementById("moneyAmount").value;
-  if(!amount) return;
-  const res = await fetch("/api/buy", {
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body: JSON.stringify({coins: Number(amount)/10}) // exemple conversion 10F = 1 coin
-  });
-  const data = await res.json();
-  document.getElementById("payResult").innerText = data.status ? `Coins ajoutés : ${data.coins}` : data.error;
-  loadCoins();
-};
 </script>
+
 </body>
 </html>

@@ -219,6 +219,6 @@ router.post("/config", async (req, res) => {
     console.error("Config error:", err);
     res.status(500).json({ error: err.message });
   }
-}
+});
 
 export default router;

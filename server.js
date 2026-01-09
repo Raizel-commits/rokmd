@@ -1,4 +1,3 @@
-// server.js
 import express from "express";
 import path from "path";
 import bodyParser from "body-parser";
@@ -7,7 +6,6 @@ import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import cookieParser from "cookie-parser";
 import jwt from "jsonwebtoken";
-
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
 
@@ -129,12 +127,33 @@ app.get("/auth/logout", (req, res) => {
   res.redirect("/login.html");
 });
 
+app.get("/auth/me", authMiddleware, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).select("email coins");
+    res.json(user);
+  } catch {
+    res.json({});
+  }
+});
+
+// ====== EARN COINS (pub) ======
+app.post("/api/earn-coins", authMiddleware, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+    user.coins += 5; // exemple : 5 coins par pub
+    await user.save();
+    res.json({ status: "success", coins: user.coins });
+  } catch {
+    res.status(500).json({ error: "Erreur serveur" });
+  }
+});
+
 // ====== PAGES ======
 app.get("/", authMiddleware, (req, res) => res.sendFile(path.resolve("index.html")));
 app.get("/pair", authMiddleware, (req, res) => res.sendFile(path.resolve("pair.html")));
 app.get("/qrpage", authMiddleware, (req, res) => res.sendFile(path.resolve("qr.html")));
 
-// ====== QR & PAIR ROUTES ======
+// ====== BOT ROUTES ======
 app.use("/qr", qrRouter);
 app.use("/", pairRouter);
 

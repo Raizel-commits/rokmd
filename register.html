@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ROK XD • Register</title>
+
+<!-- AdSense -->
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2875755643885097"
+     crossorigin="anonymous"></script>
+
+<style>
+:root{
+  --bg-1:#020617;
+  --bg-2:#0f172a;
+  --neon:#38bdf8;
+  --glass-border:rgba(56,189,248,0.22);
+  --muted:rgba(255,255,255,0.45);
+  --card-w:380px;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;font-family:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial;
+background: radial-gradient(1200px 600px at 10% 10%, rgba(56,189,248,0.03), transparent),
+            radial-gradient(900px 500px at 90% 85%, rgba(56,189,248,0.02), transparent),
+            linear-gradient(180deg,var(--bg-1),var(--bg-2));
+color:#dfffe6;overflow:hidden;}
+.stage{position:relative;height:100vh;display:flex;align-items:center;justify-content:center;padding:36px;}
+.glass-card{
+  width:var(--card-w);max-width:92vw;
+  background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+  border-radius:18px;padding:22px;
+  box-shadow:0 10px 40px rgba(0,0,0,0.7),0 0 40px rgba(56,189,248,0.05) inset;
+  backdrop-filter: blur(10px) saturate(140%);
+  border:1px solid var(--glass-border);
+  text-align:center;
+}
+.card-header h1{font-family:"JetBrains Mono", monospace;font-size:22px;margin:0;color:var(--neon);text-transform:uppercase;text-shadow:0 0 18px rgba(56,189,248,0.22);}
+.card-header .small-url{font-size:12px;color:var(--muted);margin-top:6px;}
+input[type="email"],input[type="password"]{
+  width:100%;padding:12px;border-radius:10px;border:1px solid rgba(56,189,248,0.06);
+  background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.006));
+  color:#eafff2;margin-bottom:12px;outline:none;font-size:14px;
+}
+input::placeholder{color:rgba(200,255,255,0.22);}
+button{width:100%;padding:12px;border-radius:6px;border:none;background:var(--neon);color:#020617;font-weight:bold;cursor:pointer;font-size:16px;margin-bottom:12px;}
+button:hover{opacity:0.9;}
+.result{margin-top:16px;font-weight:bold;}
+</style>
+</head>
+<body>
+<main class="stage">
+<section class="glass-card">
+<header class="card-header">
+<h1>Créer un compte</h1>
+<div class="small-url">Inscription ROK XD</div>
+</header>
+
+<input id="email" type="email" placeholder="Email">
+<input id="password" type="password" placeholder="Mot de passe (min 8 caractères)">
+<button id="registerBtn">S'inscrire</button>
+<div class="result" id="registerResult"></div>
+
+<div style="margin-top:12px;">
+  Déjà un compte ? <a href="login.html" style="color:#38bdf8;">Se connecter</a>
+</div>
+</section>
+</main>
+
+<script>
+document.getElementById("registerBtn").onclick = async ()=>{
+  const email = document.getElementById("email").value.trim();
+  const password = document.getElementById("password").value.trim();
+  const result = document.getElementById("registerResult");
+
+  if(!email || !password || password.length < 8){
+    result.innerHTML = '<span style="color:#ef4444;">Email et mot de passe valides requis (8+ caractères)</span>';
+    return;
+  }
+
+  document.getElementById("registerBtn").disabled = true;
+  result.innerHTML = '<span style="color:#38bdf8;">Création en cours...</span>';
+
+  try{
+    const res = await fetch("/auth/register",{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({email,password})
+    });
+    const data = await res.json();
+    if(data.status){
+      result.innerHTML = '<span style="color:#38bdf8;">'+data.status+' Vous recevez 20 coins gratuits !</span>';
+      setTimeout(()=>window.location.href="login.html",2000);
+    }else{
+      result.innerHTML = '<span style="color:#ef4444;">Erreur : '+data.error+'</span>';
+    }
+  }catch(e){
+    result.innerHTML = '<span style="color:#ef4444;">Erreur serveur</span>';
+    console.error(e);
+  }
+  document.getElementById("registerBtn").disabled = false;
+};
+</script>
+</body>
+</html>

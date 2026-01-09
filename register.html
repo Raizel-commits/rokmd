@@ -1,104 +1,104 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Inscription • ROK XD</title>
-<style>
-  body {
-    margin: 0;
-    font-family: Arial, sans-serif;
-    background: #020617;
-    color: #fff;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 100vh;
-  }
-  .container {
-    background: #0f172a;
-    padding: 2rem;
-    border-radius: 10px;
-    border: 1px solid rgba(56, 189, 248, 0.5);
-    box-shadow: 0 0 20px rgba(56, 189, 248, 0.3);
-    width: 100%;
-    max-width: 400px;
-  }
-  h2 {
-    text-align: center;
-    color: #38bdf8;
-  }
-  input {
-    width: 100%;
-    padding: 10px;
-    margin: 10px 0;
-    border: none;
-    border-radius: 5px;
-    background: #020617;
-    color: #fff;
-    border: 1px solid #38bdf8;
-  }
-  button {
-    width: 100%;
-    padding: 10px;
-    background: #38bdf8;
-    border: none;
-    border-radius: 5px;
-    color: #020617;
-    font-weight: bold;
-    cursor: pointer;
-  }
-  button:hover {
-    background: #0ea5e9;
-  }
-  p {
-    text-align: center;
-    margin-top: 10px;
-  }
-  p a {
-    color: #38bdf8;
-    text-decoration: none;
-  }
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Inscription • ROK XD</title>
+  <style>
+    :root {
+      --bg-1: #020617;
+      --bg-2: #0f172a;
+      --neon: #38bdf8;
+      --glass-border: rgba(56, 189, 248, 0.2);
+    }
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: var(--bg-1);
+      color: #fff;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+    .container {
+      background: var(--bg-2);
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px var(--glass-border);
+      width: 100%;
+      max-width: 400px;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
+      color: var(--neon);
+    }
+    input {
+      width: 100%;
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 5px;
+      border: none;
+    }
+    button {
+      width: 100%;
+      padding: 10px;
+      background: var(--neon);
+      border: none;
+      border-radius: 5px;
+      color: #020617;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #0ea5e9;
+    }
+    p {
+      text-align: center;
+      margin-top: 15px;
+    }
+    a {
+      color: var(--neon);
+      text-decoration: none;
+    }
+  </style>
 </head>
 <body>
-<div class="container">
-  <h2>Créer un compte</h2>
-  <form id="registerForm">
+  <div class="container">
+    <h1>Inscription</h1>
     <input type="email" id="email" placeholder="Email" required>
     <input type="password" id="password" placeholder="Mot de passe (min 8 caractères)" required>
-    <button type="submit">S'inscrire</button>
-  </form>
-  <p>Déjà inscrit ? <a href="login.html">Se connecter</a></p>
-  <p id="message"></p>
-</div>
+    <button id="register-btn">S'inscrire</button>
+    <p>Déjà un compte ? <a href="/login.html">Se connecter</a></p>
+  </div>
 
-<script>
-const form = document.getElementById('registerForm');
-const message = document.getElementById('message');
+  <script>
+    // Rediriger si déjà connecté
+    fetch("/auth/me", { credentials: "same-origin" })
+      .then(r => r.json())
+      .then(data => {
+        if (data.email) window.location.href = "/";
+      });
 
-form.addEventListener('submit', async e => {
-  e.preventDefault();
-  const email = document.getElementById('email').value;
-  const password = document.getElementById('password').value;
+    document.getElementById("register-btn").addEventListener("click", async () => {
+      const email = document.getElementById("email").value;
+      const password = document.getElementById("password").value;
 
-  try {
-    const res = await fetch('/auth/register', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password })
+      const res = await fetch("/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+        credentials: "same-origin"
+      });
+
+      const data = await res.json();
+      if (data.status === "success") {
+        window.location.href = "/";
+      } else {
+        alert(data.error || "Erreur inscription");
+      }
     });
-    const data = await res.json();
-    if(data.status === 'success'){
-      alert(`Compte créé ! Vous recevez ${data.coins} coins gratuits.`);
-      window.location.href = 'index.html';
-    } else {
-      message.textContent = data.error;
-    }
-  } catch(err) {
-    message.textContent = 'Erreur serveur';
-  }
-});
-</script>
+  </script>
 </body>
 </html>

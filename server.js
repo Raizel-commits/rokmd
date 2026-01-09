@@ -90,7 +90,7 @@ app.post("/api/register", async (req, res) => {
     await newUser.save();
 
     const token = jwt.sign({ username: newUser.username }, JWT_SECRET, { expiresIn: "1h" });
-    res.cookie('token', token, { httpOnly: true });
+    res.cookie('token', token); // Pas httpOnly pour front
     res.json({ token, username: newUser.username });
   } catch (err) {
     res.json({ error: "Erreur serveur : " + err.message });
@@ -107,7 +107,7 @@ app.post("/api/login", async (req, res) => {
     if (!user) return res.json({ error: "Utilisateur ou mot de passe incorrect" });
 
     const token = jwt.sign({ username: user.username }, JWT_SECRET, { expiresIn: "1h" });
-    res.cookie('token', token, { httpOnly: true });
+    res.cookie('token', token); // Pas httpOnly
     res.json({ token, username: user.username });
   } catch (err) {
     res.json({ error: "Erreur serveur : " + err.message });

@@ -1,77 +1,84 @@
-// =======================
-// IMPORTS
-// =======================
 import express from "express";
 import path from "path";
-import cors from "cors";
-import bodyParser from "body-parser";
 import { fileURLToPath } from "url";
+import bodyParser from "body-parser";
+import cors from "cors";
+import helmet from "helmet";
+import rateLimit from "express-rate-limit";
+import dotenv from "dotenv";
+import cookieParser from "cookie-parser";
 
-// ROUTERS (RESTENT INTACTS)
-import pairRouter from "./pair.js";
+import authRouter, { authMiddleware } from "./auth.js";
+import { connectDB } from "./db.js";
+
 import qrRouter from "./qr.js";
+import pairRouter, { restoreFromFirebase } from "./pair.js";
+import ngrokModule from "ngrok";
+import coinsRouter from "./coins.js";
 
-// =======================
-// CONFIG
-// =======================
-const app = express();
-const PORT = process.env.PORT || 3000;
+dotenv.config();
+connectDB();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const PORT = process.env.PORT || 3000;
 
-// =======================
+const app = express();
+
 // MIDDLEWARES
-// =======================
 app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
+app.use(cookieParser());
+app.use(helmet());
+app.use(express.static(__dirname));
 
-// =======================
-// FRONTEND
-// =======================
-app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "index.html"));
-});
+// RATE LIMIT
+app.use(
+  "/api",
+  rateLimit({
+    windowMs: 60 * 1000,
+    max: 10,
+    message: { error: "Trop de requêtes, réessaye plus tard" },
+  })
+);
 
-// =======================
-// API ROUTES
-// =======================
-
-// Pairing Code
+// ROUTES
+app.use("/auth", authRouter);
+app.use("/api", coinsRouter);
+app.use("/qr", qrRouter);
 app.use("/", pairRouter);
 
-// QR Code
-app.use("/", qrRouter);
+// PAGES PROTÉGÉES
+app.get("/", authMiddleware, (_, res) =>
+  res.sendFile(path.join(__dirname, "index.html"))
+);
+app.get("/pair", authMiddleware, (_, res) =>
+  res.sendFile(path.join(__dirname, "pair.html"))
+);
+app.get("/qrpage", authMiddleware, (_, res) =>
+  res.sendFile(path.join(__dirname, "qr.html"))
+);
 
-// =======================
-// CONFIG SAVE (simple)
-// =======================
-const configs = {};
+// NGROK
+async function startNgrok() {
+  if (!process.env.NGROK_AUTHTOKEN) return;
+  try {
+    const url = await ngrokModule.connect({
+      proto: "http",
+      addr: PORT,
+      authtoken: process.env.NGROK_AUTHTOKEN,
+      region: process.env.NGROK_REGION || "eu",
+    });
+    console.log(`🌐 Tunnel Ngrok actif : ${url}`);
+  } catch (err) {
+    console.error("❌ Erreur Ngrok :", err.message);
+  }
+}
 
-app.post("/config", (req, res) => {
-  const { number, prefix } = req.body;
-  if (!number) return res.json({ error: "Numéro requis" });
-
-  configs[number] = { prefix: prefix || "!" };
-
-  res.json({
-    status: "Configuration sauvegardée",
-    number,
-    prefix: configs[number].prefix
-  });
-});
-
-// =======================
-// 404
-// =======================
-app.use((req, res) => {
-  res.status(404).json({ error: "Route introuvable" });
-});
-
-// =======================
 // START SERVER
-// =======================
 app.listen(PORT, () => {
-  console.log(`🚀 ROK XD server running on port ${PORT}`);
+  console.log(`🚀 Serveur actif sur le port ${PORT}`);
+  restoreFromFirebase();
+  startNgrok();
 });

@@ -1,87 +1,67 @@
-// =======================
-// IMPORTS
-// =======================
+// server.js
 import express from "express";
 import path from "path";
 import { fileURLToPath } from "url";
+import bodyParser from "body-parser";
 import cors from "cors";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import cookieParser from "cookie-parser";
-import mongoose from "mongoose";
+import jwt from "jsonwebtoken";
 
-import authRouter from "./auth.js";
+import authRouter, { authMiddleware } from "./auth.js";
 import qrRouter from "./qr.js";
 import pairRouter from "./pair.js";
 
-// ================= PATH FIX
+import mongoose from "mongoose";
+
+const app = express();
+
+// ===================== PATH =====================
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// ================= APP
-const app = express();
-app.set("trust proxy", 1);
+// ===================== MONGODB =====================
+const MONGO_URI = "mongodb+srv://rokxd_raizel:Sangoku77@cluster0.0g3b0yp.mongodb.net/?appName=Cluster0";
 
-// ================= MONGODB
-mongoose
-  .connect(process.env.MONGO_URI || 
-    "mongodb+srv://rokxd_raizel:Sangoku77@cluster0.0g3b0yp.mongodb.net/rokxd"
-  )
+mongoose.connect(MONGO_URI, { dbName: "RAKXD_DB" })
   .then(() => console.log("✅ MongoDB connecté"))
-  .catch(err => console.error("❌ MongoDB error:", err.message));
+  .catch(err => console.error("❌ Erreur MongoDB :", err.message));
 
-// ================= MIDDLEWARE
+// ===================== MIDDLEWARE =====================
 app.use(cors());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-app.use(cookieParser());
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
+app.use(express.static(__dirname)); // fichiers HTML/CSS/JS à la racine
 app.use(helmet());
+app.use(cookieParser());
 
-// ================= RATE LIMIT (AUTH)
-app.use(
-  "/auth",
-  rateLimit({
-    windowMs: 60 * 1000,
-    max: 20,
-    message: { error: "Trop de requêtes, réessayez plus tard" }
-  })
-);
+// RATE LIMIT API
+app.use("/api", rateLimit({
+  windowMs: 60 * 1000,
+  max: 10,
+  message: { error: "Trop de requêtes" }
+}));
 
-// ================= AUTH ROUTES (SIMPLE)
-app.use("/", authRouter);
+// ===================== ROUTES =====================
+// Auth routes (login/register)
+app.use("/auth", authRouter);
 
-// ================= PAGES
-app.get("/", (_, res) => res.redirect("/login"));
+// Pages publiques login/register
+app.get("/login.html", (_, res) => res.sendFile(path.join(__dirname, "login.html")));
+app.get("/register.html", (_, res) => res.sendFile(path.join(__dirname, "register.html")));
 
-app.get("/login", (_, res) =>
-  res.sendFile(path.join(__dirname, "login.html"))
-);
+// Pages privées protégées
+app.get("/", authMiddleware, (_, res) => res.sendFile(path.join(__dirname, "index.html")));
+app.get("/pair", authMiddleware, (_, res) => res.sendFile(path.join(__dirname, "pair.html")));
+app.get("/qrpage", authMiddleware, (_, res) => res.sendFile(path.join(__dirname, "qr.html")));
 
-app.get("/register", (_, res) =>
-  res.sendFile(path.join(__dirname, "register.html"))
-);
-
-app.get("/panel", (_, res) =>
-  res.sendFile(path.join(__dirname, "index.html"))
-);
-
-app.get("/pair-page", (_, res) =>
-  res.sendFile(path.join(__dirname, "pair.html"))
-);
-
-app.get("/qr-page", (_, res) =>
-  res.sendFile(path.join(__dirname, "qr.html"))
-);
-
-// ================= ROUTES BOT (NON PROTÉGÉES)
+// Bot routes
 app.use("/qr", qrRouter);
-app.use("/pair", pairRouter);
+app.use("/", pairRouter);
 
-// ================= STATIC FILES
-app.use(express.static(__dirname));
-
-// ================= START
+// ===================== SERVER START =====================
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`🚀 Serveur lancé sur le port ${PORT}`);
+  console.log(`🚀 Serveur actif sur le port ${PORT}`);
 });

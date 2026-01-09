@@ -3,120 +3,66 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ROK XD • Sign Up</title>
-
+<title>ROK XD • Inscription</title>
 <style>
 :root{
   --bg-1:#020617;
   --bg-2:#0f172a;
   --neon:#38bdf8;
   --glass-border:rgba(56,189,248,0.22);
-  --muted:rgba(255,255,255,0.45);
 }
-
 *{box-sizing:border-box}
-html,body{
-  height:100%;
-  margin:0;
-  font-family:Inter,system-ui;
-  background:linear-gradient(180deg,var(--bg-1),var(--bg-2));
-  color:#eafff2;
-}
-
-.stage{
-  height:100vh;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-}
-
-.card{
-  width:380px;
-  padding:26px;
-  border-radius:18px;
-  background:rgba(255,255,255,.02);
-  border:1px solid var(--glass-border);
-  backdrop-filter:blur(10px);
-  box-shadow:0 0 50px rgba(56,189,248,.08);
-  text-align:center;
-}
-
-.avatar{
-  width:110px;
-  height:110px;
-  border-radius:50%;
-  overflow:hidden;
-  margin:0 auto 14px;
-  border:2px solid var(--neon);
-}
+html,body{height:100%;margin:0;font-family:Inter,system-ui;background:linear-gradient(180deg,var(--bg-1),var(--bg-2));color:#eafff2}
+.stage{height:100vh;display:flex;align-items:center;justify-content:center}
+.card{width:380px;padding:26px;border-radius:18px;background:rgba(255,255,255,.02);border:1px solid var(--glass-border);backdrop-filter:blur(10px);box-shadow:0 0 50px rgba(56,189,248,.08);text-align:center}
+.avatar{width:110px;height:110px;border-radius:50%;overflow:hidden;margin:0 auto 14px;border:2px solid var(--neon)}
 .avatar img{width:100%;height:100%;object-fit:cover}
-
-input{
-  width:100%;
-  padding:12px;
-  margin:8px 0;
-  border-radius:8px;
-  border:1px solid rgba(56,189,248,.25);
-  background:rgba(255,255,255,.02);
-  color:#eafff2;
-}
-
-button{
-  width:100%;
-  padding:12px;
-  margin-top:10px;
-  background:var(--neon);
-  color:#020617;
-  border:none;
-  border-radius:8px;
-  font-weight:700;
-  cursor:pointer;
-}
-
+input{width:100%;padding:12px;margin:8px 0;border-radius:8px;border:1px solid rgba(56,189,248,.25);background:rgba(255,255,255,.02);color:#eafff2}
+button{width:100%;padding:12px;margin-top:10px;background:var(--neon);color:#020617;border:none;border-radius:8px;font-weight:700;cursor:pointer}
 .error{color:#ef4444;font-size:13px;margin-top:8px}
 </style>
 </head>
-
 <body>
 <div class="stage">
   <div class="card">
     <div class="avatar">
       <img src="https://files.catbox.moe/t1pogr.jpg">
     </div>
-
-    <h2>Créer un compte</h2>
-
+    <h2>Inscription</h2>
     <input id="username" placeholder="Nom d'utilisateur">
-    <input id="email" placeholder="Email">
+    <input id="email" type="email" placeholder="Email">
     <input id="password" type="password" placeholder="Mot de passe">
-
-    <button onclick="signup()">Inscription</button>
+    <button onclick="register()">Créer un compte</button>
     <div class="error" id="error"></div>
+    <p style="margin-top:10px;">Déjà inscrit ? <a href="/login.html" style="color:var(--neon);">Connexion</a></p>
   </div>
 </div>
 
 <script>
-async function signup(){
-  const username = usernameInput.value.trim();
-  const email = emailInput.value.trim();
-  const password = passwordInput.value;
+async function register(){
+  const username=document.getElementById("username").value.trim();
+  const email=document.getElementById("email").value.trim();
+  const password=document.getElementById("password").value.trim();
+  const error=document.getElementById("error");
+  error.textContent="";
+  if(!username || !email || !password){ error.textContent="Champs requis"; return; }
 
-  const res = await fetch("/api/signup",{
-    method:"POST",
-    headers:{ "Content-Type":"application/json" },
-    body:JSON.stringify({ username,email,password })
-  });
-
-  const data = await res.json();
-  if(data.success){
-    window.location.href="/login";
-  }else{
-    document.getElementById("error").innerText=data.error;
+  try{
+    const res = await fetch("/api/register", {
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({username,email,password})
+    });
+    const data = await res.json();
+    if(data.error) error.textContent=data.error;
+    else {
+      error.textContent="Compte créé avec succès !";
+      setTimeout(()=> location.href="/login.html",1500);
+    }
+  } catch(e){
+    error.textContent="Erreur serveur";
   }
 }
-const usernameInput=document.getElementById("username");
-const emailInput=document.getElementById("email");
-const passwordInput=document.getElementById("password");
 </script>
 </body>
 </html>

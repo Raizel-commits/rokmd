@@ -65,10 +65,11 @@ input{
 <script>
 const msgEl = document.getElementById("msg");
 
-function showMessage(text){
+function showMessage(text, isError=true){
   msgEl.innerText = text;
+  msgEl.style.color = isError ? "#ff4081" : "#38bdf8";
   msgEl.classList.add("show");
-  setTimeout(()=> msgEl.classList.remove("show"),3000);
+  setTimeout(()=>msgEl.classList.remove("show"),3000);
 }
 
 async function login(){
@@ -78,23 +79,34 @@ async function login(){
 
   try {
     const res = await fetch("/api/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username, password })
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({username,password})
     });
     const data = await res.json();
-    console.log("Login response:", data);
 
     if(data.error) return showMessage(data.error);
 
+    // Stockage token et username
     localStorage.setItem("token", data.token);
     localStorage.setItem("username", data.username);
 
-    showMessage("Connexion réussie !");
-    setTimeout(()=> { window.location.href = "/"; }, 1000);
-  } catch(err){
-    showMessage("Erreur serveur");
+    showMessage("Connexion réussie !", false);
+
+    // Redirection vers dashboard avec token en header
+    setTimeout(async ()=>{
+      const dashRes = await fetch("/dashboard", {
+        headers: { "Authorization": "Bearer " + localStorage.getItem("token") }
+      });
+      const html = await dashRes.text();
+      document.open();
+      document.write(html);
+      document.close();
+    }, 1000);
+
+  } catch(err) {
     console.error(err);
+    showMessage("Erreur serveur : " + err.message);
   }
 }
 </script>

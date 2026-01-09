@@ -5,7 +5,7 @@ import express from "express";
 import path from "path";
 import { fileURLToPath } from "url";
 import mongoose from "mongoose";
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import bodyParser from "body-parser";
 import cors from "cors";

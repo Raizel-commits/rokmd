@@ -3,8 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ROK XD • WhatsApp Bot</title>
+<title>ROK XD • Platform</title>
+
 <style>
+/* ================= ROK XD THEME ================= */
 :root{
   --bg-1:#020617;
   --bg-2:#0f172a;
@@ -14,49 +16,177 @@
   --card-w:380px;
 }
 *{box-sizing:border-box}
-html,body{height:100%;margin:0;font-family:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial;
-background: radial-gradient(1200px 600px at 10% 10%, rgba(56,189,248,0.03), transparent),
-            radial-gradient(900px 500px at 90% 85%, rgba(56,189,248,0.02), transparent),
-            linear-gradient(180deg,var(--bg-1),var(--bg-2));
-color:#dfffe6;overflow:hidden;}
-.stage{position:relative;height:100vh;display:flex;align-items:center;justify-content:center;padding:36px;}
+html,body{
+  height:100%;margin:0;
+  font-family:"Inter",system-ui;
+  background:
+    radial-gradient(1200px 600px at 10% 10%, rgba(56,189,248,0.03), transparent),
+    radial-gradient(900px 500px at 90% 85%, rgba(56,189,248,0.02), transparent),
+    linear-gradient(180deg,var(--bg-1),var(--bg-2));
+  color:#dfffe6;
+}
+.stage{
+  min-height:100vh;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:36px;
+}
 .glass-card{
   width:var(--card-w);max-width:92vw;
   background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
   border-radius:18px;padding:22px;
-  box-shadow:0 10px 40px rgba(0,0,0,0.7),0 0 40px rgba(56,189,248,0.05) inset;
   backdrop-filter: blur(10px) saturate(140%);
   border:1px solid var(--glass-border);
   text-align:center;
 }
-.card-header h1{font-family:"JetBrains Mono", monospace;font-size:24px;margin:0;color:var(--neon);text-transform:uppercase;text-shadow:0 0 18px rgba(56,189,248,0.22);}
-.card-header .small-url{font-size:12px;color:var(--muted);margin-top:6px;}
+h1{color:var(--neon);margin:0 0 10px}
 .btn{
-  display:block;width:100%;padding:12px;margin:10px 0;font-size:16px;font-weight:bold;color:#020617;
-  background:var(--neon);border:none;border-radius:6px;text-decoration:none;cursor:pointer;
+  width:100%;padding:12px;margin:8px 0;
+  font-weight:bold;border:none;border-radius:6px;
+  background:var(--neon);color:#020617;
 }
-.btn:hover{opacity:0.9;}
-.social-icons{display:flex;justify-content:center;gap:15px;margin-top:15px;}
-.social-icons a{display:flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:50%;
-background:var(--neon);color:#020617;text-decoration:none;font-weight:bold;font-size:20px;}
-.credits{font-size:12px;color:var(--muted);margin-top:20px;}
+input{
+  width:100%;padding:12px;margin:8px 0;
+  border-radius:10px;border:none;
+  background:#020617;color:white;
+}
+.hidden{display:none}
+.dots::after{content:'';animation:blink 1s infinite;}
+@keyframes blink{
+  0%,20%{content:''}
+  40%{content:'.'}
+  60%{content:'..'}
+  80%,100%{content:'...'}
+}
 </style>
 </head>
+
 <body>
-<main class="stage">
-<section class="glass-card">
-  <header class="card-header">
+
+<!-- ================= LOGIN ================= -->
+<section id="login" class="stage">
+  <div class="glass-card">
     <h1>ROK XD</h1>
-    <div class="small-url">WhatsApp Bot</div>
-  </header>
-  <a href="pair.html" class="btn">Pairing Code</a>
-  <a href="qr.html" class="btn">QR Code</a>
-  <div class="social-icons">
-    <a href="https://t.me/devraizel" target="_blank">T</a>
-    <a href="https://wa.me/237673941535" target="_blank">W</a>
+    <input id="email" placeholder="Email">
+    <input id="pass" type="password" placeholder="Mot de passe">
+    <button class="btn" onclick="login()">Connexion</button>
   </div>
-  <div class="credits">Développé par RAIZEL & KNUT</div>
 </section>
-</main>
+
+<!-- ================= DASHBOARD ================= -->
+<section id="dashboard" class="stage hidden">
+  <div class="glass-card">
+    <h1>ROK XD</h1>
+    <p>🪙 <span id="coins">0</span> Coins</p>
+
+    <button class="btn" onclick="pay(500)">Acheter 500F</button>
+    <button class="btn" onclick="pay(2500)">Acheter 2500F</button>
+
+    <hr style="opacity:.2">
+
+    <button class="btn" onclick="go('pair')">Pairing Code (20 coins)</button>
+    <button class="btn" onclick="go('qr')">QR Code (20 coins)</button>
+  </div>
+</section>
+
+<!-- ================= PAIRING ================= -->
+<section id="pair" class="stage hidden">
+  <div class="glass-card">
+    <h1>Pairing</h1>
+
+    <input id="pair-phone" placeholder="2376XXXXXXX">
+    <button class="btn" onclick="generateCode()">Générer Code</button>
+    <div id="pair-result"></div>
+
+    <input id="prefix" placeholder="Préfixe (!)">
+    <button class="btn" onclick="saveConfig()">Sauvegarder</button>
+    <div id="config-result"></div>
+
+    <button class="btn" onclick="back()">⬅ Retour</button>
+  </div>
+</section>
+
+<!-- ================= QR ================= -->
+<section id="qr" class="stage hidden">
+  <div class="glass-card">
+    <h1>QR Code</h1>
+
+    <input id="qr-phone" placeholder="2376XXXXXXX">
+    <button class="btn" onclick="generateQR()">Générer QR</button>
+    <div id="qr-result"></div>
+
+    <button class="btn" onclick="back()">⬅ Retour</button>
+  </div>
+</section>
+
+<script>
+/* ================= NAV ================= */
+function show(id){
+  document.querySelectorAll("section").forEach(s=>s.classList.add("hidden"));
+  document.getElementById(id).classList.remove("hidden");
+}
+function back(){ show("dashboard"); }
+
+/* ================= AUTH ================= */
+function login(){
+  if(!email.value||!pass.value)return alert("Champs requis");
+  localStorage.setItem("coins",20);
+  show("dashboard");
+  updateCoins();
+}
+
+/* ================= COINS ================= */
+function updateCoins(){
+  document.getElementById("coins").innerText =
+    localStorage.getItem("coins")||0;
+}
+function go(page){
+  let c=+localStorage.getItem("coins");
+  if(c<20)return alert("Coins insuffisants");
+  localStorage.setItem("coins",c-20);
+  updateCoins();
+  show(page);
+}
+
+/* ================= PAYMENT ================= */
+function pay(amount){
+  location.href=
+  `https://www.pay.moneyfusion.net/Des/fbb93cb2c1939e83/pay/?amount=${amount}&reference=ROKXD_${Date.now()}`;
+}
+
+/* ================= PAIR ================= */
+async function generateCode(){
+  const phone=pair-phone.value;
+  if(!phone)return;
+  pair-result.innerHTML="Génération<span class='dots'></span>";
+  const r=await fetch(`/code?number=${phone}`);
+  const d=await r.json();
+  pair-result.innerText=d.code||d.status||d.error;
+}
+
+async function saveConfig(){
+  const number=pair-phone.value;
+  const prefix=prefix.value||"!";
+  const r=await fetch("/config",{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({number,prefix})
+  });
+  const d=await r.json();
+  config-result.innerText=d.status||d.error;
+}
+
+/* ================= QR ================= */
+async function generateQR(){
+  const phone=qr-phone.value;
+  if(!phone)return;
+  qr-result.innerHTML="Génération<span class='dots'></span>";
+  const r=await fetch(`/qr?number=${phone}`);
+  const d=await r.json();
+  qr-result.innerHTML=d.qr?`<img src="${d.qr}" width="220">`:d.error;
+}
+</script>
+
 </body>
 </html>

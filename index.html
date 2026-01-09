@@ -2,14 +2,61 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<title>N Dashboard</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ROK XD • WhatsApp Bot</title>
+<style>
+:root{
+  --bg-1:#020617;
+  --bg-2:#0f172a;
+  --neon:#38bdf8;
+  --glass-border:rgba(56,189,248,0.22);
+  --muted:rgba(255,255,255,0.45);
+  --card-w:380px;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;font-family:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial;
+background: radial-gradient(1200px 600px at 10% 10%, rgba(56,189,248,0.03), transparent),
+            radial-gradient(900px 500px at 90% 85%, rgba(56,189,248,0.02), transparent),
+            linear-gradient(180deg,var(--bg-1),var(--bg-2));
+color:#dfffe6;overflow:hidden;}
+.stage{position:relative;height:100vh;display:flex;align-items:center;justify-content:center;padding:36px;}
+.glass-card{
+  width:var(--card-w);max-width:92vw;
+  background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+  border-radius:18px;padding:22px;
+  box-shadow:0 10px 40px rgba(0,0,0,0.7),0 0 40px rgba(56,189,248,0.05) inset;
+  backdrop-filter: blur(10px) saturate(140%);
+  border:1px solid var(--glass-border);
+  text-align:center;
+}
+.card-header h1{font-family:"JetBrains Mono", monospace;font-size:24px;margin:0;color:var(--neon);text-transform:uppercase;text-shadow:0 0 18px rgba(56,189,248,0.22);}
+.card-header .small-url{font-size:12px;color:var(--muted);margin-top:6px;}
+.btn{
+  display:block;width:100%;padding:12px;margin:10px 0;font-size:16px;font-weight:bold;color:#020617;
+  background:var(--neon);border:none;border-radius:6px;text-decoration:none;cursor:pointer;
+}
+.btn:hover{opacity:0.9;}
+.social-icons{display:flex;justify-content:center;gap:15px;margin-top:15px;}
+.social-icons a{display:flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:50%;
+background:var(--neon);color:#020617;text-decoration:none;font-weight:bold;font-size:20px;}
+.credits{font-size:12px;color:var(--muted);margin-top:20px;}
+</style>
 </head>
 <body>
-<h1>Bienvenue sur N</h1>
-<ul>
-    <li><a href="/pair">Pair</a></li>
-    <li><a href="/qr">QR</a></li>
-    <li><a href="/logout">Logout</a></li>
-</ul>
+<main class="stage">
+<section class="glass-card">
+  <header class="card-header">
+    <h1>ROK XD</h1>
+    <div class="small-url">WhatsApp Bot</div>
+  </header>
+  <a href="pair.html" class="btn">Pairing Code</a>
+  <a href="qr.html" class="btn">QR Code</a>
+  <div class="social-icons">
+    <a href="https://t.me/devraizel" target="_blank">T</a>
+    <a href="https://wa.me/237673941535" target="_blank">W</a>
+  </div>
+  <div class="credits">Développé par RAIZEL & KNUT</div>
+</section>
+</main>
 </body>
 </html>

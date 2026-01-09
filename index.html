@@ -31,12 +31,13 @@ color:#dfffe6;overflow:hidden;}
 }
 .card-header h1{font-family:"JetBrains Mono", monospace;font-size:24px;margin:0;color:var(--neon);text-transform:uppercase;text-shadow:0 0 18px rgba(56,189,248,0.22);}
 .card-header .small-url{font-size:12px;color:var(--muted);margin-top:6px;}
-.welcome{font-size:16px;color:#18ffff;margin:12px 0;}
 .btn{
   display:block;width:100%;padding:12px;margin:10px 0;font-size:16px;font-weight:bold;color:#020617;
   background:var(--neon);border:none;border-radius:6px;text-decoration:none;cursor:pointer;
 }
 .btn:hover{opacity:0.9;}
+#msg{color:#ff4081;margin-top:10px;min-height:18px;opacity:0;transition:opacity 0.4s;}
+#msg.show{opacity:1;}
 .social-icons{display:flex;justify-content:center;gap:15px;margin-top:15px;}
 .social-icons a{display:flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:50%;
 background:var(--neon);color:#020617;text-decoration:none;font-weight:bold;font-size:20px;}
@@ -50,30 +51,49 @@ background:var(--neon);color:#020617;text-decoration:none;font-weight:bold;font-
     <h1>ROK XD</h1>
     <div class="small-url">WhatsApp Bot</div>
   </header>
-
-  <div class="welcome" id="welcomeMsg"></div>
-
+  <p id="welcome">Bienvenue !</p>
   <a href="pair.html" class="btn">Pairing Code</a>
   <a href="qr.html" class="btn">QR Code</a>
+  <button class="btn" id="logoutBtn">Se déconnecter</button>
   <div class="social-icons">
     <a href="https://t.me/devraizel" target="_blank">T</a>
     <a href="https://wa.me/237673941535" target="_blank">W</a>
   </div>
+  <div id="msg"></div>
   <div class="credits">Développé par RAIZEL & KNUT</div>
 </section>
 </main>
 
 <script>
-const welcomeEl = document.getElementById("welcomeMsg");
+const msgEl = document.getElementById("msg");
+const welcomeEl = document.getElementById("welcome");
+
+// Fonction pour afficher message
+function showMessage(text, isError=true){
+  msgEl.innerText = text;
+  msgEl.style.color = isError ? "#ff4081" : "#38bdf8";
+  msgEl.classList.add("show");
+  setTimeout(()=>msgEl.classList.remove("show"),3000);
+}
+
+// Vérifie si token existe
 const token = localStorage.getItem("token");
 const username = localStorage.getItem("username");
 
-if(token && username){
-  welcomeEl.innerText = `Bienvenue ${username} !`;
+if(!token || !username){
+  showMessage("Vous devez être connecté ! Redirection...", true);
+  setTimeout(()=> location="/login", 1500);
 } else {
-  // Pas connecté → redirection vers login
-  window.location.href = '/login';
+  welcomeEl.innerText = `Bienvenue ${username} !`;
 }
+
+// Déconnexion
+document.getElementById("logoutBtn").addEventListener("click", ()=>{
+  localStorage.removeItem("token");
+  localStorage.removeItem("username");
+  showMessage("Déconnecté !", false);
+  setTimeout(()=> location="/login", 1000);
+});
 </script>
 </body>
 </html>

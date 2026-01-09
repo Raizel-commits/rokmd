@@ -6,69 +6,42 @@
 <title>ROK XD • Login</title>
 <style>
 :root{
-  --bg-1:#020617;
-  --bg-2:#0f172a;
-  --neon:#38bdf8;
-  --glass-border:rgba(56,189,248,0.22);
-  --muted:rgba(255,255,255,0.45);
-  --card-w:380px;
+--bg-1:#020617;--bg-2:#0f172a;--neon:#38bdf8;
+--glass:rgba(255,255,255,.02);--border:rgba(56,189,248,.22)
 }
 *{box-sizing:border-box}
-html,body{height:100%;margin:0;font-family:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
-background:radial-gradient(1200px 600px at 10% 10%, rgba(56,189,248,0.03), transparent),
-            radial-gradient(900px 500px at 90% 85%, rgba(56,189,248,0.02), transparent),
-            linear-gradient(180deg,var(--bg-1),var(--bg-2));
-color:#dfffe6;overflow:hidden}
-.stage{position:relative;height:100vh;display:flex;align-items:center;justify-content:center;padding:36px}
-.glass-card{width:var(--card-w);max-width:92vw;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border-radius:18px;padding:22px;box-shadow:0 10px 40px rgba(0,0,0,0.7),0 0 40px rgba(56,189,248,0.05) inset;backdrop-filter: blur(10px) saturate(140%);border:1px solid var(--glass-border);text-align:center}
-.card-header h1{font-family:"JetBrains Mono", monospace;font-size:24px;margin:0;color:var(--neon);text-transform:uppercase;text-shadow:0 0 18px rgba(56,189,248,0.22)}
-form{display:flex;flex-direction:column;gap:12px;margin-top:20px}
-input[type="email"],input[type="password"]{padding:10px;border-radius:6px;border:1px solid var(--glass-border);background:rgba(255,255,255,0.02);color:#dfffe6;font-size:14px}
-input[type="submit"]{padding:12px;font-weight:bold;color:#020617;background:var(--neon);border:none;border-radius:6px;cursor:pointer}
-input[type="submit"]:hover{opacity:0.9}
-.credits{font-size:12px;color:var(--muted);margin-top:20px}
+html,body{margin:0;height:100%;font-family:Inter,system-ui;
+background:
+radial-gradient(1200px 600px at 10% 10%, rgba(56,189,248,.03), transparent),
+linear-gradient(180deg,var(--bg-1),var(--bg-2));
+color:#dfffe6}
+.stage{height:100vh;display:flex;align-items:center;justify-content:center}
+.card{
+width:360px;padding:24px;border-radius:18px;
+background:linear-gradient(180deg,var(--glass),rgba(255,255,255,.01));
+border:1px solid var(--border);backdrop-filter:blur(10px);
+text-align:center}
+h1{color:var(--neon)}
+input{width:100%;padding:12px;margin:10px 0;border-radius:6px;border:none}
+button{width:100%;padding:12px;background:var(--neon);border:none;font-weight:bold}
 </style>
 </head>
 <body>
-<main class="stage">
-<section class="glass-card">
-<header class="card-header">
-<h1>ROK XD Login</h1>
-<div class="small-url">WhatsApp Bot</div>
-</header>
-<form id="loginForm">
-<input type="email" name="email" placeholder="Email" required>
-<input type="password" name="password" placeholder="Mot de passe" required>
-<input type="submit" value="Se connecter / S'inscrire">
-</form>
-<div class="credits">Développé par RAIZEL & KNUT</div>
-</section>
-</main>
+<div class="stage">
+<div class="card">
+<h1>ROK XD</h1>
+<input id="email" placeholder="Email">
+<input id="pass" type="password" placeholder="Mot de passe">
+<button onclick="login()">Connexion</button>
+</div>
+</div>
 <script>
-const form=document.getElementById('loginForm');
-form.addEventListener('submit', async e=>{
-  e.preventDefault();
-  const email=form.email.value.trim();
-  const password=form.password.value.trim();
-  try{
-    const res=await fetch('/api/login',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({email,password})
-    });
-    const result=await res.json();
-    if(result.message.includes('Connecté') || result.message.includes('Compte créé')){
-      localStorage.setItem('username', email);
-      alert(result.message);
-      window.location.href='/';
-    } else {
-      alert(result.message);
-    }
-  } catch(err){
-    alert('Erreur serveur');
-    console.error(err);
-  }
-});
+function login(){
+ if(!email.value||!pass.value)return alert("Champs requis");
+ localStorage.setItem("user",email.value);
+ localStorage.setItem("coins",20);
+ location.href="/dashboard";
+}
 </script>
 </body>
 </html>

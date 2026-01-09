@@ -1,18 +1,13 @@
 // =======================
 // IMPORTS
 // =======================
-import mongoose from "mongoose";
 import express from "express";
+import fs from "fs";
 import path from "path";
-import { fileURLToPath } from "url";
-import bodyParser from "body-parser";
-import cors from "cors";
-import helmet from "helmet";
-import rateLimit from "express-rate-limit";
-import chalk from "chalk";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import cookieParser from "cookie-parser";
+import { fileURLToPath } from "url";
 
 import qrRouter from "./qr.js";
 import pairRouter from "./pair.js";
@@ -20,142 +15,120 @@ import pairRouter from "./pair.js";
 // =======================
 // CONFIG
 // =======================
-const MONGO_URI =
-  "mongodb+srv://rokxd_raizel:Sangoku77@cluster0.0g3b0yp.mongodb.net/rokxd?retryWrites=true&w=majority";
-
-const JWT_SECRET = "Sangoku";
-const PORT = 3000;
-
-const app = express();
-
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// =======================
-// MONGODB
-// =======================
-mongoose
-  .connect(MONGO_URI)
-  .then(() => console.log("MongoDB connecté"))
-  .catch(err => console.error("MongoDB error:", err.message));
+const app = express();
+const PORT = 3000;
+const JWT_SECRET = process.env.JWT_SECRET || "SECRET_STORY_KEY";
 
 // =======================
-// USER MODEL
+// FILES
 // =======================
-const userSchema = new mongoose.Schema({
-  username: { type: String, unique: true },
-  password: String,
-  createdAt: { type: Date, default: Date.now }
-});
+const USERS_FILE = path.join(__dirname, "users.json");
 
-const User = mongoose.model("User", userSchema);
+// Init users file if missing
+if (!fs.existsSync(USERS_FILE)) fs.writeFileSync(USERS_FILE, "[]", "utf-8");
 
 // =======================
-// MIDDLEWARES
+// MIDDLEWARE
 // =======================
-app.use(helmet());
-app.use(cors());
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }));
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.use(express.static(__dirname));
 
 // =======================
-// RATE LIMIT
+// HELPERS
 // =======================
-const limiter = rateLimit({
-  windowMs: 60 * 1000,
-  max: 20
-});
-app.use("/api", limiter);
+function readUsers() {
+  try {
+    return JSON.parse(fs.readFileSync(USERS_FILE, "utf-8"));
+  } catch {
+    return [];
+  }
+}
+
+function writeUsers(users) {
+  fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2), "utf-8");
+}
 
 // =======================
 // AUTH MIDDLEWARE
 // =======================
 function auth(req, res, next) {
-  const token = req.cookies.token;
-  if (!token) return res.redirect("/login");
+  const token = req.cookies.token || req.headers.authorization?.split(" ")[1];
+  if (!token) return res.redirect("/login.html");
 
   try {
     req.user = jwt.verify(token, JWT_SECRET);
     next();
   } catch {
-    res.redirect("/login");
+    res.clearCookie("token");
+    res.redirect("/login.html");
   }
 }
 
 // =======================
 // ROUTES HTML
 // =======================
-app.get("/", (req, res) =>
-  res.sendFile(path.join(__dirname, "index.html"))
-);
 
-app.get("/login", (req, res) =>
-  res.sendFile(path.join(__dirname, "login.html"))
-);
+// Pages publiques
+app.get("/", (_, res) => res.redirect("/login.html"));
+app.get("/login.html", (_, res) => res.sendFile("login.html", { root: __dirname }));
+app.get("/signup.html", (_, res) => res.sendFile("signup.html", { root: __dirname }));
 
-app.get("/signup", (req, res) =>
-  res.sendFile(path.join(__dirname, "signup.html"))
-);
-
-app.get("/accueil", auth, (req, res) =>
-  res.sendFile(path.join(__dirname, "accueil.html"))
-);
-
-app.get("/pair", auth, (req, res) =>
-  res.sendFile(path.join(__dirname, "pair.html"))
-);
-
-app.get("/qr", auth, (req, res) =>
-  res.sendFile(path.join(__dirname, "qr.html"))
-);
+// Pages protégées
+app.get("/accueil", auth, (_, res) => res.sendFile("accueil.html", { root: __dirname }));
+app.get("/pair", auth, (_, res) => res.sendFile("pair.html", { root: __dirname }));
+app.get("/qr", auth, (_, res) => res.sendFile("qr.html", { root: __dirname }));
 
 // =======================
-// AUTH API
+// API AUTH
 // =======================
-app.post("/api/signup", async (req, res) => {
-  const { username, password } = req.body;
 
-  if (!username || !password)
-    return res.status(400).json({ error: "Champs manquants" });
+// REGISTER
+app.post("/api/register", (req, res) => {
+  const { username, email, password } = req.body;
+  if (!username || !email || !password) return res.status(400).json({ error: "Champs manquants" });
 
-  const hash = await bcrypt.hash(password, 10);
-  await User.create({ username, password: hash });
+  const users = readUsers();
+  if (users.find(u => u.username === username)) return res.status(400).json({ error: "Username déjà pris" });
+  if (users.find(u => u.email === email)) return res.status(400).json({ error: "Email déjà utilisé" });
+
+  const hash = bcrypt.hashSync(password, 10);
+  users.push({ username, email, password: hash, createdAt: new Date() });
+  writeUsers(users);
 
   res.json({ success: true });
 });
 
-app.post("/api/login", async (req, res) => {
-  const { username, password } = req.body;
+// LOGIN
+app.post("/api/login", (req, res) => {
+  const { identifier, password } = req.body;
+  if (!identifier || !password) return res.status(400).json({ error: "Champs manquants" });
 
-  const user = await User.findOne({ username });
-  if (!user)
-    return res.status(401).json({ error: "Utilisateur introuvable" });
+  const users = readUsers();
+  const user = users.find(u => u.username === identifier || u.email === identifier);
+  if (!user) return res.status(401).json({ error: "Utilisateur introuvable" });
 
-  const ok = await bcrypt.compare(password, user.password);
-  if (!ok)
-    return res.status(401).json({ error: "Mot de passe incorrect" });
+  const ok = bcrypt.compareSync(password, user.password);
+  if (!ok) return res.status(401).json({ error: "Mot de passe incorrect" });
 
-  const token = jwt.sign({ id: user._id }, JWT_SECRET, {
-    expiresIn: "7d"
-  });
-
-  res.cookie("token", token, {
-    httpOnly: true,
-    sameSite: "lax"
-  });
+  const token = jwt.sign({ username: user.username, email: user.email }, JWT_SECRET, { expiresIn: "7d" });
+  res.cookie("token", token, { httpOnly: true, sameSite: "lax", maxAge: 7*24*60*60*1000 });
 
   res.json({ success: true });
 });
 
+// LOGOUT
 app.get("/logout", (req, res) => {
   res.clearCookie("token");
-  res.redirect("/");
+  res.redirect("/login.html");
 });
 
 // =======================
-// BOT ROUTERS
+// ROUTERS
 // =======================
 app.use("/qr", qrRouter);
 app.use("/", pairRouter);
@@ -164,5 +137,5 @@ app.use("/", pairRouter);
 // START SERVER
 // =======================
 app.listen(PORT, () => {
-  console.log(`Serveur lancé sur le port ${PORT}`);
+  console.log(`🚀 Serveur lancé sur http://localhost:${PORT}`);
 });

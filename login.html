@@ -101,3 +101,16 @@ document.getElementById("loginBtn").onclick = async () => {
 </script>
 </body>
 </html>
+<script>
+async function login(){
+ const email=document.getElementById("email").value;
+ const password=document.getElementById("password").value;
+ const res = await fetch("/login",{
+  method:"POST",
+  headers:{ "Content-Type":"application/json" },
+  credentials:"include",
+  body:JSON.stringify({email,password})
+ });
+ alert(await res.text());
+}
+</script>

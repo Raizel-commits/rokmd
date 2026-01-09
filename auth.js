@@ -1,111 +1,31 @@
 import express from "express";
 import jwt from "jsonwebtoken";
+import bcrypt from "bcryptjs";
 import User from "./User.js";
 
 const router = express.Router();
 
-// ⚠️ Secret en dur (NON recommandé mais demandé)
-const JWT_SECRET = "rokxd_secret_2025";
-
-// ================= MIDDLEWARE AUTH
-export function authMiddleware(req, res, next) {
-  const token = req.cookies?.token;
-  if (!token) return res.redirect("/login");
-
-  try {
-    const decoded = jwt.verify(token, JWT_SECRET);
-    req.user = decoded;
-    next();
-  } catch {
-    res.clearCookie("token", {
-      secure: true,
-      sameSite: "none"
-    });
-    return res.redirect("/login");
-  }
-}
-
-// ================= REGISTER
 router.post("/register", async (req, res) => {
   const { email, password } = req.body;
+  if (!email || !password) return res.status(400).json({ error: "Missing fields" });
 
-  if (!email || !password || password.length < 8) {
-    return res.status(400).json({ error: "Mot de passe min 8 caractères" });
-  }
-
-  try {
-    const exists = await User.findOne({ email });
-    if (exists) {
-      return res.status(400).json({ error: "Email déjà utilisé" });
-    }
-
-    const user = new User({ email, password });
-    await user.save();
-
-    const token = jwt.sign(
-      { id: user._id, email: user.email },
-      JWT_SECRET,
-      { expiresIn: "7d" }
-    );
-
-    // ✅ COOKIE OK POUR RENDER / HTTPS
-    res.cookie("token", token, {
-      httpOnly: true,
-      secure: true,
-      sameSite: "none",
-      maxAge: 7 * 24 * 60 * 60 * 1000
-    });
-
-    res.json({ success: true, coins: user.coins });
-  } catch (err) {
-    console.error("REGISTER ERROR:", err);
-    res.status(500).json({ error: "Erreur serveur" });
-  }
+  const hashed = await bcrypt.hash(password, 10);
+  const user = new User({ email, password: hashed });
+  await user.save();
+  res.json({ success: true });
 });
 
-// ================= LOGIN
 router.post("/login", async (req, res) => {
   const { email, password } = req.body;
+  const user = await User.findOne({ email });
+  if (!user) return res.status(401).json({ error: "Invalid credentials" });
 
-  try {
-    const user = await User.findOne({ email });
-    if (!user) {
-      return res.status(400).json({ error: "Identifiants invalides" });
-    }
+  const ok = await bcrypt.compare(password, user.password);
+  if (!ok) return res.status(401).json({ error: "Invalid credentials" });
 
-    const valid = await user.comparePassword(password);
-    if (!valid) {
-      return res.status(400).json({ error: "Identifiants invalides" });
-    }
-
-    const token = jwt.sign(
-      { id: user._id, email: user.email },
-      JWT_SECRET,
-      { expiresIn: "7d" }
-    );
-
-    // ✅ COOKIE OK POUR RENDER / HTTPS
-    res.cookie("token", token, {
-      httpOnly: true,
-      secure: true,
-      sameSite: "none",
-      maxAge: 7 * 24 * 60 * 60 * 1000
-    });
-
-    res.json({ success: true, coins: user.coins });
-  } catch (err) {
-    console.error("LOGIN ERROR:", err);
-    res.status(500).json({ error: "Erreur serveur" });
-  }
-});
-
-// ================= LOGOUT
-router.get("/logout", (req, res) => {
-  res.clearCookie("token", {
-    secure: true,
-    sameSite: "none"
-  });
-  res.redirect("/login");
+  const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "7d" });
+  res.cookie("token", token, { httpOnly: true });
+  res.json({ success: true });
 });
 
 export default router;

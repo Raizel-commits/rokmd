@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ROK-XD • Welcome</title>
+<title>ROK-XD • Login</title>
 <style>
 :root{
   --black:#020617;
@@ -27,7 +27,6 @@ body[data-theme="dark"]{
   --btn-bg:var(--blue);
   --bubble-color:var(--bubble-dark);
 }
-
 body[data-theme="light"]{
   --bg:linear-gradient(180deg,#d0e6ff,#f0f8ff);
   --card-bg:var(--light-card);
@@ -64,7 +63,7 @@ html,body{
   box-shadow:0 0 25px rgba(37,99,235,.45);
   opacity:.8;
 }
-/* Génération de 20 bulles plus variées */
+/* 20 bulles animées */
 .bubbles span:nth-child(1){left:5%; width:14px;height:14px;animation-duration:16s;}
 .bubbles span:nth-child(2){left:10%; width:22px;height:22px;animation-duration:18s;}
 .bubbles span:nth-child(3){left:15%; width:18px;height:18px;animation-duration:20s;}
@@ -107,7 +106,6 @@ html,body{
   background:rgba(255,255,255,.2);
   z-index:2;
   border-bottom:1px solid rgba(37,99,235,.25);
-  transition:background .5s;
 }
 .lang-btn{
   display:flex;
@@ -164,35 +162,26 @@ html,body{
 .avatar img{width:100%;height:100%;object-fit:cover;}
 h1{margin:0;font-size:22px;letter-spacing:1.2px;transition:color .5s;}
 .subtitle{font-size:13px;margin-top:6px;color:var(--muted);transition:color .5s;}
-.actions{margin-top:26px;}
-.btn{
-  display:block;
-  width:100%;
+.actions{margin-top:20px;}
+form{display:flex;flex-direction:column;gap:12px;}
+input{padding:12px;border-radius:6px;border:1px solid rgba(37,99,235,.5);outline:none;}
+input:focus{border-color:var(--blue);}
+.btn-submit{
   padding:14px;
-  margin:12px 0;
+  border:none;
   border-radius:8px;
-  text-decoration:none;
-  font-weight:600;
-  letter-spacing:.5px;
-  transition:.25s ease;
-  color:var(--btn-text);
   background:var(--btn-bg);
-}
-.btn.signup{
-  background:transparent;
   color:var(--btn-text);
-  border:1px solid rgba(37,99,235,.5);
+  font-weight:600;
+  cursor:pointer;
+  transition:.25s;
 }
-.btn:hover{
-  transform:translateY(-2px);
-  box-shadow:0 10px 30px rgba(37,99,235,.45);
-}
+.btn-submit:hover{transform:translateY(-2px); box-shadow:0 10px 30px rgba(37,99,235,.45);}
 .footer{margin-top:26px;font-size:12px;color:var(--muted);transition:color .5s;}
 </style>
 </head>
 <body data-theme="dark">
 
-<!-- Background bubbles -->
 <div class="bubbles">
   <span></span><span></span><span></span><span></span>
   <span></span><span></span><span></span><span></span>
@@ -201,7 +190,6 @@ h1{margin:0;font-size:22px;letter-spacing:1.2px;transition:color .5s;}
   <span></span><span></span><span></span><span></span>
 </div>
 
-<!-- HEADER -->
 <div class="header">
   <div class="lang-btn" onclick="toggleLang()">
     <span>Language:</span><span id="lang-text">EN</span>
@@ -218,8 +206,11 @@ h1{margin:0;font-size:22px;letter-spacing:1.2px;transition:color .5s;}
     <div class="subtitle" id="subtitle">Smart WhatsApp Bot Interface</div>
 
     <div class="actions">
-      <a href="login.html" class="btn" id="login-btn">Login</a>
-      <a href="signup.html" class="btn signup" id="signup-btn">Sign Up</a>
+      <form>
+        <input type="text" placeholder="Username" id="username">
+        <input type="password" placeholder="Password" id="password">
+        <button type="submit" class="btn-submit" id="login-btn">Login</button>
+      </form>
     </div>
     <div class="footer" id="footer">© RAIZEL & KNUT</div>
   </section>
@@ -238,17 +229,20 @@ function toggleLang(){
   if(lang==='en'){
     document.getElementById('title').innerText = "Welcome to ROK-XD";
     document.getElementById('subtitle').innerText = "Smart WhatsApp Bot Interface";
+    document.getElementById('username').placeholder = "Username";
+    document.getElementById('password').placeholder = "Password";
     document.getElementById('login-btn').innerText = "Login";
-    document.getElementById('signup-btn').innerText = "Sign Up";
     document.getElementById('footer').innerText = "© RAIZEL & KNUT";
   } else {
     document.getElementById('title').innerText = "Bienvenue sur ROK-XD";
     document.getElementById('subtitle').innerText = "Interface intelligente de bot WhatsApp";
+    document.getElementById('username').placeholder = "Nom d'utilisateur";
+    document.getElementById('password').placeholder = "Mot de passe";
     document.getElementById('login-btn').innerText = "Connexion";
-    document.getElementById('signup-btn').innerText = "S'inscrire";
     document.getElementById('footer').innerText = "© RAIZEL & KNUT";
   }
 }
 </script>
+
 </body>
 </html>

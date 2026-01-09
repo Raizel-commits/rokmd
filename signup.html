@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ROK-XD • Welcome</title>
+<title>ROK-XD • Sign Up</title>
 <style>
 :root{
   --black:#020617;
@@ -15,10 +15,10 @@
   --light-bg:#e0f0ff;
   --light-card:#ffffffcc;
   --light-text:#020617;
-  --theme-icon-color:#2563eb; /* icônes toujours bleu marine */
+  --theme-icon-color:#2563eb;
 }
 
-/* ================= MODE DARK / LIGHT ================= */
+/* Dark / Light mode */
 body[data-theme="dark"]{
   --bg:linear-gradient(180deg,var(--black),var(--navy));
   --card-bg:rgba(255,255,255,.03);
@@ -27,7 +27,6 @@ body[data-theme="dark"]{
   --btn-bg:var(--blue);
   --bubble-color:var(--bubble-dark);
 }
-
 body[data-theme="light"]{
   --bg:linear-gradient(180deg,#d0e6ff,#f0f8ff);
   --card-bg:var(--light-card);
@@ -48,7 +47,7 @@ html,body{
   transition:background .5s, color .5s;
 }
 
-/* ================= BUBBLES ================= */
+/* Bubbles */
 .bubbles{
   position:fixed;
   inset:0;
@@ -64,7 +63,6 @@ html,body{
   box-shadow:0 0 25px rgba(37,99,235,.45);
   opacity:.8;
 }
-/* Génération de 20 bulles plus variées */
 .bubbles span:nth-child(1){left:5%; width:14px;height:14px;animation-duration:16s;}
 .bubbles span:nth-child(2){left:10%; width:22px;height:22px;animation-duration:18s;}
 .bubbles span:nth-child(3){left:15%; width:18px;height:18px;animation-duration:20s;}
@@ -92,7 +90,7 @@ html,body{
   to{transform:translateY(-120vh) rotate(360deg); opacity:0;}
 }
 
-/* ================= HEADER ================= */
+/* Header */
 .header{
   position:fixed;
   top:0;
@@ -107,7 +105,6 @@ html,body{
   background:rgba(255,255,255,.2);
   z-index:2;
   border-bottom:1px solid rgba(37,99,235,.25);
-  transition:background .5s;
 }
 .lang-btn{
   display:flex;
@@ -131,7 +128,7 @@ html,body{
 }
 .theme-switch:hover{color:var(--blue);}
 
-/* ================= CARD ================= */
+/* Card */
 .stage{
   height:100vh;
   display:flex;
@@ -164,35 +161,28 @@ html,body{
 .avatar img{width:100%;height:100%;object-fit:cover;}
 h1{margin:0;font-size:22px;letter-spacing:1.2px;transition:color .5s;}
 .subtitle{font-size:13px;margin-top:6px;color:var(--muted);transition:color .5s;}
-.actions{margin-top:26px;}
-.btn{
-  display:block;
-  width:100%;
+.actions{margin-top:20px;}
+form{display:flex;flex-direction:column;gap:12px;}
+input{padding:12px;border-radius:6px;border:1px solid rgba(37,99,235,.5);outline:none; transition:.2s;}
+input:focus{border-color:var(--blue);}
+input.error{border-color:red;}
+.error-msg{color:red;font-size:12px;margin-top:-8px;margin-bottom:6px; text-align:left;}
+.btn-submit{
   padding:14px;
-  margin:12px 0;
+  border:none;
   border-radius:8px;
-  text-decoration:none;
-  font-weight:600;
-  letter-spacing:.5px;
-  transition:.25s ease;
-  color:var(--btn-text);
   background:var(--btn-bg);
-}
-.btn.signup{
-  background:transparent;
   color:var(--btn-text);
-  border:1px solid rgba(37,99,235,.5);
+  font-weight:600;
+  cursor:pointer;
+  transition:.25s;
 }
-.btn:hover{
-  transform:translateY(-2px);
-  box-shadow:0 10px 30px rgba(37,99,235,.45);
-}
-.footer{margin-top:26px;font-size:12px;color:var(--muted);transition:color .5s;}
+.btn-submit:hover{transform:translateY(-2px); box-shadow:0 10px 30px rgba(37,99,235,.45);}
+.footer{margin-top:20px;font-size:12px;color:var(--muted);transition:color .5s;}
 </style>
 </head>
 <body data-theme="dark">
 
-<!-- Background bubbles -->
 <div class="bubbles">
   <span></span><span></span><span></span><span></span>
   <span></span><span></span><span></span><span></span>
@@ -201,7 +191,6 @@ h1{margin:0;font-size:22px;letter-spacing:1.2px;transition:color .5s;}
   <span></span><span></span><span></span><span></span>
 </div>
 
-<!-- HEADER -->
 <div class="header">
   <div class="lang-btn" onclick="toggleLang()">
     <span>Language:</span><span id="lang-text">EN</span>
@@ -214,12 +203,22 @@ h1{margin:0;font-size:22px;letter-spacing:1.2px;transition:color .5s;}
     <div class="avatar">
       <img src="https://files.catbox.moe/t1pogr.jpg" alt="ROK-XD Avatar">
     </div>
-    <h1 id="title">Welcome to ROK-XD</h1>
-    <div class="subtitle" id="subtitle">Smart WhatsApp Bot Interface</div>
+    <h1 id="title">Sign Up to ROK-XD</h1>
+    <div class="subtitle" id="subtitle">Create your account</div>
 
     <div class="actions">
-      <a href="login.html" class="btn" id="login-btn">Login</a>
-      <a href="signup.html" class="btn signup" id="signup-btn">Sign Up</a>
+      <form id="signup-form" onsubmit="return validateForm()">
+        <input type="text" id="name" placeholder="Name / Username">
+        <div class="error-msg" id="name-error"></div>
+
+        <input type="email" id="email" placeholder="Email">
+        <div class="error-msg" id="email-error"></div>
+
+        <input type="password" id="password" placeholder="Password">
+        <div class="error-msg" id="password-error"></div>
+
+        <button type="submit" class="btn-submit" id="signup-btn">S'inscrire</button>
+      </form>
     </div>
     <div class="footer" id="footer">© RAIZEL & KNUT</div>
   </section>
@@ -236,18 +235,67 @@ function toggleLang(){
   lang = (lang==='en')?'fr':'en';
   document.getElementById('lang-text').innerText = lang.toUpperCase();
   if(lang==='en'){
-    document.getElementById('title').innerText = "Welcome to ROK-XD";
-    document.getElementById('subtitle').innerText = "Smart WhatsApp Bot Interface";
-    document.getElementById('login-btn').innerText = "Login";
+    document.getElementById('title').innerText = "Sign Up to ROK-XD";
+    document.getElementById('subtitle').innerText = "Create your account";
+    document.getElementById('name').placeholder = "Name / Username";
+    document.getElementById('email').placeholder = "Email";
+    document.getElementById('password').placeholder = "Password";
     document.getElementById('signup-btn').innerText = "Sign Up";
     document.getElementById('footer').innerText = "© RAIZEL & KNUT";
   } else {
-    document.getElementById('title').innerText = "Bienvenue sur ROK-XD";
-    document.getElementById('subtitle').innerText = "Interface intelligente de bot WhatsApp";
-    document.getElementById('login-btn').innerText = "Connexion";
+    document.getElementById('title').innerText = "Inscription sur ROK-XD";
+    document.getElementById('subtitle').innerText = "Créez votre compte";
+    document.getElementById('name').placeholder = "Nom / Pseudo";
+    document.getElementById('email').placeholder = "Email";
+    document.getElementById('password').placeholder = "Mot de passe";
     document.getElementById('signup-btn').innerText = "S'inscrire";
     document.getElementById('footer').innerText = "© RAIZEL & KNUT";
   }
+}
+
+/* Validation frontend */
+function validateForm(){
+  let valid = true;
+
+  const name = document.getElementById('name');
+  const email = document.getElementById('email');
+  const password = document.getElementById('password');
+
+  // Reset errors
+  document.getElementById('name-error').innerText = "";
+  document.getElementById('email-error').innerText = "";
+  document.getElementById('password-error').innerText = "";
+  name.classList.remove("error");
+  email.classList.remove("error");
+  password.classList.remove("error");
+
+  if(name.value.trim() === ""){
+    valid = false;
+    name.classList.add("error");
+    document.getElementById('name-error').innerText = "Name is required";
+  }
+
+  if(email.value.trim() === ""){
+    valid = false;
+    email.classList.add("error");
+    document.getElementById('email-error').innerText = "Email is required";
+  } else if(!/\S+@\S+\.\S+/.test(email.value)){
+    valid = false;
+    email.classList.add("error");
+    document.getElementById('email-error').innerText = "Invalid email format";
+  }
+
+  if(password.value.length < 8){
+    valid = false;
+    password.classList.add("error");
+    document.getElementById('password-error').innerText = "Password must be at least 8 characters";
+  } else if(!/[A-Z]/.test(password.value)){
+    valid = false;
+    password.classList.add("error");
+    document.getElementById('password-error').innerText = "Password must contain at least one uppercase letter";
+  }
+
+  return valid;
 }
 </script>
 </body>

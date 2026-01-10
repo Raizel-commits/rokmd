@@ -3,24 +3,23 @@ import session from "express-session";
 import bodyParser from "body-parser";
 import fs from "fs";
 import path from "path";
-import fetch from "node-fetch"; // si Node <18
+import fetch from "node-fetch"; // pour Node < 18, sinon intégré
 
 const app = express();
-const PORT = process.env.PORT || 
-  
-  /* ================== CONFIG MONEY FUSION ================== */
-const MERCHANT_ID = "69620e03013a0771970d2b80"; // ton Merchant ID
-const MF_API_KEY = "moneyfusion_v1_6950f6d898fe6dbde00af590_4A53FFA3DD9F78644E53269883CEB2C5CBD11FF72932C76BE5C8EC504D0DA82E"; // ta clé API Money Fusion
+const PORT = process.env.PORT || 3000;
+
+/* ================== CONFIG MONEY FUSION ================== */
+const MERCHANT_ID = "69620e03013a0771970d2b80";
+const MF_API_KEY = "moneyfusion_v1_6950f6d898fe6dbde00af590_4A53FFA3DD9F78644E53269883CEB2C5CBD11FF72932C76BE5C8EC504D0DA82E";
+const BASE_PAY_URL = "https://payin.moneyfusion.net/payment";
 
 /* ================== FILES ================== */
 const usersFile = "./users.json";
 const paymentsFile = "./payments.json";
 
-// Crée les fichiers si inexistants
 if (!fs.existsSync(usersFile)) fs.writeFileSync(usersFile, "[]");
 if (!fs.existsSync(paymentsFile)) fs.writeFileSync(paymentsFile, "[]");
 
-// 🔹 Fonctions lecture/écriture JSON
 const loadUsers = () => {
   try { return JSON.parse(fs.readFileSync(usersFile, "utf-8")) || []; }
   catch { return []; }
@@ -62,6 +61,7 @@ app.post("/register", (req, res) => {
 
   users.push({ username, password, coins: 0, botActiveUntil: 0 });
   saveUsers(users);
+
   res.redirect("/login");
 });
 
@@ -94,7 +94,7 @@ app.get("/coins", requireAuth, (req, res) => {
   });
 });
 
-/* ================== DEPOSIT ================== */
+/* ================== DEPOSIT via Money Fusion ================== */
 app.post("/deposit", requireAuth, async (req, res) => {
   try {
     const { amount, operator, phone, name } = req.body;
@@ -103,12 +103,9 @@ app.post("/deposit", requireAuth, async (req, res) => {
     if (!user) return res.status(400).json({ error: "Utilisateur introuvable" });
 
     const paymentId = `moneyfusion_${Date.now()}`;
-    const payments = loadPayments();
-    payments.push({ id: paymentId, user: user.username, amount, status: "pending", operator, phone, name });
-    savePayments(payments);
 
-    // ✅ Création paiement via API Money Fusion
-    const mfResp = await fetch('https://api.moneyfusion.net/v1/payments', {
+    // Appel API Money Fusion côté serveur
+    const response = await fetch("https://api.moneyfusion.net/v1/payments", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -116,7 +113,7 @@ app.post("/deposit", requireAuth, async (req, res) => {
       },
       body: JSON.stringify({
         merchant_id: MERCHANT_ID,
-        amount: amount,
+        amount: parseInt(amount),
         currency: "XAF",
         payment_id: paymentId,
         operator,
@@ -127,9 +124,20 @@ app.post("/deposit", requireAuth, async (req, res) => {
       })
     });
 
-    const mfData = await mfResp.json();
-    if (mfData && mfData.payment_url) res.json({ paymentUrl: mfData.payment_url });
-    else res.json({ error: "Impossible de générer le paiement" });
+    const data = await response.json();
+    if (!data.payment_url) return res.status(500).json({ error: "Erreur création paiement" });
+
+    // Sauvegarde du paiement
+    const payments = loadPayments();
+    payments.push({
+      id: paymentId,
+      user: user.username,
+      amount: parseInt(amount),
+      status: "pending"
+    });
+    savePayments(payments);
+
+    res.json({ paymentUrl: data.payment_url });
 
   } catch (err) {
     console.error(err);
@@ -143,7 +151,7 @@ app.post("/webhook", (req, res) => {
   if (!data || data.status !== "success") return res.send("IGNORED");
 
   const payments = loadPayments();
-  const pay = payments.find(p => p.id === data.payment_id);
+  const pay = payments.find(p => p.id === data.description);
   if (!pay) return res.send("NOT FOUND");
   if (pay.status === "success") return res.send("ALREADY PAID");
 
@@ -153,7 +161,6 @@ app.post("/webhook", (req, res) => {
   const user = users.find(u => u.username === pay.user);
   if (!user) return res.send("USER NOT FOUND");
 
-  // Map montant -> coins
   const coinsMap = { 50: 4, 100: 8, 250: 20, 500: 40, 750: 60, 1000: 80, 1500: 120, 2000: 160 };
   user.coins += coinsMap[pay.amount] || 0;
 
@@ -185,9 +192,8 @@ function requireBotActive(req, res, next) {
   const users = loadUsers();
   const user = users.find(u => u.username === req.session.user.username);
   if (!user) return res.redirect("/login");
-  if (!user.botActiveUntil || user.botActiveUntil < Date.now()) {
+  if (!user.botActiveUntil || user.botActiveUntil < Date.now())
     return res.send("Bot inactif, veuillez acheter du temps pour le déployer");
-  }
   next();
 }
 

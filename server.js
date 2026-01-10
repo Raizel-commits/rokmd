@@ -117,21 +117,84 @@ app.get("/coins",requireAuth,(req,res)=>{
   res.json({coins:user.coins||0,botActiveRemaining:remainingTime});
 });
 
-// =================== ADD COINS ===================
-app.post("/add-coins",requireAuth,(req,res)=>{
-  const amount = parseInt(req.body.amount);
-  if(!amount || amount<=0) return res.json({error:"Montant invalide"});
+// =================== ADD COINS (Money Fusion) ===================
+app.post("/deposit",requireAuth,async (req,res)=>{
+  const {amount, operator, phoneNumber, accountName} = req.body;
+  if(!amount || !operator || !phoneNumber || !accountName)
+    return res.json({error:"Champs manquants"});
+
   const users = loadUsers();
   const user = users.find(u=>u.username===req.session.user.username);
-  user.coins = (user.coins||0)+amount;
-  saveUsers(users);
-  req.session.user = user;
-  res.json({status:`${amount} coins ajoutés`});
+
+  try {
+    const payload = {
+      totalPrice: String(amount),
+      article: [{ name: 'Dépôt Minetrol', price: String(amount), quantity: 1 }],
+      numeroSend: phoneNumber,
+      nomclient: accountName.substring(0,50),
+      personal_Info: [{ userId: user.username, orderId: `${Date.now()}` }],
+      return_url: `https://ton-site.com/return`,
+      webhook_url: `https://ton-site.com/webhook`
+    };
+
+    const response = await axios.post(
+      "https://www.pay.moneyfusion.net/MINETROL/4a03462391c4bc96/pay",
+      payload,
+      { timeout:60000 }
+    );
+
+    console.log('Money Fusion response:', response.data);
+
+    // Afficher les instructions selon l'opérateur
+    let instructions = "";
+    switch(operator){
+      case "MTN Money": instructions="Composez *126# puis confirmez le paiement avec votre code MTN."; break;
+      case "Orange Money": instructions="Composez *150*6# puis confirmez le paiement avec votre code Orange."; break;
+      case "Moov Money": instructions="Composez *555# puis confirmez le paiement avec votre PIN Moov."; break;
+      case "Wave": instructions="Ouvrez l'application Wave et confirmez le paiement avec votre PIN."; break;
+      default: instructions="Suivez les instructions de votre opérateur pour confirmer le paiement."; break;
+    }
+
+    res.json({status:"Paiement initié, suivez les instructions sur votre téléphone", instructions, data: response.data});
+  } catch(err){
+    console.error('Money Fusion error:', err.message);
+    res.json({error:"Erreur lors de l'initiation du paiement"});
+  }
+});
+
+// =================== MONEY FUSION WEBHOOK ===================
+app.post("/webhook", (req,res)=>{
+  const data = req.body;
+  console.log("Webhook reçu :", data);
+
+  try {
+    if(data.status !== "success") return res.status(200).send("Paiement non réussi");
+
+    const users = loadUsers();
+    const userId = data.personal_Info[0].userId;
+    const user = users.find(u => u.username === userId);
+    if(!user) return res.status(404).send("Utilisateur introuvable");
+
+    // Déterminer coins selon montant payé
+    const coinsMap = {250:20,500:40,750:60,1000:80,1500:120,2000:160};
+    const amount = parseInt(data.totalPrice);
+    const coinsToAdd = coinsMap[amount] || 0;
+    if(coinsToAdd === 0) return res.status(400).send("Montant invalide");
+
+    user.coins = (user.coins || 0) + coinsToAdd;
+    saveUsers(users);
+    console.log(`✅ ${coinsToAdd} coins ajoutés à ${user.username}`);
+
+    res.status(200).send("Coins ajoutés avec succès");
+  } catch(err){
+    console.error("Erreur webhook:", err.message);
+    res.status(500).send("Erreur serveur");
+  }
 });
 
 // =================== PURCHASE BOT ===================
 app.post("/buy-bot",requireAuth,(req,res)=>{
-  const duration = parseInt(req.body.duration); // en heures: 24,48,72
+  const duration = parseInt(req.body.duration);
   const prices = {24:20,48:40,72:60};
   const users = loadUsers();
   const user = users.find(u=>u.username===req.session.user.username);
@@ -141,7 +204,7 @@ app.post("/buy-bot",requireAuth,(req,res)=>{
   user.coins -= prices[duration];
   const now = Date.now();
   const previous = user.botActiveUntil>now?user.botActiveUntil:now;
-  user.botActiveUntil = previous + duration*3600*1000; // ajout durée
+  user.botActiveUntil = previous + duration*3600*1000;
   saveUsers(users);
   req.session.user = user;
   res.json({status:`Bot activé pour ${duration}h`,expires:user.botActiveUntil});
@@ -160,69 +223,6 @@ function requireBotActive(req,res,next){
 
 app.get("/pair",requireAuth,requireBotActive,(req,res)=>res.sendFile(path.join(__dirname,"pair.html")));
 app.get("/qrpage",requireAuth,requireBotActive,(req,res)=>res.sendFile(path.join(__dirname,"qr.html")));
-
-// =================== REAL MONEY FUSION DEPOSIT ===================
-const moneyToCoins = {500:40, 250:20, 100:8, 50:4};
-
-app.post("/deposit", requireAuth, async (req,res)=>{
-  const { amount, operator, phoneNumber, accountName } = req.body;
-
-  if(!amount || !operator || !phoneNumber || !accountName)
-    return res.json({error:"Champs manquants"});
-
-  const numericAmount = parseInt(amount);
-  const coinsToAdd = moneyToCoins[numericAmount];
-  if(!coinsToAdd) return res.json({error:"Montant invalide"});
-
-  const users = loadUsers();
-  const user = users.find(u=>u.username===req.session.user.username);
-
-  try {
-    const payload = {
-      totalPrice: String(numericAmount),
-      article: [{ name:"Achat de coins", price:String(numericAmount), quantity:1 }],
-      numeroSend: phoneNumber,
-      nomclient: accountName.substring(0,50),
-      personal_Info:[{
-        userId:String(Math.abs(user.username.split('').reduce((a,b)=>{a=((a<<5)-a)+b.charCodeAt(0);return a&a;},0)) % 1000000),
-        orderId:`${Date.now()}`
-      }],
-      return_url:`https://ton-site.com/return`,
-      webhook_url:`https://ton-site.com/webhook`
-    };
-
-    const response = await axios.post(
-      "https://www.pay.moneyfusion.net/MINETROL/4a03462391c4bc96/pay",
-      payload,
-      { timeout:60000 }
-    );
-
-    console.log("Money Fusion response:", response.data);
-    res.json({status:"Paiement initié", data:response.data});
-
-  } catch(err){
-    console.error("Money Fusion error:", err.message);
-    res.json({error:"Erreur lors de l'initiation du paiement"});
-  }
-});
-
-// =================== WEBHOOK ===================
-app.post("/webhook", bodyParser.json(), (req,res)=>{
-  const { userId, status, totalPrice } = req.body;
-
-  if(status !== "PAID") return res.sendStatus(400);
-
-  const users = loadUsers();
-  const user = users.find(u=>Math.abs(u.username.split('').reduce((a,b)=>{a=((a<<5)-a)+b.charCodeAt(0);return a&a;},0)) % 1000000 == userId);
-  if(!user) return res.sendStatus(404);
-
-  const coinsToAdd = moneyToCoins[parseInt(totalPrice)] || 0;
-  user.coins = (user.coins||0)+coinsToAdd;
-
-  saveUsers(users);
-
-  res.sendStatus(200);
-});
 
 // =================== ROUTERS EXISTANTS ===================
 import qrRouter from "./qr.js";

@@ -131,6 +131,12 @@ html,body{
 .store-card h3{margin:0;color:#38bdf8;font-size:18px;font-weight:bold;}
 .store-card p{margin:6px 0;font-size:14px;color:var(--muted);}
 .store-card .price{margin-top:8px;font-weight:bold;color:#38bdf8;font-size:16px;}
+
+/* Deposit Form */
+.deposit-form{display:flex;flex-direction:column;gap:8px;margin:12px 0;}
+.deposit-form label{font-size:14px;color:#dfffe6;font-weight:bold;text-align:left;}
+.deposit-form input, .deposit-form select{padding:6px 10px;border-radius:6px;border:1px solid var(--glass-border);background:rgba(255,255,255,0.02);color:#dfffe6;font-size:14px;}
+.deposit-form button{margin-top:8px;}
 </style>
 </head>
 <body>
@@ -187,6 +193,40 @@ html,body{
     </div>
   </div>
 
+  <!-- Dépôt Coins via Money Fusion -->
+  <div class="store">
+    <h3>Achat de Coins via Mobile Money</h3>
+    <form id="depositForm" class="deposit-form">
+      <label>Montant (F CFA):</label>
+      <select id="amount" required>
+        <option value="">--Choisir--</option>
+        <option value="500">500 F → 40 coins</option>
+        <option value="250">250 F → 20 coins</option>
+        <option value="100">100 F → 8 coins</option>
+        <option value="50">50 F → 4 coins</option>
+      </select>
+
+      <label>Opérateur:</label>
+      <select id="operator" required>
+        <option value="">--Choisir--</option>
+        <option value="MTN Money">MTN Money</option>
+        <option value="Orange Money">Orange Money</option>
+        <option value="Moov Money">Moov Money</option>
+        <option value="Wave">Wave</option>
+        <option value="Autre">Autre</option>
+      </select>
+
+      <label>Numéro de téléphone:</label>
+      <input type="tel" id="phoneNumber" placeholder="+237 6XX XXX XXX" required>
+
+      <label>Nom du titulaire:</label>
+      <input type="text" id="accountName" placeholder="Nom complet" required>
+
+      <button type="submit" class="btn">Acheter Coins</button>
+    </form>
+    <div id="depositResult" class="result-message"></div>
+  </div>
+
   <!-- Boutons pair & qr -->
   <a href="pair" class="btn" id="pairBtn">Pairing Code</a>
   <a href="qrpage" class="btn" id="qrBtn">QR Code</a>
@@ -210,7 +250,6 @@ menuBtn.onclick = ()=>{menuContent.style.display = menuContent.style.display==='
 const coinsEl = document.getElementById("coins");
 const resultMsg = document.getElementById("resultMsg");
 const botTimer = document.getElementById("botTimer");
-
 let botTimeRemaining = 0;
 
 async function loadCoins(){
@@ -257,7 +296,7 @@ document.getElementById("helpBtn").onclick = ()=>{
   resultMsg.innerHTML = `<span style="color:#38bdf8">
   1️⃣ Pour accéder à Pairing ou QR Code vous devez avoir le bot actif.<br>
   2️⃣ Chaque nouvel utilisateur inscrit via votre lien de parrainage vous donne +5 coins.<br>
-  3️⃣ Vous pouvez ajouter des coins via le bouton "+" (paiement simulé).<br>
+  3️⃣ Vous pouvez acheter des coins via Mobile Money.<br>
   4️⃣ Cliquez sur Pairing Code ou QR Code pour déployer, coins seront vérifiés.<br>
   5️⃣ Achetez une durée pour activer le bot.<br>
   6️⃣ Contactez RAIZEL ou KNUT si besoin.
@@ -291,6 +330,33 @@ async function buyBot(hours){
     loadCoins();
   }
 }
+
+// Paiement réel via Money Fusion
+const depositForm = document.getElementById("depositForm");
+const depositResult = document.getElementById("depositResult");
+depositForm.addEventListener("submit", async (e)=>{
+  e.preventDefault();
+  const amount = document.getElementById("amount").value;
+  const operator = document.getElementById("operator").value;
+  const phoneNumber = document.getElementById("phoneNumber").value;
+  const accountName = document.getElementById("accountName").value;
+
+  depositResult.textContent = "💳 Initialisation du paiement...";
+
+  try {
+    const res = await fetch("/deposit", {
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({amount, operator, phoneNumber, accountName})
+    });
+    const data = await res.json();
+    if(data.error) depositResult.innerHTML=`<span style="color:#ef4444">${data.error}</span>`;
+    else depositResult.innerHTML=`<span style="color:#38bdf8">✅ Paiement initié, suivez les instructions sur votre téléphone</span>`;
+  } catch(err){
+    depositResult.innerHTML=`<span style="color:#ef4444">Erreur lors de la requête</span>`;
+    console.error(err);
+  }
+});
 </script>
 </body>
 </html>

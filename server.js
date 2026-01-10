@@ -31,8 +31,11 @@ function loadUsers() {
   }
 }
 
+function saveUsers(users) {
+  fs.writeFileSync(usersFile, JSON.stringify(users, null, 2));
+}
+
 function renderError(message, back = "/") {
-  // Affiche l'erreur directement dans une page stylée
   return `
   <!DOCTYPE html>
   <html lang="fr">
@@ -97,7 +100,7 @@ app.use(session({
   cookie: { secure: false }
 }));
 
-/* ================= AUTH MIDDLEWARE ================= */
+/* ================= AUTH ================= */
 function requireAuth(req, res, next) {
   if (!req.session.user) return res.redirect("/login");
   next();
@@ -109,19 +112,22 @@ app.get("/register", (req, res) => res.sendFile(path.join(__dirname, "register.h
 
 /* ================= REGISTER ================= */
 app.post("/register", (req, res) => {
-  const { username, password } = req.body;
+  const { username, password, ref } = req.body;
   const users = loadUsers();
 
-  if (!username || !password) {
-    return res.send(renderError("Champs manquants", "/register"));
+  if (!username || !password) return res.send(renderError("Champs manquants", "/register"));
+  if (users.some(u => u.username === username)) return res.send(renderError("Utilisateur déjà existant", "/register"));
+
+  const newUser = { username, password, coins: 20 }; // chaque nouvel utilisateur reçoit 20 coins
+  users.push(newUser);
+
+  // Bonus parrainage
+  if(ref){
+    const refUser = users.find(u => u.username === ref);
+    if(refUser) refUser.coins += 5;
   }
 
-  if (users.some(u => u.username === username)) {
-    return res.send(renderError("Utilisateur déjà existant", "/register"));
-  }
-
-  users.push({ username, password });
-  fs.writeFileSync(usersFile, JSON.stringify(users, null, 2));
+  saveUsers(users);
   res.redirect("/login");
 });
 
@@ -131,9 +137,7 @@ app.post("/login", (req, res) => {
   const users = loadUsers();
   const user = users.find(u => u.username === username && u.password === password);
 
-  if (!user) {
-    return res.send(renderError("Identifiants incorrects", "/login"));
-  }
+  if (!user) return res.send(renderError("Identifiants incorrects", "/login"));
 
   req.session.user = user;
   res.redirect("/");
@@ -143,14 +147,28 @@ app.post("/login", (req, res) => {
 app.get("/logout", (req, res) => req.session.destroy(() => res.redirect("/login")));
 
 /* ================= PROTECTED ROUTES ================= */
-app.get("/", requireAuth, (_, res) => res.sendFile(path.join(__dirname, "index.html")));
-app.get("/pair", requireAuth, (_, res) => res.sendFile(path.join(__dirname, "pair.html")));
-app.get("/qrpage", requireAuth, (_, res) => res.sendFile(path.join(__dirname, "qr.html")));
+app.get("/", requireAuth, (req, res) => {
+  const user = req.session.user;
+  let indexHtml = fs.readFileSync(path.join(__dirname, "index.html"), "utf-8");
+  // Injecter username et coins dans le HTML
+  indexHtml = indexHtml.replace('let coins = 20;', `let coins = ${user.coins};`);
+  indexHtml = indexHtml.replace('const username = "user123";', `const username = "${user.username}";`);
+  res.send(indexHtml);
+});
+
+// Vérification coins pour accès
+app.get("/pair", requireAuth, (req, res) => {
+  if(req.session.user.coins < 20) return res.send(renderError("Vous avez besoin de 20 coins pour accéder à cette page", "/"));
+  res.sendFile(path.join(__dirname, "pair.html"));
+});
+app.get("/qrpage", requireAuth, (req, res) => {
+  if(req.session.user.coins < 20) return res.send(renderError("Vous avez besoin de 20 coins pour accéder à cette page", "/"));
+  res.sendFile(path.join(__dirname, "qr.html"));
+});
 
 /* ================= ROUTERS ================= */
 import qrRouter from "./qr.js";
 import pairRouter from "./pair.js";
-
 app.use("/qr", requireAuth, qrRouter);
 app.use("/", requireAuth, pairRouter);
 

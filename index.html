@@ -77,6 +77,43 @@ html,body{
   opacity:0.9;
   transform:scale(1.03);
 }
+.social-icons{
+  display:flex;
+  justify-content:center;
+  gap:15px;
+  margin-top:15px;
+}
+.social-icons a{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  width:40px;
+  height:40px;
+  border-radius:50%;
+  background:var(--neon);
+  color:#020617;
+  text-decoration:none;
+  font-weight:bold;
+  font-size:20px;
+  transition:0.2s;
+}
+.social-icons a:hover{transform:scale(1.1);}
+.credits{font-size:12px;color:var(--muted);margin-top:20px;}
+.avatar{margin-bottom:10px;}
+.avatar img{width:60px;height:60px;border-radius:50%;border:2px solid var(--neon);}
+.coins-display{display:flex;justify-content:center;align-items:center;gap:8px;margin-bottom:15px;font-weight:bold;}
+.coins-display button{width:auto;padding:4px 8px;font-size:14px;}
+.timer{margin-top:8px;font-size:14px;color:#38bdf8;font-weight:bold;}
+
+/* Hamburger menu */
+.menu-btn{position:absolute;top:12px;right:12px;width:30px;height:22px;cursor:pointer;display:flex;flex-direction:column;justify-content:space-between;z-index:10;}
+.menu-btn span{display:block;height:4px;width:100%;background:var(--neon);border-radius:2px;transition:0.3s;}
+.menu-content{position:absolute;top:50px;right:0;width:220px;background:linear-gradient(180deg, rgba(0,0,0,0.3), rgba(0,0,0,0.1));border:1px solid var(--glass-border);border-radius:10px;padding:10px;display:none;flex-direction:column;gap:10px;z-index:9;}
+.menu-content button{background:none;color:var(--neon);border:none;text-align:left;cursor:pointer;font-weight:bold;}
+.menu-content button:hover{text-decoration:underline;}
+.result-message{margin-top:10px;font-weight:bold;text-align:center;}
+
+/* Store Cards */
 .store{display:flex;flex-direction:column;gap:12px;margin:15px 0;}
 .store-card{
   background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.006));
@@ -94,31 +131,57 @@ html,body{
 .store-card h3{margin:0;color:#38bdf8;font-size:18px;font-weight:bold;}
 .store-card p{margin:6px 0;font-size:14px;color:var(--muted);}
 .store-card .price{margin-top:8px;font-weight:bold;color:#38bdf8;font-size:16px;}
-.result-message{margin-top:10px;font-weight:bold;text-align:center;}
-.coins-display{display:flex;justify-content:center;align-items:center;gap:8px;margin-bottom:15px;font-weight:bold;}
-.coins-display button{width:auto;padding:4px 8px;font-size:14px;}
-.timer{margin-top:8px;font-size:14px;color:#38bdf8;font-weight:bold;}
-form{margin-top:15px;display:flex;flex-direction:column;gap:10px;}
-input, select{padding:10px;border-radius:8px;border:1px solid var(--glass-border);background:rgba(255,255,255,0.02);color:#dfffe6;}
+
+/* Deposit Form */
+.deposit-form{display:none;flex-direction:column;gap:8px;margin:12px 0;}
+.deposit-form label{font-size:14px;color:#dfffe6;font-weight:bold;text-align:left;}
+.deposit-form input, .deposit-form select{padding:6px 10px;border-radius:6px;border:1px solid var(--glass-border);background:rgba(255,255,255,0.02);color:#dfffe6;font-size:14px;}
+.deposit-form button{margin-top:8px;}
+#instructions{
+  background:rgba(56,189,248,0.05);
+  padding:8px;
+  border-radius:6px;
+  font-size:14px;
+  color:#dfffe6;
+}
 </style>
 </head>
 <body>
 <main class="stage">
 <section class="glass-card">
+  <!-- Hamburger Menu -->
+  <div class="menu-btn" id="menuBtn">
+    <span></span>
+    <span></span>
+    <span></span>
+  </div>
+  <div class="menu-content" id="menuContent">
+    <button id="copyLinkBtn">Copier mon lien de parrainage</button>
+    <button onclick="window.open('https://wa.me/237699777530','_blank')">Contacter RAIZEL</button>
+    <button onclick="window.open('https://wa.me/237673941535','_blank')">Contacter KNUT</button>
+    <button id="helpBtn">Help</button>
+  </div>
+
+  <!-- Avatar -->
+  <div class="avatar">
+    <img src="https://files.catbox.moe/36ywf8.jpeg" alt="Avatar">
+  </div>
 
   <header class="card-header">
     <h1>ROK XD</h1>
     <div class="small-url">WhatsApp Bot</div>
   </header>
 
-  <!-- Coins et Timer -->
+  <!-- Coins -->
   <div class="coins-display">
     Coins : <span id="coins">0</span>
     <button id="addCoinsBtn">+</button>
   </div>
+
+  <!-- Timer Bot -->
   <div class="timer" id="botTimer">Bot inactif</div>
 
-  <!-- Store Bot -->
+  <!-- Store / Durée Bot -->
   <div class="store">
     <div class="store-card" onclick="buyBot(24)">
       <h3>24 heures</h3>
@@ -137,43 +200,72 @@ input, select{padding:10px;border-radius:8px;border:1px solid var(--glass-border
     </div>
   </div>
 
-  <!-- Formulaire Money Fusion -->
-  <form id="depositForm">
-    <h3>Ajouter des coins via Mobile Money</h3>
-    <select id="operator" required>
-      <option value="">Sélectionnez l'opérateur</option>
-      <option value="MTN Money">MTN Money</option>
-      <option value="Orange Money">Orange Money</option>
-      <option value="Moov Money">Moov Money</option>
-      <option value="Wave">Wave</option>
-    </select>
-    <input type="tel" id="phoneNumber" placeholder="+237 6XX XXX XXX" required>
-    <input type="text" id="accountName" placeholder="Nom du titulaire" required>
-    <select id="amount" required>
-      <option value="">Sélectionnez le montant</option>
-      <option value="250">250 F → 20 coins</option>
-      <option value="500">500 F → 40 coins</option>
-      <option value="750">750 F → 60 coins</option>
-      <option value="1000">1000 F → 80 coins</option>
-      <option value="1500">1500 F → 120 coins</option>
-      <option value="2000">2000 F → 160 coins</option>
-    </select>
-    <button type="submit" class="btn">Déposer</button>
-  </form>
+  <!-- Dépôt Coins via Mobile Money -->
+  <div class="store">
+    <h3>Achat de Coins via Mobile Money</h3>
+    <form id="depositForm" class="deposit-form">
+      <label>Montant (F CFA):</label>
+      <select id="amount" required>
+        <option value="">--Choisir--</option>
+        <option value="50">50 F → 4 coins</option>
+        <option value="100">100 F → 8 coins</option>
+        <option value="250">250 F → 20 coins</option>
+        <option value="500">500 F → 40 coins</option>
+        <option value="750">750 F → 60 coins</option>
+        <option value="1000">1000 F → 80 coins</option>
+        <option value="1500">1500 F → 120 coins</option>
+        <option value="2000">2000 F → 160 coins</option>
+      </select>
 
-  <!-- Instructions paiement -->
+      <label>Opérateur:</label>
+      <select id="operator" required>
+        <option value="">--Choisir--</option>
+        <option value="MTN Money">MTN Money</option>
+        <option value="Orange Money">Orange Money</option>
+        <option value="Moov Money">Moov Money</option>
+        <option value="Wave">Wave</option>
+        <option value="Autre">Autre</option>
+      </select>
+
+      <label>Numéro de téléphone:</label>
+      <input type="tel" id="phoneNumber" placeholder="+237 6XX XXX XXX" required>
+
+      <label>Nom du titulaire:</label>
+      <input type="text" id="accountName" placeholder="Nom complet" required>
+
+      <label>Instructions opérateur:</label>
+      <div id="instructions">Sélectionnez un opérateur et un montant pour voir les instructions.</div>
+
+      <button type="submit" class="btn">Acheter Coins</button>
+    </form>
+    <div id="depositResult" class="result-message"></div>
+  </div>
+
+  <!-- Boutons pair & qr -->
+  <a href="pair" class="btn" id="pairBtn">Pairing Code</a>
+  <a href="qrpage" class="btn" id="qrBtn">QR Code</a>
+
   <div class="result-message" id="resultMsg"></div>
 
+  <div class="social-icons">
+    <a href="https://t.me/devraizel" target="_blank">T</a>
+    <a href="https://wa.me/237673941535" target="_blank">W</a>
+  </div>
+  <div class="credits">Développé par RAIZEL & KNUT</div>
 </section>
 </main>
 
 <script>
+const menuBtn = document.getElementById("menuBtn");
+const menuContent = document.getElementById("menuContent");
+menuBtn.onclick = ()=>{menuContent.style.display = menuContent.style.display==='flex'?'none':'flex';}
+
+// Coins et timer
 const coinsEl = document.getElementById("coins");
 const resultMsg = document.getElementById("resultMsg");
 const botTimer = document.getElementById("botTimer");
 let botTimeRemaining = 0;
 
-// Charger coins
 async function loadCoins(){
   const res = await fetch("/coins");
   const data = await res.json();
@@ -195,7 +287,83 @@ function updateTimer(){
   },1000);
 }
 
-// Acheter bot
+// Afficher/Masquer le formulaire Mobile Money
+const addCoinsBtn = document.getElementById("addCoinsBtn");
+const depositForm = document.getElementById("depositForm");
+addCoinsBtn.onclick = () => {
+  depositForm.style.display = depositForm.style.display === "flex" ? "none" : "flex";
+}
+
+// Instructions opérateur
+const operatorSelect = document.getElementById("operator");
+const amountSelect = document.getElementById("amount");
+const instructionsDiv = document.getElementById("instructions");
+
+function updateInstructions() {
+  const op = operatorSelect.value;
+  const amount = amountSelect.value;
+  if(!op || !amount){
+    instructionsDiv.textContent = "Sélectionnez un opérateur et un montant pour voir les instructions.";
+    return;
+  }
+  let instr = "";
+  switch(op){
+    case "MTN Money":
+      instr = `MTN Money : Tapez *126# → 3 Paiement → 1 Mobile Money → 2 Minetrol → Montant ${amount} F → Confirmez avec votre code secret.`;
+      break;
+    case "Orange Money":
+      instr = `Orange Money : Tapez *150# → 4 Paiement → 2 Minetrol → Montant ${amount} F → Confirmez avec votre code secret.`;
+      break;
+    case "Moov Money":
+      instr = `Moov Money : Tapez *555# → 2 Paiement → 1 Minetrol → Montant ${amount} F → Confirmez avec votre code secret.`;
+      break;
+    case "Wave":
+      instr = `Wave : Ouvrez l'application Wave → Paiement → Minetrol → Montant ${amount} F → Confirmez.`;
+      break;
+    case "Autre":
+      instr = `Veuillez suivre les instructions de votre opérateur pour effectuer le paiement de ${amount} F vers Minetrol.`;
+      break;
+  }
+  instructionsDiv.textContent = instr;
+}
+operatorSelect.onchange = updateInstructions;
+amountSelect.onchange = updateInstructions;
+
+// Parrainage
+const copyLinkBtn = document.getElementById("copyLinkBtn");
+copyLinkBtn.onclick = ()=>{
+  const link = `${window.location.origin}/register?ref=${encodeURIComponent(prompt('Entrez votre nom d’utilisateur pour générer le lien'))}`;
+  navigator.clipboard.writeText(link);
+  resultMsg.innerHTML=`<span style="color:#38bdf8">Lien copié !</span>`;
+}
+
+// Help
+document.getElementById("helpBtn").onclick = ()=>{
+  resultMsg.innerHTML = `<span style="color:#38bdf8">
+  1️⃣ Pour accéder à Pairing ou QR Code vous devez avoir le bot actif.<br>
+  2️⃣ Chaque nouvel utilisateur inscrit via votre lien de parrainage vous donne +5 coins.<br>
+  3️⃣ Vous pouvez acheter des coins via Mobile Money.<br>
+  4️⃣ Cliquez sur Pairing Code ou QR Code pour déployer, coins seront vérifiés.<br>
+  5️⃣ Achetez une durée pour activer le bot.<br>
+  6️⃣ Contactez RAIZEL ou KNUT si besoin.
+  </span>`;
+}
+
+// Vérification coins avant pair/qr
+document.getElementById("pairBtn").onclick = async (e)=>{
+  e.preventDefault();
+  const res = await fetch("/coins"); const data = await res.json();
+  if((data.botActiveRemaining||0)<=0){ resultMsg.innerHTML='<span style="color:#ef4444">Bot inactif, achetez une durée</span>'; return; }
+  window.location.href="pair";
+}
+document.getElementById("qrBtn").onclick = async (e)=>{
+  e.preventDefault();
+  const res = await fetch("/coins"); const data = await res.json();
+  if((data.botActiveRemaining||0)<=0){ resultMsg.innerHTML='<span style="color:#ef4444">Bot inactif, achetez une durée</span>'; return; }
+  window.location.href="qrpage";
+}
+
+// Acheter durée bot
 async function buyBot(hours){
   const confirmBuy = confirm(`Confirmez l'achat de ${hours}h pour activer votre bot ?`);
   if(!confirmBuy) return;
@@ -209,27 +377,31 @@ async function buyBot(hours){
   }
 }
 
-// Déposer coins Money Fusion
-document.getElementById("depositForm").onsubmit = async (e)=>{
+// Paiement via Money Fusion
+const depositResult = document.getElementById("depositResult");
+depositForm.addEventListener("submit", async (e)=>{
   e.preventDefault();
+  const amount = document.getElementById("amount").value;
   const operator = document.getElementById("operator").value;
   const phoneNumber = document.getElementById("phoneNumber").value;
   const accountName = document.getElementById("accountName").value;
-  const amount = document.getElementById("amount").value;
-  if(!operator || !phoneNumber || !accountName || !amount) return;
 
-  const res = await fetch("/deposit",{
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({operator,phoneNumber,accountName,amount})
-  });
-  const data = await res.json();
-  if(data.error) resultMsg.innerHTML=`<span style="color:#ef4444">${data.error}</span>`;
-  else{
-    resultMsg.innerHTML = `<span style="color:#38bdf8">${data.status}</span>
-      <p><strong>Instructions :</strong> ${data.instructions}</p>`;
+  depositResult.textContent = "💳 Initialisation du paiement...";
+
+  try {
+    const res = await fetch("/deposit", {
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({amount, operator, phoneNumber, accountName})
+    });
+    const data = await res.json();
+    if(data.error) depositResult.innerHTML=`<span style="color:#ef4444">${data.error}</span>`;
+    else depositResult.innerHTML=`<span style="color:#38bdf8">✅ Paiement initié, suivez les instructions sur votre téléphone</span>`;
+  } catch(err){
+    depositResult.innerHTML=`<span style="color:#ef4444">Erreur lors de la requête</span>`;
+    console.error(err);
   }
-}
+});
 </script>
 </body>
 </html>

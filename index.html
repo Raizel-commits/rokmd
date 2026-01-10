@@ -93,95 +93,36 @@ html,body{
   font-size:20px;
 }
 .credits{font-size:12px;color:var(--muted);margin-top:20px;}
-
-/* Avatar */
-.avatar img{
-  width:60px;
-  height:60px;
-  border-radius:50%;
-  border:2px solid var(--neon);
-  margin-bottom:10px;
-}
-
-/* Menu trois traits */
-.menu-icon{
-  position:absolute;
-  top:16px;
-  right:16px;
-  width:30px;
-  height:22px;
-  cursor:pointer;
-  display:flex;
-  flex-direction:column;
-  justify-content:space-between;
-}
-.menu-icon div{
-  height:4px;
-  background:var(--neon);
-  border-radius:2px;
-}
-.menu-content{
-  display:none;
-  position:absolute;
-  top:50px;
-  right:16px;
-  background:rgba(0,0,0,0.7);
-  border:1px solid var(--glass-border);
-  border-radius:12px;
-  padding:10px;
-  text-align:left;
-  width:200px;
-  z-index:100;
-}
-.menu-content a{
-  display:block;
-  color:#dfffe6;
-  padding:8px 0;
-  text-decoration:none;
-}
-.menu-content a:hover{
-  color:#38bdf8;
-}
-
-/* Coins */
-.coins{
-  display:flex;
-  justify-content:center;
-  align-items:center;
-  margin-bottom:12px;
-  font-weight:bold;
-}
-.coins span{margin-left:8px;color:#38bdf8;}
-
-/* Coin add button */
-.add-coin{
-  margin-left:10px;
-  background:#38bdf8;
-  color:#020617;
-  border:none;
-  border-radius:6px;
-  cursor:pointer;
-  padding:2px 8px;
-  font-weight:bold;
-}
-.add-coin:hover{opacity:0.9;}
+.avatar{margin-bottom:10px;}
+.avatar img{width:60px;height:60px;border-radius:50%;border:2px solid var(--neon);}
+.coins-display{display:flex;justify-content:center;align-items:center;gap:8px;margin-bottom:10px;font-weight:bold;}
+.coins-display button{width:auto;padding:4px 8px;font-size:14px;}
+/* Hamburger menu */
+.menu-btn{position:absolute;top:12px;right:12px;width:30px;height:22px;cursor:pointer;display:flex;flex-direction:column;justify-content:space-between;}
+.menu-btn span{display:block;height:4px;width:100%;background:var(--neon);border-radius:2px;transition:0.3s;}
+.menu-content{position:absolute;top:50px;right:0;width:200px;background:linear-gradient(180deg, rgba(0,0,0,0.3), rgba(0,0,0,0.1));border:1px solid var(--glass-border);border-radius:10px;padding:10px;display:none;flex-direction:column;gap:10px;}
+.menu-content button{background:none;color:var(--neon);border:none;text-align:left;cursor:pointer;font-weight:bold;}
+.menu-content button:hover{text-decoration:underline;}
+.result-message{margin-top:10px;font-weight:bold;text-align:center;}
 </style>
 </head>
 <body>
 <main class="stage">
 <section class="glass-card">
-  <div class="menu-icon" id="menuBtn">
-    <div></div>
-    <div></div>
-    <div></div>
+  <!-- Hamburger Menu -->
+  <div class="menu-btn" id="menuBtn">
+    <span></span>
+    <span></span>
+    <span></span>
   </div>
   <div class="menu-content" id="menuContent">
-    <a href="#" id="referralLink">Lien de parrainage</a>
-    <a href="#">Help</a>
-    <a href="https://wa.me/237699777530" target="_blank">RAIZEL</a>
-    <a href="https://wa.me/237673941535" target="_blank">KNUT</a>
+    <button id="copyLinkBtn">Copier mon lien de parrainage</button>
+    <button onclick="window.open('https://wa.me/237699777530','_blank')">Contacter RAIZEL</button>
+    <button onclick="window.open('https://wa.me/237673941535','_blank')">Contacter KNUT</button>
+    <button id="helpBtn">Help</button>
   </div>
 
+  <!-- Avatar -->
   <div class="avatar">
     <img src="https://files.catbox.moe/36ywf8.jpeg" alt="Avatar">
   </div>
@@ -191,13 +132,17 @@ html,body{
     <div class="small-url">WhatsApp Bot</div>
   </header>
 
-  <div class="coins">
-    Coins: <span id="coinCount">0</span>
-    <button class="add-coin" onclick="addCoins()">+</button>
+  <!-- Coins -->
+  <div class="coins-display">
+    Coins : <span id="coins">0</span>
+    <button id="addCoinsBtn">+</button>
   </div>
 
+  <!-- Boutons pair & qr -->
   <a href="pair" class="btn" id="pairBtn">Pairing Code (20 coins)</a>
   <a href="qrpage" class="btn" id="qrBtn">QR Code (20 coins)</a>
+
+  <div class="result-message" id="resultMsg"></div>
 
   <div class="social-icons">
     <a href="https://t.me/devraizel" target="_blank">T</a>
@@ -208,41 +153,62 @@ html,body{
 </main>
 
 <script>
-// Menu toggle
 const menuBtn = document.getElementById("menuBtn");
 const menuContent = document.getElementById("menuContent");
-menuBtn.onclick = () => {
-  menuContent.style.display = menuContent.style.display === "block" ? "none" : "block";
-};
+menuBtn.onclick = ()=>{menuContent.style.display = menuContent.style.display==='flex'?'none':'flex';}
 
-// Fetch coins
-let coins = 0;
+// Coins
+const coinsEl = document.getElementById("coins");
+const resultMsg = document.getElementById("resultMsg");
 async function loadCoins(){
-  const r = await fetch("/coins");
-  const data = await r.json();
-  coins = data.coins || 0;
-  document.getElementById("coinCount").textContent = coins;
+  const res = await fetch("/coins");
+  const data = await res.json();
+  coinsEl.textContent = data.coins;
 }
 loadCoins();
 
-// Add coins placeholder (could open Money Fusion payment)
-function addCoins(){
-  alert("Ajouter des coins via paiement Money Fusion ou lien de parrainage !");
+// Ajouter coins (simulate payment)
+document.getElementById("addCoinsBtn").onclick = async ()=>{
+  const amount = prompt("Combien de coins voulez-vous ajouter ?");
+  if(!amount) return;
+  const res = await fetch("/add-coins",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({amount})});
+  const data = await res.json();
+  if(data.error) resultMsg.innerHTML=`<span style="color:#ef4444">${data.error}</span>`;
+  else { resultMsg.innerHTML=`<span style="color:#38bdf8">${data.status}</span>`; loadCoins(); }
 }
 
-// Check coins before pair / qr
-document.getElementById("pairBtn").onclick = (e)=>{
-  if(coins < 20){ e.preventDefault(); alert("Coins insuffisants (20 coins requis)"); return false; }
-};
-document.getElementById("qrBtn").onclick = (e)=>{
-  if(coins < 20){ e.preventDefault(); alert("Coins insuffisants (20 coins requis)"); return false; }
-};
+// Parrainage
+const copyLinkBtn = document.getElementById("copyLinkBtn");
+copyLinkBtn.onclick = ()=>{
+  const link = `${window.location.origin}/register?ref=${encodeURIComponent(prompt('Entrez votre nom d’utilisateur pour générer le lien'))}`;
+  navigator.clipboard.writeText(link);
+  resultMsg.innerHTML=`<span style="color:#38bdf8">Lien copié !</span>`;
+}
 
-// Referral link
-document.getElementById("referralLink").onclick = ()=>{
-  const username = prompt("Entrez votre nom d'utilisateur pour générer le lien de parrainage :");
-  if(username) alert(`Partage ce lien pour gagner 5 coins à chaque inscription : ${window.location.origin}/register?ref=${username}`);
-};
+// Help
+document.getElementById("helpBtn").onclick = ()=>{
+  resultMsg.innerHTML = `<span style="color:#38bdf8">
+  1️⃣ Pour accéder à Pairing ou QR Code vous devez avoir 20 coins.<br>
+  2️⃣ Chaque nouvel utilisateur inscrit via votre lien de parrainage vous donne +5 coins.<br>
+  3️⃣ Vous pouvez ajouter des coins via le bouton "+" (paiement Money Fusion simulé).<br>
+  4️⃣ Cliquez sur Pairing Code ou QR Code pour déployer, 20 coins seront déduits.<br>
+  5️⃣ Contactez RAIZEL ou KNUT si besoin.
+  </span>`;
+}
+
+// Vérification coins avant pair/qr
+document.getElementById("pairBtn").onclick = async (e)=>{
+  e.preventDefault();
+  const res = await fetch("/coins"); const data = await res.json();
+  if(data.coins<20){ resultMsg.innerHTML='<span style="color:#ef4444">Coins insuffisants (20 coins requis)</span>'; return; }
+  window.location.href="pair";
+}
+document.getElementById("qrBtn").onclick = async (e)=>{
+  e.preventDefault();
+  const res = await fetch("/coins"); const data = await res.json();
+  if(data.coins<20){ resultMsg.innerHTML='<span style="color:#ef4444">Coins insuffisants (20 coins requis)</span>'; return; }
+  window.location.href="qrpage";
+}
 </script>
 </body>
 </html>

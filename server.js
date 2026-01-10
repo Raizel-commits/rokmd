@@ -14,13 +14,13 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// =================== VOLUME PERSISTANT RENDER ===================
-const PERSISTENT_DIR = "/mnt/data"; // Render gère le dossier
+// =================== PATHS ===================
+const PERSISTENT_DIR = "/mnt/data"; // Volume persistant sur Render
 const USERS_FILE = path.join(PERSISTENT_DIR, "users.enc.json");
-const SESSIONS_DIR = path.join(PERSISTENT_DIR, "sessions");
+const SESSIONS_DIR = path.join(PERSISTENT_DIR, "sessions"); // doit exister sur le volume
 
-// =================== CRYPTO / PASSWORD ===================
-const SECRET = process.env.USER_SECRET || "ULTRA_SECRET_256_BITS_KEY";
+// =================== CRYPTO ===================
+const SECRET = process.env.USER_SECRET || "ULTRA_SECRET_KEY_256_BITS";
 const ALGORITHM = "aes-256-ctr";
 const KEY = crypto.createHash("sha256").update(SECRET).digest();
 
@@ -121,6 +121,7 @@ app.get("/logout", (req, res) => req.session.destroy(() => res.redirect("/login"
 app.post("/register", async (req, res) => {
   const { username, password, ref } = req.body;
   if (!username || !password) return res.send(renderError("Champs manquants", "/register"));
+
   const users = loadUsers();
   if (users.some(u => u.username === username)) return res.send(renderError("Utilisateur déjà existant", "/register"));
 
@@ -143,6 +144,7 @@ app.post("/login", async (req, res) => {
   const user = users.find(u => u.username === username);
   if (!user || !(await bcrypt.compare(password, user.password)))
     return res.send(renderError("Identifiants incorrects", "/login"));
+
   req.session.user = { username: user.username };
   res.redirect("/");
 });

@@ -309,16 +309,16 @@ function updateInstructions() {
   let instr = "";
   switch(op){
     case "MTN Money":
-      instr = `MTN Money : Tapez *126# → 3 Paiement → 1 Mobile Money → 2 Minetrol → Montant ${amount} F → Confirmez avec votre code secret.`;
+      instr = `MTN Money : Tapez *126# → Montant ${amount} F → Confirmez avec votre code secret.`;
       break;
     case "Orange Money":
-      instr = `Orange Money : Tapez *150# → 4 Paiement → 2 Minetrol → Montant ${amount} F → Confirmez avec votre code secret.`;
+      instr = `Orange Money : Tapez *150# → Montant ${amount} F → Confirmez avec votre code secret.`;
       break;
     case "Moov Money":
-      instr = `Moov Money : Tapez *555# → 2 Paiement → 1 Minetrol → Montant ${amount} F → Confirmez avec votre code secret.`;
+      instr = `Moov Money : Tapez *555# → Montant ${amount} F → Confirmez avec votre code secret.`;
       break;
     case "Wave":
-      instr = `Wave : Ouvrez l'application Wave → Paiement → Minetrol → Montant ${amount} F → Confirmez.`;
+      instr = `Wave : Ouvrez l'application Wave → Montant ${amount} F → Confirmez.`;
       break;
     case "Autre":
       instr = `Veuillez suivre les instructions de votre opérateur pour effectuer le paiement de ${amount} F vers Minetrol.`;

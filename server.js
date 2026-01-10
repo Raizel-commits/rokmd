@@ -4,27 +4,27 @@ import session from "express-session";
 import bodyParser from "body-parser";
 import fs from "fs";
 import path from "path";
-import axios from "axios";
 import { fileURLToPath } from "url";
+import axios from "axios";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-const PORT = process.env.PORT || 10000;
+const PORT = process.env.PORT || 3000;
 
-// ================== FILE USERS ==================
+// =================== USERS FILE ===================
 const usersFile = path.join(__dirname, "users.json");
-if (!fs.existsSync(usersFile)) {
-  fs.writeFileSync(usersFile, "[]");
-}
+if (!fs.existsSync(usersFile)) fs.writeFileSync(usersFile, JSON.stringify([]));
 
-// ================== HELPERS ==================
+// =================== MERCHANT ID ===================
+const MERCHANT_ID = "moneyfusion_v1_6950f6d898fe6dbde00af590_4A53FFA3DD9F78644E53269883CEB2C5CBD11FF72932C76BE5C8EC504D0DA82E";
+
+// =================== HELPERS ===================
 function loadUsers() {
   try {
     const data = fs.readFileSync(usersFile, "utf-8");
-    const parsed = JSON.parse(data);
-    return Array.isArray(parsed) ? parsed : [];
+    return Array.isArray(JSON.parse(data)) ? JSON.parse(data) : [];
   } catch {
     return [];
   }
@@ -39,207 +39,184 @@ function renderError(message, back = "/") {
   <!DOCTYPE html>
   <html lang="fr">
   <head>
-    <meta charset="UTF-8">
-    <title>Erreur</title>
-    <style>
-      body{background:#020617;color:white;font-family:sans-serif;display:flex;justify-content:center;align-items:center;height:100vh}
-      .box{background:#0f172a;padding:30px;border-radius:12px;text-align:center}
-      a{color:#38bdf8;text-decoration:none;font-weight:bold}
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Erreur</title>
+  <style>
+    body { font-family: "Inter", sans-serif; background: linear-gradient(180deg,#020617,#0f172a); color: #dfffe6; display:flex; justify-content:center; align-items:center; height:100vh; margin:0; }
+    .glass-card { background: rgba(255,255,255,0.02); padding:24px 36px; border-radius:18px; box-shadow:0 10px 40px rgba(0,0,0,0.7); border:1px solid rgba(56,189,248,0.22); text-align:center; max-width:400px; }
+    h2 { color: #ef4444; margin-bottom:16px; }
+    a { display:inline-block; padding:10px 20px; background:#38bdf8; color:#020617; text-decoration:none; border-radius:6px; font-weight:bold; margin-top:10px; }
+  </style>
   </head>
   <body>
-    <div class="box">
+    <section class="glass-card">
       <h2>${message}</h2>
-      <br/>
       <a href="${back}">Retour</a>
-    </div>
+    </section>
   </body>
   </html>
   `;
 }
 
-// ================== MIDDLEWARE ==================
+// =================== MIDDLEWARE ===================
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
-
 app.use(session({
-  secret: "ROKXD_SECRET",
+  secret: "SECRETSTORY_N_AUTH",
   resave: false,
   saveUninitialized: false,
   cookie: { secure: false }
 }));
 
-function requireAuth(req, res, next) {
-  if (!req.session.user) return res.redirect("/login");
+function requireAuth(req,res,next){
+  if(!req.session.user) return res.redirect("/login");
   next();
 }
 
-// ================== PUBLIC ==================
-app.get("/login", (_, res) => res.sendFile(path.join(__dirname, "login.html")));
-app.get("/register", (_, res) => res.sendFile(path.join(__dirname, "register.html")));
+// =================== ROUTES PUBLIC ===================
+app.get("/login",(req,res)=>res.sendFile(path.join(__dirname,"login.html")));
+app.get("/register",(req,res)=>res.sendFile(path.join(__dirname,"register.html")));
 
-// ================== REGISTER ==================
-app.post("/register", (req, res) => {
-  const { username, password } = req.body;
-  if (!username || !password)
-    return res.send(renderError("Champs manquants", "/register"));
-
+// =================== REGISTER ===================
+app.post("/register",(req,res)=>{
+  const {username,password,ref} = req.body;
   const users = loadUsers();
-  if (users.find(u => u.username === username))
-    return res.send(renderError("Utilisateur déjà existant", "/register"));
+  if(!username || !password) return res.send(renderError("Champs manquants","/register"));
+  if(users.some(u=>u.username===username)) return res.send(renderError("Utilisateur déjà existant","/register"));
 
-  users.push({
-    username,
-    password,
-    coins: 0,
-    botActiveUntil: 0
-  });
+  let coins = 20;
+  if(ref){
+    const parent = users.find(u=>u.username===ref);
+    if(parent) parent.coins = (parent.coins||0)+5;
+  }
 
+  users.push({ username,password,coins,botActiveUntil:0 });
   saveUsers(users);
   res.redirect("/login");
 });
 
-// ================== LOGIN ==================
-app.post("/login", (req, res) => {
-  const { username, password } = req.body;
+// =================== LOGIN ===================
+app.post("/login",(req,res)=>{
+  const {username,password} = req.body;
   const users = loadUsers();
-
-  const user = users.find(
-    u => u.username === username && u.password === password
-  );
-
-  if (!user)
-    return res.send(renderError("Identifiants incorrects", "/login"));
-
-  req.session.user = { username: user.username };
+  const user = users.find(u=>u.username===username && u.password===password);
+  if(!user) return res.send(renderError("Identifiants incorrects","/login"));
+  req.session.user = user;
   res.redirect("/");
 });
 
-// ================== LOGOUT ==================
-app.get("/logout", (req, res) => {
-  req.session.destroy(() => res.redirect("/login"));
-});
+// =================== LOGOUT ===================
+app.get("/logout",(req,res)=>req.session.destroy(()=>res.redirect("/login")));
 
-// ================== HOME ==================
-app.get("/", requireAuth, (_, res) => {
-  res.sendFile(path.join(__dirname, "index.html"));
-});
+// =================== FRONT PAGE ===================
+app.get("/",requireAuth,(req,res)=>res.sendFile(path.join(__dirname,"index.html")));
 
-// ================== COINS API ==================
-app.get("/coins", requireAuth, (req, res) => {
+// =================== API COINS ===================
+app.get("/coins",requireAuth,(req,res)=>{
   const users = loadUsers();
-  const user = users.find(u => u.username === req.session.user.username);
-  if (!user) return res.json({ coins: 0, botActiveRemaining: 0 });
-
-  const remaining = Math.max(0, user.botActiveUntil - Date.now());
-  res.json({ coins: user.coins || 0, botActiveRemaining: remaining });
+  const user = users.find(u=>u.username===req.session.user.username);
+  if(!user) return res.status(401).json({error:"Non autorisé"});
+  const remainingTime = Math.max(0,user.botActiveUntil-Date.now());
+  res.json({coins:user.coins||0,botActiveRemaining:remainingTime});
 });
 
-// ================== MONEY FUSION ==================
-app.post("/deposit", requireAuth, async (req, res) => {
-  const { amount, operator, phoneNumber, accountName } = req.body;
-  if (!amount || !operator || !phoneNumber || !accountName)
-    return res.json({ error: "Champs manquants" });
+// =================== ADD COINS (Money Fusion) ===================
+app.post("/deposit",requireAuth,async (req,res)=>{
+  const {amount, operator, phoneNumber, accountName} = req.body;
+  if(!amount || !operator || !phoneNumber || !accountName)
+    return res.json({error:"Champs manquants"});
 
-  const payload = {
-    totalPrice: String(amount),
-    article: [{ name: "Depot ROK XD", price: String(amount), quantity: 1 }],
-    numeroSend: phoneNumber,
-    nomclient: accountName.substring(0, 50),
-    personal_Info: [{
-      userId: req.session.user.username,
-      orderId: `ROK-${Date.now()}`
-    }],
-    return_url: "https://rokmd.onrender.com/",
-    webhook_url: "https://rokmd.onrender.com/webhook"
-  };
+  const users = loadUsers();
+  const user = users.find(u=>u.username===req.session.user.username);
 
   try {
-    const mf = await axios.post(
-      "https://www.pay.moneyfusion.net/MINETROL/4a03462391c4bc96/pay",
-      payload,
-      { timeout: 60000 }
-    );
+    // URL de paiement Money Fusion
+    const paymentUrl = `https://payin.moneyfusion.net/payment/${MERCHANT_ID}/${amount}/Achat-coins`;
 
-    res.json({ status: "Paiement initié", data: mf.data });
-  } catch (e) {
-    console.error(e.message);
-    res.json({ error: "Erreur Money Fusion" });
+    // Ici tu pourrais faire un POST sur l'API Money Fusion si nécessaire
+    // Pour l'instant, on renvoie l'URL pour rediriger l'utilisateur
+    res.json({
+      status: "ok",
+      paymentUrl,
+      instructions: `Suivez ce lien pour payer : ${paymentUrl}`
+    });
+
+  } catch(err){
+    console.error('Money Fusion error:', err.message);
+    res.json({error:"Erreur lors de l'initiation du paiement"});
   }
 });
 
-// ================== WEBHOOK ==================
-app.post("/webhook", (req, res) => {
+// =================== MONEY FUSION WEBHOOK ===================
+app.post("/webhook", (req,res)=>{
+  const data = req.body;
+  console.log("Webhook reçu :", data);
+
   try {
-    const data = req.body;
-    if (data.status !== "success") return res.sendStatus(200);
+    if(data.status !== "success") return res.status(200).send("Paiement non réussi");
 
     const users = loadUsers();
-    const info = data.personal_Info?.[0];
-    if (!info) return res.sendStatus(200);
+    const userId = data.personal_Info[0].userId;
+    const user = users.find(u => u.username === userId);
+    if(!user) return res.status(404).send("Utilisateur introuvable");
 
-    const user = users.find(u => u.username === info.userId);
-    if (!user) return res.sendStatus(200);
+    // Déterminer coins selon montant payé
+    const coinsMap = {50:4,100:8,250:20,500:40,750:60,1000:80,1500:120,2000:160};
+    const amount = parseInt(data.totalPrice);
+    const coinsToAdd = coinsMap[amount] || 0;
+    if(coinsToAdd === 0) return res.status(400).send("Montant invalide");
 
-    const coinsMap = {
-      250: 20,
-      500: 40,
-      750: 60,
-      1000: 80,
-      1500: 120,
-      2000: 160
-    };
-
-    const coins = coinsMap[parseInt(data.totalPrice)];
-    if (!coins) return res.sendStatus(200);
-
-    user.coins += coins;
+    user.coins = (user.coins || 0) + coinsToAdd;
     saveUsers(users);
+    console.log(`✅ ${coinsToAdd} coins ajoutés à ${user.username}`);
 
-    console.log(`✅ ${coins} coins ajoutés à ${user.username}`);
-    res.sendStatus(200);
-  } catch {
-    res.sendStatus(500);
+    res.status(200).send("Coins ajoutés avec succès");
+  } catch(err){
+    console.error("Erreur webhook:", err.message);
+    res.status(500).send("Erreur serveur");
   }
 });
 
-// ================== BOT ==================
-app.post("/buy-bot", requireAuth, (req, res) => {
-  const prices = { 24: 20, 48: 40, 72: 60 };
+// =================== PURCHASE BOT ===================
+app.post("/buy-bot",requireAuth,(req,res)=>{
   const duration = parseInt(req.body.duration);
-
+  const prices = {24:20,48:40,72:60};
   const users = loadUsers();
-  const user = users.find(u => u.username === req.session.user.username);
-
-  if (!prices[duration])
-    return res.json({ error: "Durée invalide" });
-
-  if (user.coins < prices[duration])
-    return res.json({ error: "Coins insuffisants" });
+  const user = users.find(u=>u.username===req.session.user.username);
+  if(!prices[duration]) return res.json({error:"Durée invalide"});
+  if((user.coins||0)<prices[duration]) return res.json({error:`Coins insuffisants (${prices[duration]} requis)`});
 
   user.coins -= prices[duration];
   const now = Date.now();
-  user.botActiveUntil = Math.max(user.botActiveUntil, now) + duration * 3600000;
+  const previous = user.botActiveUntil>now?user.botActiveUntil:now;
+  user.botActiveUntil = previous + duration*3600*1000;
   saveUsers(users);
-
-  res.json({ status: "Bot activé" });
+  req.session.user = user;
+  res.json({status:`Bot activé pour ${duration}h`,expires:user.botActiveUntil});
 });
 
-// ================== PAGES ==================
-app.get("/pair", requireAuth, (_, res) =>
-  res.sendFile(path.join(__dirname, "pair.html"))
-);
+// =================== PAIR & QR (require bot actif) ===================
+function requireBotActive(req,res,next){
+  const users = loadUsers();
+  const user = users.find(u=>u.username===req.session.user.username);
+  if(!user) return res.redirect("/login");
+  if(!user.botActiveUntil || user.botActiveUntil<Date.now()){
+    return res.send(renderError("Bot inactif, veuillez acheter du temps pour le déployer","/"));
+  }
+  next();
+}
 
-app.get("/qrpage", requireAuth, (_, res) =>
-  res.sendFile(path.join(__dirname, "qr.html"))
-);
+app.get("/pair",requireAuth,requireBotActive,(req,res)=>res.sendFile(path.join(__dirname,"pair.html")));
+app.get("/qrpage",requireAuth,requireBotActive,(req,res)=>res.sendFile(path.join(__dirname,"qr.html")));
 
-// ================== 404 ==================
-app.use((_, res) =>
-  res.status(404).send(renderError("Page introuvable", "/"))
-);
+// =================== ROUTERS EXISTANTS ===================
+import qrRouter from "./qr.js";
+import pairRouter from "./pair.js";
+app.use("/qr",requireAuth,qrRouter);
+app.use("/",requireAuth,pairRouter);
 
-// ================== START ==================
-app.listen(PORT, () =>
-  console.log(`🚀 ROK XD Server running on port ${PORT}`)
-);
+// =================== 404 ===================
+app.use((req,res)=>res.status(404).send(renderError("Erreur 404: Page non trouvée","/")));
+
+app.listen(PORT,()=>console.log(`✅ Server running on port ${PORT}`));

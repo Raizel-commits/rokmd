@@ -4,21 +4,17 @@ import session from "express-session";
 import bodyParser from "body-parser";
 import fs from "fs";
 import path from "path";
-import axios from "axios";
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 /* ================== CONFIG MONEY FUSION ================== */
-const MERCHANT_ID = "69620e03013a0771970d2b80"; // 🔴 METTRE TON MERCHANT ID ICI
+const MERCHANT_ID = "69620e03013a0771970d2b80"; // ton Merchant ID
 const BASE_PAY_URL = "https://payin.moneyfusion.net/payment";
-const WEBHOOK_URL = "https://ton-site.com/webhook"; // 🔴 METTRE TON URL WEBHOOK
-const RETURN_URL = "https://ton-site.com/return"; // 🔴 METTRE TON URL DE RETOUR
 
 /* ================== FILES ================== */
 const usersFile = "./users.json";
 const paymentsFile = "./payments.json";
-
 if (!fs.existsSync(usersFile)) fs.writeFileSync(usersFile, "[]");
 if (!fs.existsSync(paymentsFile)) fs.writeFileSync(paymentsFile, "[]");
 
@@ -41,7 +37,7 @@ const requireAuth = (req,res,next)=>{
   next();
 };
 
-/* ================== ROUTES HTML ================== */
+/* ================== HTML ================== */
 app.get("/", requireAuth, (req,res)=>res.sendFile(path.resolve("index.html")));
 app.get("/login", (req,res)=>res.sendFile(path.resolve("login.html")));
 app.get("/register", (req,res)=>res.sendFile(path.resolve("register.html")));
@@ -83,46 +79,48 @@ app.get("/coins", requireAuth, (req,res)=>{
   });
 });
 
-/* ================== DEPOSIT MONEY FUSION ================== */
+/* ================== DEPOSIT ================== */
 app.post("/deposit", requireAuth, (req,res)=>{
-  const { amount } = req.body;
-  const users = loadUsers();
-  const user = users.find(u=>u.username===req.session.user.username);
+  try {
+    const { amount } = req.body;
+    const users = loadUsers();
+    const user = users.find(u=>u.username===req.session.user.username);
+    if(!user) return res.status(400).json({error:"Utilisateur introuvable"});
 
-  const paymentId = `moneyfusion_${Date.now()}`;
+    const paymentId = `moneyfusion_${Date.now()}`;
+    const payments = loadPayments();
+    payments.push({
+      id: paymentId,
+      user: user.username,
+      amount: parseInt(amount),
+      status: "pending"
+    });
+    savePayments(payments);
 
-  const payments = loadPayments();
-  payments.push({
-    id: paymentId,
-    user: user.username,
-    amount: parseInt(amount),
-    status: "pending"
-  });
-  savePayments(payments);
-
-  const payUrl = `${BASE_PAY_URL}/${MERCHANT_ID}/${amount}/${paymentId}`;
-
-  res.json({ payUrl });
+    const payUrl = `${BASE_PAY_URL}/${MERCHANT_ID}/${amount}/${paymentId}`;
+    res.json({ paymentUrl: payUrl }); // ⚡ clé paymentUrl pour le HTML
+  } catch(err){
+    console.error(err);
+    res.status(500).json({ error:"Erreur serveur lors de la création du paiement" });
+  }
 });
 
 /* ================== WEBHOOK ================== */
 app.post("/webhook", (req,res)=>{
   const data = req.body;
-
   if(data.status !== "success") return res.send("IGNORED");
 
   const payments = loadPayments();
   const pay = payments.find(p=>p.id === data.description);
   if(!pay) return res.send("NOT FOUND");
-
   if(pay.status === "success") return res.send("ALREADY PAID");
 
   pay.status = "success";
 
   const users = loadUsers();
   const user = users.find(u=>u.username===pay.user);
+  if(!user) return res.send("USER NOT FOUND");
 
-  // ⚡ Map montant -> coins
   const coinsMap = {50:4,100:8,250:20,500:40,750:60,1000:80,1500:120,2000:160};
   user.coins += coinsMap[pay.amount] || 0;
 
@@ -138,14 +136,13 @@ app.post("/buy-bot", requireAuth, (req,res)=>{
   const prices = {24:20,48:40,72:60};
   const users = loadUsers();
   const user = users.find(u=>u.username===req.session.user.username);
-
   if(user.coins < prices[duration]) return res.json({error:"Coins insuffisants"});
 
   user.coins -= prices[duration];
   user.botActiveUntil = Math.max(user.botActiveUntil, Date.now()) + duration*3600000;
 
   saveUsers(users);
-  res.json({success:true});
+  res.json({status:`Bot activé ${duration}h`, expires:user.botActiveUntil});
 });
 
 /* ================== PAIR & QR ================== */
@@ -158,7 +155,6 @@ function requireBotActive(req,res,next){
   }
   next();
 }
-
 app.get("/pair", requireAuth, requireBotActive, (req,res)=>res.sendFile(path.join(__dirname,"pair.html")));
 app.get("/qrpage", requireAuth, requireBotActive, (req,res)=>res.sendFile(path.join(__dirname,"qr.html")));
 

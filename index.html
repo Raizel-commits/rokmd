@@ -97,10 +97,10 @@ html,body{
 .avatar img{width:60px;height:60px;border-radius:50%;border:2px solid var(--neon);}
 .coins-display{display:flex;justify-content:center;align-items:center;gap:8px;margin-bottom:10px;font-weight:bold;}
 .coins-display button{width:auto;padding:4px 8px;font-size:14px;}
-/* Hamburger menu */
+.timer{margin-top:8px;font-size:14px;color:#38bdf8;}
 .menu-btn{position:absolute;top:12px;right:12px;width:30px;height:22px;cursor:pointer;display:flex;flex-direction:column;justify-content:space-between;}
 .menu-btn span{display:block;height:4px;width:100%;background:var(--neon);border-radius:2px;transition:0.3s;}
-.menu-content{position:absolute;top:50px;right:0;width:200px;background:linear-gradient(180deg, rgba(0,0,0,0.3), rgba(0,0,0,0.1));border:1px solid var(--glass-border);border-radius:10px;padding:10px;display:none;flex-direction:column;gap:10px;}
+.menu-content{position:absolute;top:50px;right:0;width:220px;background:linear-gradient(180deg, rgba(0,0,0,0.3), rgba(0,0,0,0.1));border:1px solid var(--glass-border);border-radius:10px;padding:10px;display:none;flex-direction:column;gap:10px;}
 .menu-content button{background:none;color:var(--neon);border:none;text-align:left;cursor:pointer;font-weight:bold;}
 .menu-content button:hover{text-decoration:underline;}
 .result-message{margin-top:10px;font-weight:bold;text-align:center;}
@@ -138,9 +138,19 @@ html,body{
     <button id="addCoinsBtn">+</button>
   </div>
 
+  <!-- Timer Bot -->
+  <div class="timer" id="botTimer">Bot inactif</div>
+
+  <!-- Achat durée -->
+  <div>
+    <button class="btn" onclick="buyBot(24)">Acheter 24h (20 coins)</button>
+    <button class="btn" onclick="buyBot(48)">Acheter 48h (40 coins)</button>
+    <button class="btn" onclick="buyBot(72)">Acheter 72h (60 coins)</button>
+  </div>
+
   <!-- Boutons pair & qr -->
-  <a href="pair" class="btn" id="pairBtn">Pairing Code (20 coins)</a>
-  <a href="qrpage" class="btn" id="qrBtn">QR Code (20 coins)</a>
+  <a href="pair" class="btn" id="pairBtn">Pairing Code</a>
+  <a href="qrpage" class="btn" id="qrBtn">QR Code</a>
 
   <div class="result-message" id="resultMsg"></div>
 
@@ -157,17 +167,35 @@ const menuBtn = document.getElementById("menuBtn");
 const menuContent = document.getElementById("menuContent");
 menuBtn.onclick = ()=>{menuContent.style.display = menuContent.style.display==='flex'?'none':'flex';}
 
-// Coins
+// Coins et timer
 const coinsEl = document.getElementById("coins");
 const resultMsg = document.getElementById("resultMsg");
+const botTimer = document.getElementById("botTimer");
+
+let botTimeRemaining = 0;
+
 async function loadCoins(){
   const res = await fetch("/coins");
   const data = await res.json();
   coinsEl.textContent = data.coins;
+  botTimeRemaining = data.botActiveRemaining || 0;
+  updateTimer();
 }
 loadCoins();
 
-// Ajouter coins (simulate payment)
+function updateTimer(){
+  if(botTimeRemaining<=0){ botTimer.textContent="Bot inactif"; return; }
+  const interval = setInterval(()=>{
+    if(botTimeRemaining<=0){ botTimer.textContent="Bot inactif"; clearInterval(interval); return; }
+    botTimeRemaining-=1000;
+    const h = Math.floor(botTimeRemaining/3600000);
+    const m = Math.floor((botTimeRemaining%3600000)/60000);
+    const s = Math.floor((botTimeRemaining%60000)/1000);
+    botTimer.textContent = `Bot actif : ${h}h ${m}m ${s}s`;
+  },1000);
+}
+
+// Ajouter coins
 document.getElementById("addCoinsBtn").onclick = async ()=>{
   const amount = prompt("Combien de coins voulez-vous ajouter ?");
   if(!amount) return;
@@ -188,11 +216,12 @@ copyLinkBtn.onclick = ()=>{
 // Help
 document.getElementById("helpBtn").onclick = ()=>{
   resultMsg.innerHTML = `<span style="color:#38bdf8">
-  1️⃣ Pour accéder à Pairing ou QR Code vous devez avoir 20 coins.<br>
+  1️⃣ Pour accéder à Pairing ou QR Code vous devez avoir le bot actif.<br>
   2️⃣ Chaque nouvel utilisateur inscrit via votre lien de parrainage vous donne +5 coins.<br>
   3️⃣ Vous pouvez ajouter des coins via le bouton "+" (paiement Money Fusion simulé).<br>
-  4️⃣ Cliquez sur Pairing Code ou QR Code pour déployer, 20 coins seront déduits.<br>
-  5️⃣ Contactez RAIZEL ou KNUT si besoin.
+  4️⃣ Cliquez sur Pairing Code ou QR Code pour déployer, coins seront vérifiés.<br>
+  5️⃣ Achetez une durée pour activer le bot.<br>
+  6️⃣ Contactez RAIZEL ou KNUT si besoin.
   </span>`;
 }
 
@@ -200,14 +229,28 @@ document.getElementById("helpBtn").onclick = ()=>{
 document.getElementById("pairBtn").onclick = async (e)=>{
   e.preventDefault();
   const res = await fetch("/coins"); const data = await res.json();
-  if(data.coins<20){ resultMsg.innerHTML='<span style="color:#ef4444">Coins insuffisants (20 coins requis)</span>'; return; }
+  if((data.botActiveRemaining||0)<=0){ resultMsg.innerHTML='<span style="color:#ef4444">Bot inactif, achetez une durée</span>'; return; }
   window.location.href="pair";
 }
 document.getElementById("qrBtn").onclick = async (e)=>{
   e.preventDefault();
   const res = await fetch("/coins"); const data = await res.json();
-  if(data.coins<20){ resultMsg.innerHTML='<span style="color:#ef4444">Coins insuffisants (20 coins requis)</span>'; return; }
+  if((data.botActiveRemaining||0)<=0){ resultMsg.innerHTML='<span style="color:#ef4444">Bot inactif, achetez une durée</span>'; return; }
   window.location.href="qrpage";
+}
+
+// Acheter durée bot
+async function buyBot(hours){
+  const confirmBuy = confirm(`Confirmez l'achat de ${hours}h pour activer votre bot ?`);
+  if(!confirmBuy) return;
+  const res = await fetch("/buy-bot",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({duration:hours})});
+  const data = await res.json();
+  if(data.error) resultMsg.innerHTML=`<span style="color:#ef4444">${data.error}</span>`;
+  else{
+    resultMsg.innerHTML=`<span style="color:#38bdf8">✅ ${data.status}</span>`;
+    botTimeRemaining = data.expires - Date.now();
+    loadCoins();
+  }
 }
 </script>
 </body>

@@ -3,7 +3,7 @@ import session from "express-session";
 import bodyParser from "body-parser";
 import fs from "fs";
 import path from "path";
-import fetch from "node-fetch"; // pour Node < 18, sinon intégré
+import fetch from "node-fetch"; // Node <18 sinon intégré
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -11,7 +11,6 @@ const PORT = process.env.PORT || 3000;
 /* ================== CONFIG MONEY FUSION ================== */
 const MERCHANT_ID = "69620e03013a0771970d2b80";
 const MF_API_KEY = "moneyfusion_v1_6950f6d898fe6dbde00af590_4A53FFA3DD9F78644E53269883CEB2C5CBD11FF72932C76BE5C8EC504D0DA82E";
-const BASE_PAY_URL = "https://payin.moneyfusion.net/payment";
 
 /* ================== FILES ================== */
 const usersFile = "./users.json";
@@ -21,18 +20,28 @@ const paymentsFile = "./payments.json";
 if (!fs.existsSync(usersFile)) fs.writeFileSync(usersFile, "[]");
 if (!fs.existsSync(paymentsFile)) fs.writeFileSync(paymentsFile, "[]");
 
-// 🔹 Fonctions lecture/écriture
+// 🔹 Fonctions lecture/écriture JSON
 const loadUsers = () => {
-  try { return JSON.parse(fs.readFileSync(usersFile, "utf-8")) || []; }
-  catch { return []; }
+  try {
+    const data = fs.readFileSync(usersFile, "utf-8");
+    const json = JSON.parse(data);
+    return Array.isArray(json) ? json : [];
+  } catch {
+    return [];
+  }
 };
-const saveUsers = (d) => fs.writeFileSync(usersFile, JSON.stringify(d, null, 2));
+const saveUsers = (users) => fs.writeFileSync(usersFile, JSON.stringify(users, null, 2));
 
 const loadPayments = () => {
-  try { return JSON.parse(fs.readFileSync(paymentsFile, "utf-8")) || []; }
-  catch { return []; }
+  try {
+    const data = fs.readFileSync(paymentsFile, "utf-8");
+    const json = JSON.parse(data);
+    return Array.isArray(json) ? json : [];
+  } catch {
+    return [];
+  }
 };
-const savePayments = (d) => fs.writeFileSync(paymentsFile, JSON.stringify(d, null, 2));
+const savePayments = (payments) => fs.writeFileSync(paymentsFile, JSON.stringify(payments, null, 2));
 
 /* ================== MIDDLEWARE ================== */
 app.use(bodyParser.json());
@@ -61,7 +70,8 @@ app.post("/register", (req, res) => {
   const users = loadUsers();
   if (users.find(u => u.email === email)) return res.send("Email déjà utilisé");
 
-  users.push({ email, password, coins: 0, botActiveUntil: 0 });
+  const newUser = { email, password, coins: 0, botActiveUntil: 0 };
+  users.push(newUser);
   saveUsers(users);
 
   res.redirect("/login");
@@ -75,7 +85,7 @@ app.post("/login", (req, res) => {
 
   if (!user) return res.send("Identifiants incorrects");
 
-  req.session.user = user;
+  req.session.user = user; // session à jour
   res.redirect("/");
 });
 
@@ -162,6 +172,9 @@ app.post("/webhook", (req, res) => {
   savePayments(payments);
   saveUsers(users);
 
+  // mettre à jour la session si le paiement affecte l’utilisateur connecté
+  if (req.session.user.email === user.email) req.session.user = user;
+
   res.send("OK");
 });
 
@@ -179,6 +192,8 @@ app.post("/buy-bot", requireAuth, (req, res) => {
   user.botActiveUntil = Math.max(user.botActiveUntil, Date.now()) + duration * 3600000;
 
   saveUsers(users);
+  req.session.user = user; // session mise à jour
+
   res.json({ status: `Bot activé ${duration}h`, expires: user.botActiveUntil });
 });
 

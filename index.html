@@ -42,6 +42,7 @@ html,body{
   backdrop-filter: blur(10px) saturate(140%);
   border:1px solid var(--glass-border);
   text-align:center;
+  position:relative;
 }
 .card-header h1{
   font-family:"JetBrains Mono", monospace;
@@ -91,67 +92,113 @@ html,body{
   font-weight:bold;
   font-size:20px;
 }
-.credits{
-  font-size:12px;
-  color:var(--muted);
-  margin-top:20px;
+.credits{font-size:12px;color:var(--muted);margin-top:20px;}
+
+/* Avatar */
+.avatar img{
+  width:60px;
+  height:60px;
+  border-radius:50%;
+  border:2px solid var(--neon);
+  margin-bottom:10px;
 }
 
 /* Menu trois traits */
-.menu{
-  position:fixed;
-  top:10px;
-  right:10px;
-  font-size:28px;
+.menu-icon{
+  position:absolute;
+  top:16px;
+  right:16px;
+  width:30px;
+  height:22px;
   cursor:pointer;
-  z-index:100;
-  color:var(--neon);
+  display:flex;
+  flex-direction:column;
+  justify-content:space-between;
 }
-#menuContent{
-  display:none;
-  position:fixed;
-  top:50px;
-  right:10px;
-  width:250px;
-  background:var(--bg-2);
-  border:1px solid var(--glass-border);
-  border-radius:10px;
-  padding:10px;
-  z-index:100;
-}
-#menuContent div, #menuContent button{
-  margin-bottom:6px;
-  color:#dfffe6;
-}
-#menuContent button{
-  width:100%;
+.menu-icon div{
+  height:4px;
   background:var(--neon);
+  border-radius:2px;
+}
+.menu-content{
+  display:none;
+  position:absolute;
+  top:50px;
+  right:16px;
+  background:rgba(0,0,0,0.7);
+  border:1px solid var(--glass-border);
+  border-radius:12px;
+  padding:10px;
+  text-align:left;
+  width:200px;
+  z-index:100;
+}
+.menu-content a{
+  display:block;
+  color:#dfffe6;
+  padding:8px 0;
+  text-decoration:none;
+}
+.menu-content a:hover{
+  color:#38bdf8;
+}
+
+/* Coins */
+.coins{
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  margin-bottom:12px;
+  font-weight:bold;
+}
+.coins span{margin-left:8px;color:#38bdf8;}
+
+/* Coin add button */
+.add-coin{
+  margin-left:10px;
+  background:#38bdf8;
   color:#020617;
   border:none;
   border-radius:6px;
-  padding:6px;
   cursor:pointer;
+  padding:2px 8px;
+  font-weight:bold;
 }
+.add-coin:hover{opacity:0.9;}
 </style>
 </head>
 <body>
-
-<div class="menu" id="menuBtn">☰</div>
-<div id="menuContent">
-  <div>Coins: <span id="coinsDisplay">20</span></div>
-  <button onclick="copyReferral()">Générer lien de parrainage</button>
-  <div>Contact:<br>RAIZEL: <a href='https://wa.me/237699777530' target='_blank'>WA</a><br>KNUT: <a href='https://wa.me/237673941535' target='_blank'>WA</a></div>
-  <button onclick="alert('Pour vous connecter au bot, utilisez votre numéro et générez le code de pairing.')">Help</button>
-</div>
-
 <main class="stage">
 <section class="glass-card">
+  <div class="menu-icon" id="menuBtn">
+    <div></div>
+    <div></div>
+    <div></div>
+  </div>
+  <div class="menu-content" id="menuContent">
+    <a href="#" id="referralLink">Lien de parrainage</a>
+    <a href="#">Help</a>
+    <a href="https://wa.me/237699777530" target="_blank">RAIZEL</a>
+    <a href="https://wa.me/237673941535" target="_blank">KNUT</a>
+  </div>
+
+  <div class="avatar">
+    <img src="https://files.catbox.moe/36ywf8.jpeg" alt="Avatar">
+  </div>
+
   <header class="card-header">
     <h1>ROK XD</h1>
     <div class="small-url">WhatsApp Bot</div>
   </header>
-  <a href="/pair" class="btn" id="pairBtn">Pairing Code</a>
-  <a href="/qrpage" class="btn" id="qrBtn">QR Code</a>
+
+  <div class="coins">
+    Coins: <span id="coinCount">0</span>
+    <button class="add-coin" onclick="addCoins()">+</button>
+  </div>
+
+  <a href="pair" class="btn" id="pairBtn">Pairing Code (20 coins)</a>
+  <a href="qrpage" class="btn" id="qrBtn">QR Code (20 coins)</a>
+
   <div class="social-icons">
     <a href="https://t.me/devraizel" target="_blank">T</a>
     <a href="https://wa.me/237673941535" target="_blank">W</a>
@@ -164,27 +211,38 @@ html,body{
 // Menu toggle
 const menuBtn = document.getElementById("menuBtn");
 const menuContent = document.getElementById("menuContent");
-menuBtn.onclick = ()=> menuContent.style.display = menuContent.style.display==='none'?'block':'none';
+menuBtn.onclick = () => {
+  menuContent.style.display = menuContent.style.display === "block" ? "none" : "block";
+};
 
-// Coins - remplacer par valeur réelle depuis session
-let coins = 20;
-document.getElementById("coinsDisplay").innerText = coins;
+// Fetch coins
+let coins = 0;
+async function loadCoins(){
+  const r = await fetch("/coins");
+  const data = await r.json();
+  coins = data.coins || 0;
+  document.getElementById("coinCount").textContent = coins;
+}
+loadCoins();
 
-// Blocage si moins de 20 coins
+// Add coins placeholder (could open Money Fusion payment)
+function addCoins(){
+  alert("Ajouter des coins via paiement Money Fusion ou lien de parrainage !");
+}
+
+// Check coins before pair / qr
 document.getElementById("pairBtn").onclick = (e)=>{
-  if(coins < 20){ e.preventDefault(); alert("Vous avez besoin de 20 coins pour accéder à cette page."); return false; }
+  if(coins < 20){ e.preventDefault(); alert("Coins insuffisants (20 coins requis)"); return false; }
 };
 document.getElementById("qrBtn").onclick = (e)=>{
-  if(coins < 20){ e.preventDefault(); alert("Vous avez besoin de 20 coins pour accéder à cette page."); return false; }
+  if(coins < 20){ e.preventDefault(); alert("Coins insuffisants (20 coins requis)"); return false; }
 };
 
-// Parrainage
-function copyReferral(){
-  const username = "user123"; // injecter username réel depuis serveur
-  const link = `${window.location.origin}/register?ref=${username}`;
-  navigator.clipboard.writeText(link);
-  alert(`Lien de parrainage copié !\n${link}`);
-}
+// Referral link
+document.getElementById("referralLink").onclick = ()=>{
+  const username = prompt("Entrez votre nom d'utilisateur pour générer le lien de parrainage :");
+  if(username) alert(`Partage ce lien pour gagner 5 coins à chaque inscription : ${window.location.origin}/register?ref=${username}`);
+};
 </script>
 </body>
 </html>

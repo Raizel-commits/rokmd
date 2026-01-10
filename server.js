@@ -5,10 +5,6 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 
-/* ================= DEBUG ================= */
-process.on("uncaughtException", err => console.error("UNCAUGHT EXCEPTION:", err));
-process.on("unhandledRejection", err => console.error("UNHANDLED REJECTION:", err));
-
 /* ================= PATH ================= */
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -31,7 +27,7 @@ function loadUsers() {
   }
 }
 
-function saveUsers(users) {
+function saveUsers(users){
   fs.writeFileSync(usersFile, JSON.stringify(users, null, 2));
 }
 
@@ -100,7 +96,7 @@ app.use(session({
   cookie: { secure: false }
 }));
 
-/* ================= AUTH ================= */
+/* ================= AUTH MIDDLEWARE ================= */
 function requireAuth(req, res, next) {
   if (!req.session.user) return res.redirect("/login");
   next();
@@ -118,16 +114,17 @@ app.post("/register", (req, res) => {
   if (!username || !password) return res.send(renderError("Champs manquants", "/register"));
   if (users.some(u => u.username === username)) return res.send(renderError("Utilisateur déjà existant", "/register"));
 
-  const newUser = { username, password, coins: 20 }; // chaque nouvel utilisateur reçoit 20 coins
-  users.push(newUser);
+  let coins = 20; // bonus d'inscription
 
-  // Bonus parrainage
+  // bonus parrainage
   if(ref){
-    const refUser = users.find(u => u.username === ref);
-    if(refUser) refUser.coins += 5;
+    const parent = users.find(u => u.username === ref);
+    if(parent) parent.coins = (parent.coins || 0) + 5;
   }
 
+  users.push({ username, password, coins });
   saveUsers(users);
+
   res.redirect("/login");
 });
 
@@ -147,28 +144,56 @@ app.post("/login", (req, res) => {
 app.get("/logout", (req, res) => req.session.destroy(() => res.redirect("/login")));
 
 /* ================= PROTECTED ROUTES ================= */
-app.get("/", requireAuth, (req, res) => {
-  const user = req.session.user;
-  let indexHtml = fs.readFileSync(path.join(__dirname, "index.html"), "utf-8");
-  // Injecter username et coins dans le HTML
-  indexHtml = indexHtml.replace('let coins = 20;', `let coins = ${user.coins};`);
-  indexHtml = indexHtml.replace('const username = "user123";', `const username = "${user.username}";`);
-  res.send(indexHtml);
+app.get("/", requireAuth, (_, res) => res.sendFile(path.join(__dirname, "index.html")));
+
+/* ================= ROUTE COINS ================= */
+app.get("/coins", requireAuth, (req, res) => {
+  const users = loadUsers();
+  const user = users.find(u => u.username === req.session.user.username);
+  res.json({ coins: user?.coins || 0 });
 });
 
-// Vérification coins pour accès
-app.get("/pair", requireAuth, (req, res) => {
-  if(req.session.user.coins < 20) return res.send(renderError("Vous avez besoin de 20 coins pour accéder à cette page", "/"));
-  res.sendFile(path.join(__dirname, "pair.html"));
+/* ================= AJOUT COINS ================= */
+app.post("/add-coins", requireAuth, (req, res) => {
+  const { amount } = req.body;
+  if(!amount || isNaN(amount)) return res.json({ error: "Montant invalide" });
+
+  const users = loadUsers();
+  const user = users.find(u => u.username === req.session.user.username);
+  if(!user) return res.json({ error: "Utilisateur introuvable" });
+
+  user.coins = (user.coins || 0) + Number(amount);
+  saveUsers(users);
+  req.session.user = user;
+
+  res.json({ status: `${amount} coins ajoutés !`, coins: user.coins });
 });
-app.get("/qrpage", requireAuth, (req, res) => {
-  if(req.session.user.coins < 20) return res.send(renderError("Vous avez besoin de 20 coins pour accéder à cette page", "/"));
-  res.sendFile(path.join(__dirname, "qr.html"));
-});
+
+/* ================= PAYANT PAIR ET QR ================= */
+function requireCoins(req, res, next) {
+  const users = loadUsers();
+  const user = users.find(u => u.username === req.session.user.username);
+  if(!user) return res.redirect("/login");
+
+  if((user.coins || 0) < 20){
+    return res.send(renderError("Coins insuffisants pour accéder à cette page", "/"));
+  }
+
+  // Déduire 20 coins
+  user.coins -= 20;
+  saveUsers(users);
+  req.session.user = user;
+
+  next();
+}
+
+app.get("/pair", requireAuth, requireCoins, (_, res) => res.sendFile(path.join(__dirname, "pair.html")));
+app.get("/qrpage", requireAuth, requireCoins, (_, res) => res.sendFile(path.join(__dirname, "qr.html")));
 
 /* ================= ROUTERS ================= */
 import qrRouter from "./qr.js";
 import pairRouter from "./pair.js";
+
 app.use("/qr", requireAuth, qrRouter);
 app.use("/", requireAuth, pairRouter);
 

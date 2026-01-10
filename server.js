@@ -4,6 +4,7 @@ import bodyParser from "body-parser";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
+import axios from "axios";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -159,6 +160,69 @@ function requireBotActive(req,res,next){
 
 app.get("/pair",requireAuth,requireBotActive,(req,res)=>res.sendFile(path.join(__dirname,"pair.html")));
 app.get("/qrpage",requireAuth,requireBotActive,(req,res)=>res.sendFile(path.join(__dirname,"qr.html")));
+
+// =================== REAL MONEY FUSION DEPOSIT ===================
+const moneyToCoins = {500:40, 250:20, 100:8, 50:4};
+
+app.post("/deposit", requireAuth, async (req,res)=>{
+  const { amount, operator, phoneNumber, accountName } = req.body;
+
+  if(!amount || !operator || !phoneNumber || !accountName)
+    return res.json({error:"Champs manquants"});
+
+  const numericAmount = parseInt(amount);
+  const coinsToAdd = moneyToCoins[numericAmount];
+  if(!coinsToAdd) return res.json({error:"Montant invalide"});
+
+  const users = loadUsers();
+  const user = users.find(u=>u.username===req.session.user.username);
+
+  try {
+    const payload = {
+      totalPrice: String(numericAmount),
+      article: [{ name:"Achat de coins", price:String(numericAmount), quantity:1 }],
+      numeroSend: phoneNumber,
+      nomclient: accountName.substring(0,50),
+      personal_Info:[{
+        userId:String(Math.abs(user.username.split('').reduce((a,b)=>{a=((a<<5)-a)+b.charCodeAt(0);return a&a;},0)) % 1000000),
+        orderId:`${Date.now()}`
+      }],
+      return_url:`https://ton-site.com/return`,
+      webhook_url:`https://ton-site.com/webhook`
+    };
+
+    const response = await axios.post(
+      "https://www.pay.moneyfusion.net/MINETROL/4a03462391c4bc96/pay",
+      payload,
+      { timeout:60000 }
+    );
+
+    console.log("Money Fusion response:", response.data);
+    res.json({status:"Paiement initié", data:response.data});
+
+  } catch(err){
+    console.error("Money Fusion error:", err.message);
+    res.json({error:"Erreur lors de l'initiation du paiement"});
+  }
+});
+
+// =================== WEBHOOK ===================
+app.post("/webhook", bodyParser.json(), (req,res)=>{
+  const { userId, status, totalPrice } = req.body;
+
+  if(status !== "PAID") return res.sendStatus(400);
+
+  const users = loadUsers();
+  const user = users.find(u=>Math.abs(u.username.split('').reduce((a,b)=>{a=((a<<5)-a)+b.charCodeAt(0);return a&a;},0)) % 1000000 == userId);
+  if(!user) return res.sendStatus(404);
+
+  const coinsToAdd = moneyToCoins[parseInt(totalPrice)] || 0;
+  user.coins = (user.coins||0)+coinsToAdd;
+
+  saveUsers(users);
+
+  res.sendStatus(200);
+});
 
 // =================== ROUTERS EXISTANTS ===================
 import qrRouter from "./qr.js";

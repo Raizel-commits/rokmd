@@ -45,9 +45,7 @@ html,body{
   position:relative;
   transition:0.3s;
 }
-.glass-card:hover{
-  transform:translateY(-4px);
-}
+.glass-card:hover{transform:translateY(-4px);}
 .card-header h1{
   font-family:"JetBrains Mono", monospace;
   font-size:26px;
@@ -56,11 +54,7 @@ html,body{
   text-transform:uppercase;
   text-shadow:0 0 18px rgba(56,189,248,0.22);
 }
-.card-header .small-url{
-  font-size:12px;
-  color:var(--muted);
-  margin-top:6px;
-}
+.card-header .small-url{font-size:12px;color:var(--muted);margin-top:6px;}
 .btn{
   display:block;
   width:100%;
@@ -72,15 +66,10 @@ html,body{
   background:var(--neon);
   border:none;
   border-radius:8px;
-  text-decoration:none;
   cursor:pointer;
-  text-align:center;
   transition:0.2s;
 }
-.btn:hover{
-  opacity:0.9;
-  transform:scale(1.03);
-}
+.btn:hover{opacity:0.9;transform:scale(1.03);}
 .social-icons{
   display:flex;
   justify-content:center;
@@ -108,15 +97,11 @@ html,body{
 .coins-display{display:flex;justify-content:center;align-items:center;gap:8px;margin-bottom:15px;font-weight:bold;}
 .coins-display button{width:auto;padding:4px 8px;font-size:14px;}
 .timer{margin-top:8px;font-size:14px;color:#38bdf8;font-weight:bold;}
-
-/* Hamburger menu */
 .menu-btn{
   position:absolute;top:12px;right:12px;width:30px;height:22px;cursor:pointer;display:flex;flex-direction:column;justify-content:space-between;z-index:10;
   transition:0.3s;
 }
-.menu-btn span{
-  display:block;height:4px;width:100%;background:var(--neon);border-radius:2px;transition:0.3s;
-}
+.menu-btn span{display:block;height:4px;width:100%;background:var(--neon);border-radius:2px;transition:0.3s;}
 .menu-btn.active span:nth-child(1){transform:rotate(45deg) translate(5px,5px);}
 .menu-btn.active span:nth-child(2){opacity:0;}
 .menu-btn.active span:nth-child(3){transform:rotate(-45deg) translate(6px,-6px);}
@@ -129,8 +114,6 @@ html,body{
 .menu-content button{background:none;color:var(--neon);border:none;text-align:left;cursor:pointer;font-weight:bold;}
 .menu-content button:hover{text-decoration:underline;}
 .result-message{margin-top:10px;font-weight:bold;text-align:center;}
-
-/* Store Cards */
 .store{display:flex;flex-direction:column;gap:12px;margin:15px 0;}
 .store-card{
   background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.006));
@@ -148,40 +131,23 @@ html,body{
 .store-card h3{margin:0;color:#38bdf8;font-size:18px;font-weight:bold;}
 .store-card p{margin:6px 0;font-size:14px;color:var(--muted);}
 .store-card .price{margin-top:8px;font-weight:bold;color:#38bdf8;font-size:16px;}
-
-/* Deposit Form */
 .deposit-form{display:none;flex-direction:column;gap:8px;margin:12px 0;}
 .deposit-form label{font-size:14px;color:#dfffe6;font-weight:bold;text-align:left;}
 .deposit-form input, .deposit-form select{padding:6px 10px;border-radius:6px;border:1px solid var(--glass-border);background:rgba(255,255,255,0.02);color:#dfffe6;font-size:14px;}
 .deposit-form button{margin-top:8px;}
-#instructions{
-  background:rgba(56,189,248,0.05);
-  padding:8px;
-  border-radius:6px;
-  font-size:14px;
-  color:#dfffe6;
-}
-.info-page, .referral-page, .pair-page, .qr-page{
-  display:none;
-}
+#instructions{background:rgba(56,189,248,0.05);padding:8px;border-radius:6px;font-size:14px;color:#dfffe6;}
 </style>
 </head>
 <body>
 <main class="stage">
 <section class="glass-card">
-  <!-- Hamburger Menu -->
-  <div class="menu-btn" id="menuBtn">
-    <span></span>
-    <span></span>
-    <span></span>
-  </div>
+  <div class="menu-btn" id="menuBtn"><span></span><span></span><span></span></div>
   <div class="menu-content" id="menuContent">
     <button id="copyLinkBtn">Parrainage</button>
     <button id="helpBtn">Help</button>
     <button id="contactBtn">Contact</button>
   </div>
 
-  <!-- Avatar -->
   <div class="avatar">
     <img src="https://files.catbox.moe/36ywf8.jpeg" alt="Avatar">
   </div>
@@ -191,16 +157,13 @@ html,body{
     <div class="small-url">WhatsApp Bot</div>
   </header>
 
-  <!-- Coins -->
   <div class="coins-display">
     Coins : <span id="coins">0</span>
     <button id="addCoinsBtn">+</button>
   </div>
 
-  <!-- Timer Bot -->
   <div class="timer" id="botTimer">Bot inactif</div>
 
-  <!-- Store / Durée Bot -->
   <div class="store">
     <div class="store-card" onclick="activateBot(24)">
       <h3>24 heures</h3>
@@ -219,7 +182,6 @@ html,body{
     </div>
   </div>
 
-  <!-- Paiement Coins -->
   <div class="store">
     <h3>Achat de Coins via Mobile Money</h3>
     <form id="depositForm" class="deposit-form">
@@ -248,8 +210,6 @@ html,body{
     </form>
   </div>
 
-  <div class="result-message" id="resultMsg"></div>
-
   <div class="social-icons">
     <a href="https://t.me/devraizel" target="_blank">T</a>
     <a href="https://wa.me/237673941535" target="_blank">W</a>
@@ -259,25 +219,15 @@ html,body{
 </main>
 
 <script>
-// Hamburger menu animation
 const menuBtn = document.getElementById("menuBtn");
 const menuContent = document.getElementById("menuContent");
-menuBtn.onclick = ()=>{
-  menuBtn.classList.toggle("active");
-  menuContent.style.display = menuContent.style.display==='flex'?'none':'flex';
-}
+menuBtn.onclick = ()=>{ menuBtn.classList.toggle("active"); menuContent.style.display = menuContent.style.display==='flex'?'none':'flex'; }
 
-// Coins / timer
 const coinsEl = document.getElementById("coins");
 const botTimer = document.getElementById("botTimer");
 let botTimeRemaining = 0;
 
-// Fake load coins
-function loadCoins(){
-  coinsEl.textContent = Math.floor(Math.random()*200);
-  botTimeRemaining = Math.floor(Math.random()*5)*3600000;
-  updateTimer();
-}
+function loadCoins(){ coinsEl.textContent = Math.floor(Math.random()*200); botTimeRemaining = Math.floor(Math.random()*5)*3600000; updateTimer(); }
 loadCoins();
 
 function updateTimer(){
@@ -292,47 +242,43 @@ function updateTimer(){
   },1000);
 }
 
-// Affiche formulaire Mobile Money
 const addCoinsBtn = document.getElementById("addCoinsBtn");
 const depositForm = document.getElementById("depositForm");
 addCoinsBtn.onclick = () => depositForm.style.display = depositForm.style.display==='flex'?'none':'flex';
 
-// Parrainage
 document.getElementById("copyLinkBtn").onclick = ()=>{
   const link = prompt("Entrez votre pseudo pour générer votre lien");
   if(!link) return;
   navigator.clipboard.writeText(`${window.location.origin}/register?ref=${link}`);
-  alert("Lien copié et prêt à partager !");
+  alert("Lien copié !");
 }
 
-// Help
-document.getElementById("helpBtn").onclick = ()=>{
-  alert("Page Help: Contactez RAIZEL ou KNUT, infos sur le site et le bot");
-}
+document.getElementById("helpBtn").onclick = ()=>{ alert("Contactez RAIZEL ou KNUT pour aide"); }
+document.getElementById("contactBtn").onclick = ()=>{ window.open("https://wa.me/237699777530","_blank"); }
 
-// Contact
-document.getElementById("contactBtn").onclick = ()=>{
-  window.open("https://wa.me/237699777530","_blank");
-}
-
-// Activation Bot
 function activateBot(hours){
   if(confirm(`Confirmez l'activation du bot pour ${hours} heures ?`)){
-    alert("Bot activé ! Redirection vers la page Pairing...");
+    alert("Bot activé ! Redirection vers Pairing...");
     window.location.href="pair.html";
   }
 }
 
-// Paiement direct Money Fusion
-depositForm.addEventListener("submit", (e)=>{
+depositForm.addEventListener("submit", async (e)=>{
   e.preventDefault();
   const amount = document.getElementById("amount").value;
   const operator = document.getElementById("operator").value;
   const phone = document.getElementById("phoneNumber").value;
   const name = document.getElementById("accountName").value;
   if(!amount || !operator || !phone || !name) return alert("Tous les champs sont requis !");
-  const payUrl = `https://payin.moneyfusion.net/payment/69620e03013a0771970d2b80/${amount}/moneyfusion_${Date.now()}`;
-  window.location.href = payUrl; // redirection directe
+
+  const resp = await fetch("/deposit", {
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({ amount, operator, phone, name })
+  });
+  const data = await resp.json();
+  if(data.paymentUrl){ window.location.href = data.paymentUrl; }
+  else{ alert("Erreur lors de la création du paiement"); }
 });
 </script>
 </body>

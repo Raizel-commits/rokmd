@@ -14,89 +14,15 @@
   --card-w:400px;
 }
 *{box-sizing:border-box;}
-html,body{
-  height:100%;
-  margin:0;
-  font-family:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial;
-  background: radial-gradient(1200px 600px at 10% 10%, rgba(56,189,248,0.03), transparent),
-              radial-gradient(900px 500px at 90% 85%, rgba(56,189,248,0.02), transparent),
-              linear-gradient(180deg,var(--bg-1),var(--bg-2));
-  color:#dfffe6;
-  overflow-x:hidden;
-}
-.stage{
-  position:relative;
-  min-height:100vh;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  padding:36px;
-}
-.glass-card{
-  width:var(--card-w);
-  max-width:95vw;
-  background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
-  border-radius:18px;
-  padding:22px;
-  box-shadow:0 10px 40px rgba(0,0,0,0.7),0 0 40px rgba(56,189,248,0.05) inset;
-  backdrop-filter: blur(12px) saturate(150%);
-  border:1px solid var(--glass-border);
-  text-align:center;
-  position:relative;
-}
-.card-header h1{
-  font-family:"JetBrains Mono", monospace;
-  font-size:26px;
-  margin:0;
-  color:var(--neon);
-  text-transform:uppercase;
-  text-shadow:0 0 18px rgba(56,189,248,0.22);
-}
-.card-header .small-url{
-  font-size:12px;
-  color:var(--muted);
-  margin-top:6px;
-}
-.btn{
-  display:block;
-  width:100%;
-  padding:12px;
-  margin:10px 0;
-  font-size:16px;
-  font-weight:bold;
-  color:#020617;
-  background:var(--neon);
-  border:none;
-  border-radius:8px;
-  text-decoration:none;
-  cursor:pointer;
-  text-align:center;
-  transition:0.2s;
-}
-.btn:hover{
-  opacity:0.9;
-  transform:scale(1.03);
-}
-.social-icons{
-  display:flex;
-  justify-content:center;
-  gap:15px;
-  margin-top:15px;
-}
-.social-icons a{
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  width:40px;
-  height:40px;
-  border-radius:50%;
-  background:var(--neon);
-  color:#020617;
-  text-decoration:none;
-  font-weight:bold;
-  font-size:20px;
-  transition:0.2s;
-}
+html,body{height:100%;margin:0;font-family:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial;background: radial-gradient(1200px 600px at 10% 10%, rgba(56,189,248,0.03), transparent),radial-gradient(900px 500px at 90% 85%, rgba(56,189,248,0.02), transparent),linear-gradient(180deg,var(--bg-1),var(--bg-2));color:#dfffe6;overflow-x:hidden;}
+.stage{position:relative;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:36px;}
+.glass-card{width:var(--card-w);max-width:95vw;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border-radius:18px;padding:22px;box-shadow:0 10px 40px rgba(0,0,0,0.7),0 0 40px rgba(56,189,248,0.05) inset;backdrop-filter: blur(12px) saturate(150%);border:1px solid var(--glass-border);text-align:center;position:relative;}
+.card-header h1{font-family:"JetBrains Mono", monospace;font-size:26px;margin:0;color:var(--neon);text-transform:uppercase;text-shadow:0 0 18px rgba(56,189,248,0.22);}
+.card-header .small-url{font-size:12px;color:var(--muted);margin-top:6px;}
+.btn{display:block;width:100%;padding:12px;margin:10px 0;font-size:16px;font-weight:bold;color:#020617;background:var(--neon);border:none;border-radius:8px;text-decoration:none;cursor:pointer;text-align:center;transition:0.2s;}
+.btn:hover{opacity:0.9;transform:scale(1.03);}
+.social-icons{display:flex;justify-content:center;gap:15px;margin-top:15px;}
+.social-icons a{display:flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:50%;background:var(--neon);color:#020617;text-decoration:none;font-weight:bold;font-size:20px;transition:0.2s;}
 .social-icons a:hover{transform:scale(1.1);}
 .credits{font-size:12px;color:var(--muted);margin-top:20px;}
 .avatar{margin-bottom:10px;}
@@ -104,57 +30,29 @@ html,body{
 .coins-display{display:flex;justify-content:center;align-items:center;gap:8px;margin-bottom:15px;font-weight:bold;}
 .coins-display button{width:auto;padding:4px 8px;font-size:14px;}
 .timer{margin-top:8px;font-size:14px;color:#38bdf8;font-weight:bold;}
-
-/* Hamburger menu */
 .menu-btn{position:absolute;top:12px;right:12px;width:30px;height:22px;cursor:pointer;display:flex;flex-direction:column;justify-content:space-between;z-index:10;}
 .menu-btn span{display:block;height:4px;width:100%;background:var(--neon);border-radius:2px;transition:0.3s;}
 .menu-content{position:absolute;top:50px;right:0;width:220px;background:linear-gradient(180deg, rgba(0,0,0,0.3), rgba(0,0,0,0.1));border:1px solid var(--glass-border);border-radius:10px;padding:10px;display:none;flex-direction:column;gap:10px;z-index:9;}
 .menu-content button{background:none;color:var(--neon);border:none;text-align:left;cursor:pointer;font-weight:bold;}
 .menu-content button:hover{text-decoration:underline;}
 .result-message{margin-top:10px;font-weight:bold;text-align:center;}
-
-/* Store Cards */
 .store{display:flex;flex-direction:column;gap:12px;margin:15px 0;}
-.store-card{
-  background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.006));
-  border:1px solid var(--glass-border);
-  border-radius:15px;
-  padding:15px;
-  text-align:center;
-  cursor:pointer;
-  transition:0.2s;
-}
-.store-card:hover{
-  box-shadow:0 0 20px var(--neon),0 0 40px rgba(56,189,248,0.15) inset;
-  transform:scale(1.03);
-}
+.store-card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.006));border:1px solid var(--glass-border);border-radius:15px;padding:15px;text-align:center;cursor:pointer;transition:0.2s;}
+.store-card:hover{box-shadow:0 0 20px var(--neon),0 0 40px rgba(56,189,248,0.15) inset;transform:scale(1.03);}
 .store-card h3{margin:0;color:#38bdf8;font-size:18px;font-weight:bold;}
 .store-card p{margin:6px 0;font-size:14px;color:var(--muted);}
 .store-card .price{margin-top:8px;font-weight:bold;color:#38bdf8;font-size:16px;}
-
-/* Deposit Form */
 .deposit-form{display:none;flex-direction:column;gap:8px;margin:12px 0;}
 .deposit-form label{font-size:14px;color:#dfffe6;font-weight:bold;text-align:left;}
 .deposit-form input, .deposit-form select{padding:6px 10px;border-radius:6px;border:1px solid var(--glass-border);background:rgba(255,255,255,0.02);color:#dfffe6;font-size:14px;}
 .deposit-form button{margin-top:8px;}
-#instructions{
-  background:rgba(56,189,248,0.05);
-  padding:8px;
-  border-radius:6px;
-  font-size:14px;
-  color:#dfffe6;
-}
+#instructions{background:rgba(56,189,248,0.05);padding:8px;border-radius:6px;font-size:14px;color:#dfffe6;}
 </style>
 </head>
 <body>
 <main class="stage">
 <section class="glass-card">
-  <!-- Hamburger Menu -->
-  <div class="menu-btn" id="menuBtn">
-    <span></span>
-    <span></span>
-    <span></span>
-  </div>
+  <div class="menu-btn" id="menuBtn"><span></span><span></span><span></span></div>
   <div class="menu-content" id="menuContent">
     <button id="copyLinkBtn">Copier mon lien de parrainage</button>
     <button onclick="window.open('https://wa.me/237699777530','_blank')">Contacter RAIZEL</button>
@@ -162,45 +60,18 @@ html,body{
     <button id="helpBtn">Help</button>
   </div>
 
-  <!-- Avatar -->
-  <div class="avatar">
-    <img src="https://files.catbox.moe/36ywf8.jpeg" alt="Avatar">
-  </div>
+  <div class="avatar"><img src="https://files.catbox.moe/36ywf8.jpeg" alt="Avatar"></div>
+  <header class="card-header"><h1>ROK XD</h1><div class="small-url">WhatsApp Bot</div></header>
 
-  <header class="card-header">
-    <h1>ROK XD</h1>
-    <div class="small-url">WhatsApp Bot</div>
-  </header>
-
-  <!-- Coins -->
-  <div class="coins-display">
-    Coins : <span id="coins">0</span>
-    <button id="addCoinsBtn">+</button>
-  </div>
-
-  <!-- Timer Bot -->
+  <div class="coins-display">Coins : <span id="coins">0</span> <button id="addCoinsBtn">+</button></div>
   <div class="timer" id="botTimer">Bot inactif</div>
 
-  <!-- Store / Durée Bot -->
   <div class="store">
-    <div class="store-card" onclick="buyBot(24)">
-      <h3>24 heures</h3>
-      <p>Activation du bot pendant 24h</p>
-      <div class="price">20 coins</div>
-    </div>
-    <div class="store-card" onclick="buyBot(48)">
-      <h3>48 heures</h3>
-      <p>Activation du bot pendant 48h</p>
-      <div class="price">40 coins</div>
-    </div>
-    <div class="store-card" onclick="buyBot(72)">
-      <h3>72 heures</h3>
-      <p>Activation du bot pendant 72h</p>
-      <div class="price">60 coins</div>
-    </div>
+    <div class="store-card" onclick="buyBot(24)"><h3>24 heures</h3><p>Activation du bot pendant 24h</p><div class="price">20 coins</div></div>
+    <div class="store-card" onclick="buyBot(48)"><h3>48 heures</h3><p>Activation du bot pendant 48h</p><div class="price">40 coins</div></div>
+    <div class="store-card" onclick="buyBot(72)"><h3>72 heures</h3><p>Activation du bot pendant 72h</p><div class="price">60 coins</div></div>
   </div>
 
-  <!-- Dépôt Coins via Mobile Money -->
   <div class="store">
     <h3>Achat de Coins via Mobile Money</h3>
     <form id="depositForm" class="deposit-form">
@@ -241,10 +112,8 @@ html,body{
     <div id="depositResult" class="result-message"></div>
   </div>
 
-  <!-- Boutons pair & qr -->
   <a href="pair" class="btn" id="pairBtn">Pairing Code</a>
   <a href="qrpage" class="btn" id="qrBtn">QR Code</a>
-
   <div class="result-message" id="resultMsg"></div>
 
   <div class="social-icons">
@@ -260,7 +129,6 @@ const menuBtn = document.getElementById("menuBtn");
 const menuContent = document.getElementById("menuContent");
 menuBtn.onclick = ()=>{menuContent.style.display = menuContent.style.display==='flex'?'none':'flex';}
 
-// Coins et timer
 const coinsEl = document.getElementById("coins");
 const resultMsg = document.getElementById("resultMsg");
 const botTimer = document.getElementById("botTimer");
@@ -287,14 +155,10 @@ function updateTimer(){
   },1000);
 }
 
-// Afficher/Masquer le formulaire Mobile Money
 const addCoinsBtn = document.getElementById("addCoinsBtn");
 const depositForm = document.getElementById("depositForm");
-addCoinsBtn.onclick = () => {
-  depositForm.style.display = depositForm.style.display === "flex" ? "none" : "flex";
-}
+addCoinsBtn.onclick = () => { depositForm.style.display = depositForm.style.display === "flex" ? "none" : "flex"; }
 
-// Instructions opérateur
 const operatorSelect = document.getElementById("operator");
 const amountSelect = document.getElementById("amount");
 const instructionsDiv = document.getElementById("instructions");
@@ -302,42 +166,26 @@ const instructionsDiv = document.getElementById("instructions");
 function updateInstructions() {
   const op = operatorSelect.value;
   const amount = amountSelect.value;
-  if(!op || !amount){
-    instructionsDiv.textContent = "Sélectionnez un opérateur et un montant pour voir les instructions.";
-    return;
-  }
+  if(!op || !amount){ instructionsDiv.textContent = "Sélectionnez un opérateur et un montant pour voir les instructions."; return; }
   let instr = "";
   switch(op){
-    case "MTN Money":
-      instr = `MTN Money : Tapez *126# → Montant ${amount} F → Confirmez avec votre code secret.`;
-      break;
-    case "Orange Money":
-      instr = `Orange Money : Tapez *150# → Montant ${amount} F → Confirmez avec votre code secret.`;
-      break;
-    case "Moov Money":
-      instr = `Moov Money : Tapez *555# → Montant ${amount} F → Confirmez avec votre code secret.`;
-      break;
-    case "Wave":
-      instr = `Wave : Ouvrez l'application Wave → Montant ${amount} F → Confirmez.`;
-      break;
-    case "Autre":
-      instr = `Veuillez suivre les instructions de votre opérateur pour effectuer le paiement de ${amount} F vers Minetrol.`;
-      break;
+    case "MTN Money": instr = `MTN Money : Tapez *126# → Montant ${amount} F → Confirmez avec votre code secret.`; break;
+    case "Orange Money": instr = `Orange Money : Tapez *150# → Montant ${amount} F → Confirmez avec votre code secret.`; break;
+    case "Moov Money": instr = `Moov Money : Tapez *555# → Montant ${amount} F → Confirmez avec votre code secret.`; break;
+    case "Wave": instr = `Wave : Ouvrez l'application Wave → Montant ${amount} F → Confirmez.`; break;
+    case "Autre": instr = `Veuillez suivre les instructions de votre opérateur pour effectuer le paiement de ${amount} F.`; break;
   }
   instructionsDiv.textContent = instr;
 }
 operatorSelect.onchange = updateInstructions;
 amountSelect.onchange = updateInstructions;
 
-// Parrainage
-const copyLinkBtn = document.getElementById("copyLinkBtn");
-copyLinkBtn.onclick = ()=>{
+document.getElementById("copyLinkBtn").onclick = ()=>{
   const link = `${window.location.origin}/register?ref=${encodeURIComponent(prompt('Entrez votre nom d’utilisateur pour générer le lien'))}`;
   navigator.clipboard.writeText(link);
   resultMsg.innerHTML=`<span style="color:#38bdf8">Lien copié !</span>`;
 }
 
-// Help
 document.getElementById("helpBtn").onclick = ()=>{
   resultMsg.innerHTML = `<span style="color:#38bdf8">
   1️⃣ Pour accéder à Pairing ou QR Code vous devez avoir le bot actif.<br>
@@ -349,7 +197,6 @@ document.getElementById("helpBtn").onclick = ()=>{
   </span>`;
 }
 
-// Vérification coins avant pair/qr
 document.getElementById("pairBtn").onclick = async (e)=>{
   e.preventDefault();
   const res = await fetch("/coins"); const data = await res.json();
@@ -363,7 +210,6 @@ document.getElementById("qrBtn").onclick = async (e)=>{
   window.location.href="qrpage";
 }
 
-// Acheter durée bot
 async function buyBot(hours){
   const confirmBuy = confirm(`Confirmez l'achat de ${hours}h pour activer votre bot ?`);
   if(!confirmBuy) return;
@@ -377,7 +223,6 @@ async function buyBot(hours){
   }
 }
 
-// Paiement via Money Fusion
 const depositResult = document.getElementById("depositResult");
 depositForm.addEventListener("submit", async (e)=>{
   e.preventDefault();

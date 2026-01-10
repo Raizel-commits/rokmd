@@ -137,24 +137,12 @@ html,body{
 .deposit-form label{font-size:14px;color:#dfffe6;font-weight:bold;text-align:left;}
 .deposit-form input, .deposit-form select{padding:6px 10px;border-radius:6px;border:1px solid var(--glass-border);background:rgba(255,255,255,0.02);color:#dfffe6;font-size:14px;}
 .deposit-form button{margin-top:8px;}
-#instructions{
-  background:rgba(56,189,248,0.05);
-  padding:8px;
-  border-radius:6px;
-  font-size:14px;
-  color:#dfffe6;
-}
 </style>
 </head>
 <body>
 <main class="stage">
 <section class="glass-card">
-  <!-- Hamburger Menu -->
-  <div class="menu-btn" id="menuBtn">
-    <span></span>
-    <span></span>
-    <span></span>
-  </div>
+  <div class="menu-btn" id="menuBtn"><span></span><span></span><span></span></div>
   <div class="menu-content" id="menuContent">
     <button id="copyLinkBtn">Copier mon lien de parrainage</button>
     <button onclick="window.open('https://wa.me/237699777530','_blank')">Contacter RAIZEL</button>
@@ -162,45 +150,32 @@ html,body{
     <button id="helpBtn">Help</button>
   </div>
 
-  <!-- Avatar -->
-  <div class="avatar">
-    <img src="https://files.catbox.moe/36ywf8.jpeg" alt="Avatar">
-  </div>
+  <div class="avatar"><img src="https://files.catbox.moe/36ywf8.jpeg" alt="Avatar"></div>
 
   <header class="card-header">
     <h1>ROK XD</h1>
     <div class="small-url">WhatsApp Bot</div>
   </header>
 
-  <!-- Coins -->
   <div class="coins-display">
     Coins : <span id="coins">0</span>
     <button id="addCoinsBtn">+</button>
   </div>
 
-  <!-- Timer Bot -->
   <div class="timer" id="botTimer">Bot inactif</div>
 
-  <!-- Store / Durée Bot -->
   <div class="store">
     <div class="store-card" onclick="buyBot(24)">
-      <h3>24 heures</h3>
-      <p>Activation du bot pendant 24h</p>
-      <div class="price">20 coins</div>
+      <h3>24 heures</h3><p>Activation du bot pendant 24h</p><div class="price">20 coins</div>
     </div>
     <div class="store-card" onclick="buyBot(48)">
-      <h3>48 heures</h3>
-      <p>Activation du bot pendant 48h</p>
-      <div class="price">40 coins</div>
+      <h3>48 heures</h3><p>Activation du bot pendant 48h</p><div class="price">40 coins</div>
     </div>
     <div class="store-card" onclick="buyBot(72)">
-      <h3>72 heures</h3>
-      <p>Activation du bot pendant 72h</p>
-      <div class="price">60 coins</div>
+      <h3>72 heures</h3><p>Activation du bot pendant 72h</p><div class="price">60 coins</div>
     </div>
   </div>
 
-  <!-- Dépôt Coins via Mobile Money -->
   <div class="store">
     <h3>Achat de Coins via Mobile Money</h3>
     <form id="depositForm" class="deposit-form">
@@ -233,15 +208,11 @@ html,body{
       <label>Nom du titulaire:</label>
       <input type="text" id="accountName" placeholder="Nom complet" required>
 
-      <label>Instructions opérateur:</label>
-      <div id="instructions">Sélectionnez un opérateur et un montant pour voir les instructions.</div>
-
       <button type="submit" class="btn">Acheter Coins</button>
     </form>
     <div id="depositResult" class="result-message"></div>
   </div>
 
-  <!-- Boutons pair & qr -->
   <a href="pair" class="btn" id="pairBtn">Pairing Code</a>
   <a href="qrpage" class="btn" id="qrBtn">QR Code</a>
 
@@ -294,44 +265,8 @@ addCoinsBtn.onclick = () => {
   depositForm.style.display = depositForm.style.display === "flex" ? "none" : "flex";
 }
 
-// Instructions opérateur
-const operatorSelect = document.getElementById("operator");
-const amountSelect = document.getElementById("amount");
-const instructionsDiv = document.getElementById("instructions");
-
-function updateInstructions() {
-  const op = operatorSelect.value;
-  const amount = amountSelect.value;
-  if(!op || !amount){
-    instructionsDiv.textContent = "Sélectionnez un opérateur et un montant pour voir les instructions.";
-    return;
-  }
-  let instr = "";
-  switch(op){
-    case "MTN Money":
-      instr = `MTN Money : Tapez *126# → Montant ${amount} F → Confirmez avec votre code secret.`;
-      break;
-    case "Orange Money":
-      instr = `Orange Money : Tapez *150# → Montant ${amount} F → Confirmez avec votre code secret.`;
-      break;
-    case "Moov Money":
-      instr = `Moov Money : Tapez *555# → Montant ${amount} F → Confirmez avec votre code secret.`;
-      break;
-    case "Wave":
-      instr = `Wave : Ouvrez l'application Wave → Montant ${amount} F → Confirmez.`;
-      break;
-    case "Autre":
-      instr = `Veuillez suivre les instructions de votre opérateur pour effectuer le paiement de ${amount} F vers Minetrol.`;
-      break;
-  }
-  instructionsDiv.textContent = instr;
-}
-operatorSelect.onchange = updateInstructions;
-amountSelect.onchange = updateInstructions;
-
 // Parrainage
-const copyLinkBtn = document.getElementById("copyLinkBtn");
-copyLinkBtn.onclick = ()=>{
+document.getElementById("copyLinkBtn").onclick = ()=>{
   const username = prompt('Entrez votre nom d’utilisateur pour générer le lien');
   if(!username) return;
   const link = `${window.location.origin}/register?ref=${encodeURIComponent(username)}`;
@@ -379,7 +314,7 @@ async function buyBot(hours){
   }
 }
 
-// Paiement via Money Fusion
+// Paiement Money Fusion direct
 const depositResult = document.getElementById("depositResult");
 depositForm.addEventListener("submit", async (e)=>{
   e.preventDefault();
@@ -388,7 +323,12 @@ depositForm.addEventListener("submit", async (e)=>{
   const phoneNumber = document.getElementById("phoneNumber").value;
   const accountName = document.getElementById("accountName").value;
 
-  depositResult.textContent = "💳 Initialisation du paiement...";
+  if(!amount || !operator || !phoneNumber || !accountName){
+    depositResult.textContent = "Veuillez remplir tous les champs";
+    return;
+  }
+
+  depositResult.textContent = "💳 Redirection vers le paiement...";
 
   try {
     const res = await fetch("/deposit", {
@@ -397,9 +337,13 @@ depositForm.addEventListener("submit", async (e)=>{
       body:JSON.stringify({amount, operator, phoneNumber, accountName})
     });
     const data = await res.json();
-    if(data.error) depositResult.innerHTML=`<span style="color:#ef4444">${data.error}</span>`;
-    else{
-      depositResult.innerHTML=`<span style="color:#38bdf8">✅ Paiement initié, <a href="${data.paymentUrl}" target="_blank">Cliquez ici pour payer</a></span>`;
+    if(data.error){
+      depositResult.innerHTML=`<span style="color:#ef4444">${data.error}</span>`;
+    } else if(data.payUrl){
+      // Redirection automatique
+      window.location.href = data.payUrl;
+    } else {
+      depositResult.innerHTML=`<span style="color:#ef4444">Erreur lors de la génération du paiement</span>`;
     }
   } catch(err){
     depositResult.innerHTML=`<span style="color:#ef4444">Erreur lors de la requête</span>`;

@@ -11,7 +11,7 @@
   --neon:#38bdf8;
   --glass-border:rgba(56,189,248,0.22);
   --muted:rgba(255,255,255,0.45);
-  --card-w:380px;
+  --card-w:400px;
 }
 *{box-sizing:border-box;}
 html,body{
@@ -22,11 +22,11 @@ html,body{
               radial-gradient(900px 500px at 90% 85%, rgba(56,189,248,0.02), transparent),
               linear-gradient(180deg,var(--bg-1),var(--bg-2));
   color:#dfffe6;
-  overflow:hidden;
+  overflow-x:hidden;
 }
 .stage{
   position:relative;
-  height:100vh;
+  min-height:100vh;
   display:flex;
   align-items:center;
   justify-content:center;
@@ -34,19 +34,19 @@ html,body{
 }
 .glass-card{
   width:var(--card-w);
-  max-width:92vw;
+  max-width:95vw;
   background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
   border-radius:18px;
   padding:22px;
   box-shadow:0 10px 40px rgba(0,0,0,0.7),0 0 40px rgba(56,189,248,0.05) inset;
-  backdrop-filter: blur(10px) saturate(140%);
+  backdrop-filter: blur(12px) saturate(150%);
   border:1px solid var(--glass-border);
   text-align:center;
   position:relative;
 }
 .card-header h1{
   font-family:"JetBrains Mono", monospace;
-  font-size:24px;
+  font-size:26px;
   margin:0;
   color:var(--neon);
   text-transform:uppercase;
@@ -67,12 +67,16 @@ html,body{
   color:#020617;
   background:var(--neon);
   border:none;
-  border-radius:6px;
+  border-radius:8px;
   text-decoration:none;
   cursor:pointer;
   text-align:center;
+  transition:0.2s;
 }
-.btn:hover{opacity:0.9;}
+.btn:hover{
+  opacity:0.9;
+  transform:scale(1.03);
+}
 .social-icons{
   display:flex;
   justify-content:center;
@@ -91,19 +95,42 @@ html,body{
   text-decoration:none;
   font-weight:bold;
   font-size:20px;
+  transition:0.2s;
 }
+.social-icons a:hover{transform:scale(1.1);}
 .credits{font-size:12px;color:var(--muted);margin-top:20px;}
 .avatar{margin-bottom:10px;}
 .avatar img{width:60px;height:60px;border-radius:50%;border:2px solid var(--neon);}
-.coins-display{display:flex;justify-content:center;align-items:center;gap:8px;margin-bottom:10px;font-weight:bold;}
+.coins-display{display:flex;justify-content:center;align-items:center;gap:8px;margin-bottom:15px;font-weight:bold;}
 .coins-display button{width:auto;padding:4px 8px;font-size:14px;}
-.timer{margin-top:8px;font-size:14px;color:#38bdf8;}
-.menu-btn{position:absolute;top:12px;right:12px;width:30px;height:22px;cursor:pointer;display:flex;flex-direction:column;justify-content:space-between;}
+.timer{margin-top:8px;font-size:14px;color:#38bdf8;font-weight:bold;}
+
+/* Hamburger menu */
+.menu-btn{position:absolute;top:12px;right:12px;width:30px;height:22px;cursor:pointer;display:flex;flex-direction:column;justify-content:space-between;z-index:10;}
 .menu-btn span{display:block;height:4px;width:100%;background:var(--neon);border-radius:2px;transition:0.3s;}
-.menu-content{position:absolute;top:50px;right:0;width:220px;background:linear-gradient(180deg, rgba(0,0,0,0.3), rgba(0,0,0,0.1));border:1px solid var(--glass-border);border-radius:10px;padding:10px;display:none;flex-direction:column;gap:10px;}
+.menu-content{position:absolute;top:50px;right:0;width:220px;background:linear-gradient(180deg, rgba(0,0,0,0.3), rgba(0,0,0,0.1));border:1px solid var(--glass-border);border-radius:10px;padding:10px;display:none;flex-direction:column;gap:10px;z-index:9;}
 .menu-content button{background:none;color:var(--neon);border:none;text-align:left;cursor:pointer;font-weight:bold;}
 .menu-content button:hover{text-decoration:underline;}
 .result-message{margin-top:10px;font-weight:bold;text-align:center;}
+
+/* Store Cards */
+.store{display:flex;flex-direction:column;gap:12px;margin:15px 0;}
+.store-card{
+  background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.006));
+  border:1px solid var(--glass-border);
+  border-radius:15px;
+  padding:15px;
+  text-align:center;
+  cursor:pointer;
+  transition:0.2s;
+}
+.store-card:hover{
+  box-shadow:0 0 20px var(--neon),0 0 40px rgba(56,189,248,0.15) inset;
+  transform:scale(1.03);
+}
+.store-card h3{margin:0;color:#38bdf8;font-size:18px;font-weight:bold;}
+.store-card p{margin:6px 0;font-size:14px;color:var(--muted);}
+.store-card .price{margin-top:8px;font-weight:bold;color:#38bdf8;font-size:16px;}
 </style>
 </head>
 <body>
@@ -141,11 +168,23 @@ html,body{
   <!-- Timer Bot -->
   <div class="timer" id="botTimer">Bot inactif</div>
 
-  <!-- Achat durée -->
-  <div>
-    <button class="btn" onclick="buyBot(24)">Acheter 24h (20 coins)</button>
-    <button class="btn" onclick="buyBot(48)">Acheter 48h (40 coins)</button>
-    <button class="btn" onclick="buyBot(72)">Acheter 72h (60 coins)</button>
+  <!-- Store / Durée Bot -->
+  <div class="store">
+    <div class="store-card" onclick="buyBot(24)">
+      <h3>24 heures</h3>
+      <p>Activation du bot pendant 24h</p>
+      <div class="price">20 coins</div>
+    </div>
+    <div class="store-card" onclick="buyBot(48)">
+      <h3>48 heures</h3>
+      <p>Activation du bot pendant 48h</p>
+      <div class="price">40 coins</div>
+    </div>
+    <div class="store-card" onclick="buyBot(72)">
+      <h3>72 heures</h3>
+      <p>Activation du bot pendant 72h</p>
+      <div class="price">60 coins</div>
+    </div>
   </div>
 
   <!-- Boutons pair & qr -->
@@ -218,7 +257,7 @@ document.getElementById("helpBtn").onclick = ()=>{
   resultMsg.innerHTML = `<span style="color:#38bdf8">
   1️⃣ Pour accéder à Pairing ou QR Code vous devez avoir le bot actif.<br>
   2️⃣ Chaque nouvel utilisateur inscrit via votre lien de parrainage vous donne +5 coins.<br>
-  3️⃣ Vous pouvez ajouter des coins via le bouton "+" (paiement Money Fusion simulé).<br>
+  3️⃣ Vous pouvez ajouter des coins via le bouton "+" (paiement simulé).<br>
   4️⃣ Cliquez sur Pairing Code ou QR Code pour déployer, coins seront vérifiés.<br>
   5️⃣ Achetez une durée pour activer le bot.<br>
   6️⃣ Contactez RAIZEL ou KNUT si besoin.

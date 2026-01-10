@@ -1,4 +1,3 @@
-
 import express from "express";
 import session from "express-session";
 import bodyParser from "body-parser";
@@ -9,7 +8,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 /* ================== CONFIG MONEY FUSION ================== */
-const MERCHANT_ID = "69620e03013a0771970d2b80"; // ton Merchant ID
+const MERCHANT_ID = "69620e03013a0771970d2b80"; // 🔴 METTRE TON MERCHANT ID ICI
 const BASE_PAY_URL = "https://payin.moneyfusion.net/payment";
 
 /* ================== FILES ================== */
@@ -41,6 +40,8 @@ const requireAuth = (req,res,next)=>{
 app.get("/", requireAuth, (req,res)=>res.sendFile(path.resolve("index.html")));
 app.get("/login", (req,res)=>res.sendFile(path.resolve("login.html")));
 app.get("/register", (req,res)=>res.sendFile(path.resolve("register.html")));
+app.get("/pair", requireAuth, (req,res)=>res.sendFile(path.resolve("pair.html")));
+app.get("/qrpage", requireAuth, (req,res)=>res.sendFile(path.resolve("qr.html")));
 
 /* ================== REGISTER ================== */
 app.post("/register",(req,res)=>{
@@ -60,7 +61,14 @@ app.post("/login",(req,res)=>{
   const users = loadUsers();
   const user = users.find(u=>u.username===username && u.password===password);
   if(!user) return res.send("Identifiants incorrects");
-  req.session.user = user;
+
+  // 🔹 Stocker uniquement ce dont on a besoin
+  req.session.user = {
+    username: user.username,
+    coins: user.coins || 0,
+    botActiveUntil: user.botActiveUntil || 0
+  };
+
   res.redirect("/");
 });
 
@@ -73,9 +81,10 @@ app.get("/logout",(req,res)=>{
 app.get("/coins", requireAuth, (req,res)=>{
   const users = loadUsers();
   const user = users.find(u=>u.username===req.session.user.username);
+  if(!user) return res.status(400).json({error:"Utilisateur introuvable"});
   res.json({
     coins: user.coins,
-    botActiveRemaining: Math.max(0, user.botActiveUntil - Date.now())
+    botActiveRemaining: Math.max(0, (user.botActiveUntil||0) - Date.now())
   });
 });
 
@@ -98,7 +107,7 @@ app.post("/deposit", requireAuth, (req,res)=>{
     savePayments(payments);
 
     const payUrl = `${BASE_PAY_URL}/${MERCHANT_ID}/${amount}/${paymentId}`;
-    res.json({ paymentUrl: payUrl }); // ⚡ clé paymentUrl pour le HTML
+    res.json({ paymentUrl: payUrl });
   } catch(err){
     console.error(err);
     res.status(500).json({ error:"Erreur serveur lors de la création du paiement" });
@@ -136,10 +145,11 @@ app.post("/buy-bot", requireAuth, (req,res)=>{
   const prices = {24:20,48:40,72:60};
   const users = loadUsers();
   const user = users.find(u=>u.username===req.session.user.username);
+  if(!user) return res.json({error:"Utilisateur introuvable"});
   if(user.coins < prices[duration]) return res.json({error:"Coins insuffisants"});
 
   user.coins -= prices[duration];
-  user.botActiveUntil = Math.max(user.botActiveUntil, Date.now()) + duration*3600000;
+  user.botActiveUntil = Math.max(user.botActiveUntil||0, Date.now()) + duration*3600000;
 
   saveUsers(users);
   res.json({status:`Bot activé ${duration}h`, expires:user.botActiveUntil});
@@ -148,7 +158,7 @@ app.post("/buy-bot", requireAuth, (req,res)=>{
 /* ================== PAIR & QR ================== */
 function requireBotActive(req,res,next){
   const users = loadUsers();
-  const user = users.find(u => u.username === req.session.user.username);
+  const user = users.find(u => u.username===req.session.user.username);
   if(!user) return res.redirect("/login");
   if(!user.botActiveUntil || user.botActiveUntil < Date.now()){
     return res.send("Bot inactif, veuillez acheter du temps pour le déployer");

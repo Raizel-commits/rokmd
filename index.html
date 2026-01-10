@@ -66,7 +66,9 @@ html,body{
   background:var(--neon);
   border:none;
   border-radius:8px;
+  text-decoration:none;
   cursor:pointer;
+  text-align:center;
   transition:0.2s;
 }
 .btn:hover{opacity:0.9;transform:scale(1.03);}
@@ -97,23 +99,6 @@ html,body{
 .coins-display{display:flex;justify-content:center;align-items:center;gap:8px;margin-bottom:15px;font-weight:bold;}
 .coins-display button{width:auto;padding:4px 8px;font-size:14px;}
 .timer{margin-top:8px;font-size:14px;color:#38bdf8;font-weight:bold;}
-.menu-btn{
-  position:absolute;top:12px;right:12px;width:30px;height:22px;cursor:pointer;display:flex;flex-direction:column;justify-content:space-between;z-index:10;
-  transition:0.3s;
-}
-.menu-btn span{display:block;height:4px;width:100%;background:var(--neon);border-radius:2px;transition:0.3s;}
-.menu-btn.active span:nth-child(1){transform:rotate(45deg) translate(5px,5px);}
-.menu-btn.active span:nth-child(2){opacity:0;}
-.menu-btn.active span:nth-child(3){transform:rotate(-45deg) translate(6px,-6px);}
-.menu-content{
-  position:absolute;top:50px;right:0;width:220px;background:linear-gradient(180deg, rgba(0,0,0,0.3), rgba(0,0,0,0.1));
-  border:1px solid var(--glass-border);border-radius:10px;padding:10px;display:none;flex-direction:column;gap:10px;z-index:9;
-  animation:fadeIn 0.3s ease forwards;
-}
-@keyframes fadeIn{from{opacity:0;transform:translateY(-10px);}to{opacity:1;transform:translateY(0);}}
-.menu-content button{background:none;color:var(--neon);border:none;text-align:left;cursor:pointer;font-weight:bold;}
-.menu-content button:hover{text-decoration:underline;}
-.result-message{margin-top:10px;font-weight:bold;text-align:center;}
 .store{display:flex;flex-direction:column;gap:12px;margin:15px 0;}
 .store-card{
   background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.006));
@@ -141,13 +126,6 @@ html,body{
 <body>
 <main class="stage">
 <section class="glass-card">
-  <div class="menu-btn" id="menuBtn"><span></span><span></span><span></span></div>
-  <div class="menu-content" id="menuContent">
-    <button id="copyLinkBtn">Parrainage</button>
-    <button id="helpBtn">Help</button>
-    <button id="contactBtn">Contact</button>
-  </div>
-
   <div class="avatar">
     <img src="https://files.catbox.moe/36ywf8.jpeg" alt="Avatar">
   </div>
@@ -206,7 +184,7 @@ html,body{
       <label>Nom titulaire:</label>
       <input type="text" id="accountName" placeholder="Nom complet" required>
       <button type="submit" class="btn">Acheter Coins</button>
-      <div id="depositResult" class="result-message"></div>
+      <div id="depositResult"></div>
     </form>
   </div>
 
@@ -219,18 +197,28 @@ html,body{
 </main>
 
 <script>
-const menuBtn = document.getElementById("menuBtn");
-const menuContent = document.getElementById("menuContent");
-menuBtn.onclick = ()=>{ menuBtn.classList.toggle("active"); menuContent.style.display = menuContent.style.display==='flex'?'none':'flex'; }
-
 const coinsEl = document.getElementById("coins");
 const botTimer = document.getElementById("botTimer");
+const depositForm = document.getElementById("depositForm");
+const addCoinsBtn = document.getElementById("addCoinsBtn");
+
 let botTimeRemaining = 0;
 
-function loadCoins(){ coinsEl.textContent = Math.floor(Math.random()*200); botTimeRemaining = Math.floor(Math.random()*5)*3600000; updateTimer(); }
-loadCoins();
+// Charger coins et bot timer depuis le serveur
+async function loadUserData() {
+  try {
+    const res = await fetch("/coins");
+    const data = await res.json();
+    coinsEl.textContent = data.coins;
+    botTimeRemaining = data.botActiveRemaining;
+    startTimer();
+  } catch (err) {
+    console.error(err);
+  }
+}
+loadUserData();
 
-function updateTimer(){
+function startTimer(){
   if(botTimeRemaining<=0){ botTimer.textContent="Bot inactif"; return; }
   const interval = setInterval(()=>{
     if(botTimeRemaining<=0){ botTimer.textContent="Bot inactif"; clearInterval(interval); return; }
@@ -242,43 +230,51 @@ function updateTimer(){
   },1000);
 }
 
-const addCoinsBtn = document.getElementById("addCoinsBtn");
-const depositForm = document.getElementById("depositForm");
+// Affiche formulaire Mobile Money
 addCoinsBtn.onclick = () => depositForm.style.display = depositForm.style.display==='flex'?'none':'flex';
 
-document.getElementById("copyLinkBtn").onclick = ()=>{
-  const link = prompt("Entrez votre pseudo pour générer votre lien");
-  if(!link) return;
-  navigator.clipboard.writeText(`${window.location.origin}/register?ref=${link}`);
-  alert("Lien copié !");
-}
-
-document.getElementById("helpBtn").onclick = ()=>{ alert("Contactez RAIZEL ou KNUT pour aide"); }
-document.getElementById("contactBtn").onclick = ()=>{ window.open("https://wa.me/237699777530","_blank"); }
-
+// Activation Bot
 function activateBot(hours){
   if(confirm(`Confirmez l'activation du bot pour ${hours} heures ?`)){
-    alert("Bot activé ! Redirection vers Pairing...");
-    window.location.href="pair.html";
+    fetch("/buy-bot", {
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({duration: hours})
+    })
+    .then(r=>r.json())
+    .then(d=>{
+      if(d.error) return alert(d.error);
+      alert(d.status);
+      loadUserData();
+    });
   }
 }
 
+// Paiement Mobile Money via serveur
 depositForm.addEventListener("submit", async (e)=>{
   e.preventDefault();
   const amount = document.getElementById("amount").value;
   const operator = document.getElementById("operator").value;
   const phone = document.getElementById("phoneNumber").value;
   const name = document.getElementById("accountName").value;
-  if(!amount || !operator || !phone || !name) return alert("Tous les champs sont requis !");
 
-  const resp = await fetch("/deposit", {
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({ amount, operator, phone, name })
-  });
-  const data = await resp.json();
-  if(data.paymentUrl){ window.location.href = data.paymentUrl; }
-  else{ alert("Erreur lors de la création du paiement"); }
+  if(!amount || !operator || !phone || !name) return alert("Tous les champs sont requis !");
+  try{
+    const res = await fetch("/deposit", {
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({amount, operator, phone, name})
+    });
+    const data = await res.json();
+    if(data.paymentUrl){
+      window.location.href = data.paymentUrl;
+    } else {
+      alert("Erreur création paiement");
+    }
+  } catch(err){
+    console.error(err);
+    alert("Erreur serveur");
+  }
 });
 </script>
 </body>

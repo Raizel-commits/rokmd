@@ -130,7 +130,7 @@ app.post("/add-coins",requireAuth,(req,res)=>{
 
 // =================== PURCHASE BOT ===================
 app.post("/buy-bot",requireAuth,(req,res)=>{
-  const {duration} = req.body; // en heures: 24,48,72
+  const duration = parseInt(req.body.duration); // en heures: 24,48,72
   const prices = {24:20,48:40,72:60};
   const users = loadUsers();
   const user = users.find(u=>u.username===req.session.user.username);
@@ -143,7 +143,7 @@ app.post("/buy-bot",requireAuth,(req,res)=>{
   user.botActiveUntil = previous + duration*3600*1000; // ajout durée
   saveUsers(users);
   req.session.user = user;
-  res.json({status:`Bot activé pour ${duration}h`,`expires`:user.botActiveUntil});
+  res.json({status:`Bot activé pour ${duration}h`,expires:user.botActiveUntil});
 });
 
 // =================== PAIR & QR (require bot actif) ===================

@@ -137,6 +137,13 @@ html,body{
 .deposit-form label{font-size:14px;color:#dfffe6;font-weight:bold;text-align:left;}
 .deposit-form input, .deposit-form select{padding:6px 10px;border-radius:6px;border:1px solid var(--glass-border);background:rgba(255,255,255,0.02);color:#dfffe6;font-size:14px;}
 .deposit-form button{margin-top:8px;}
+#instructions{
+  background:rgba(56,189,248,0.05);
+  padding:8px;
+  border-radius:6px;
+  font-size:14px;
+  color:#dfffe6;
+}
 </style>
 </head>
 <body>
@@ -226,6 +233,9 @@ html,body{
       <label>Nom du titulaire:</label>
       <input type="text" id="accountName" placeholder="Nom complet" required>
 
+      <label>Instructions opérateur:</label>
+      <div id="instructions">Sélectionnez un opérateur et un montant pour voir les instructions.</div>
+
       <button type="submit" class="btn">Acheter Coins</button>
     </form>
     <div id="depositResult" class="result-message"></div>
@@ -244,12 +254,6 @@ html,body{
   <div class="credits">Développé par RAIZEL & KNUT</div>
 </section>
 </main>
-
-<!-- Audio background -->
-<audio id="bgSound" loop>
-  <source src="https://files.catbox.moe/90dy8s.m4a" type="audio/mpeg">
-  Votre navigateur ne supporte pas la lecture audio.
-</audio>
 
 <script>
 const menuBtn = document.getElementById("menuBtn");
@@ -289,6 +293,41 @@ const depositForm = document.getElementById("depositForm");
 addCoinsBtn.onclick = () => {
   depositForm.style.display = depositForm.style.display === "flex" ? "none" : "flex";
 }
+
+// Instructions opérateur
+const operatorSelect = document.getElementById("operator");
+const amountSelect = document.getElementById("amount");
+const instructionsDiv = document.getElementById("instructions");
+
+function updateInstructions() {
+  const op = operatorSelect.value;
+  const amount = amountSelect.value;
+  if(!op || !amount){
+    instructionsDiv.textContent = "Sélectionnez un opérateur et un montant pour voir les instructions.";
+    return;
+  }
+  let instr = "";
+  switch(op){
+    case "MTN Money":
+      instr = `MTN Money : Tapez *126# → Montant ${amount} F → Confirmez avec votre code secret.`;
+      break;
+    case "Orange Money":
+      instr = `Orange Money : Tapez *150# → Montant ${amount} F → Confirmez avec votre code secret.`;
+      break;
+    case "Moov Money":
+      instr = `Moov Money : Tapez *555# → Montant ${amount} F → Confirmez avec votre code secret.`;
+      break;
+    case "Wave":
+      instr = `Wave : Ouvrez l'application Wave → Montant ${amount} F → Confirmez.`;
+      break;
+    case "Autre":
+      instr = `Veuillez suivre les instructions de votre opérateur pour effectuer le paiement de ${amount} F vers Minetrol.`;
+      break;
+  }
+  instructionsDiv.textContent = instr;
+}
+operatorSelect.onchange = updateInstructions;
+amountSelect.onchange = updateInstructions;
 
 // Parrainage
 const copyLinkBtn = document.getElementById("copyLinkBtn");
@@ -362,25 +401,6 @@ depositForm.addEventListener("submit", async (e)=>{
     depositResult.innerHTML=`<span style="color:#ef4444">Erreur lors de la requête</span>`;
     console.error(err);
   }
-});
-
-// Son automatique
-const bgSound = document.getElementById("bgSound");
-window.addEventListener("load", () => {
-  bgSound.play().catch(() => {
-    const soundBtn = document.createElement("button");
-    soundBtn.textContent = "🔊 Activer le son";
-    soundBtn.className = "btn";
-    document.body.appendChild(soundBtn);
-    soundBtn.style.position = "fixed";
-    soundBtn.style.bottom = "20px";
-    soundBtn.style.right = "20px";
-    soundBtn.style.zIndex = "9999";
-    soundBtn.onclick = () => {
-      bgSound.play();
-      soundBtn.remove();
-    };
-  });
 });
 </script>
 </body>

@@ -4,147 +4,99 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ROK XD • Dashboard</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <style>
 :root{
-  --bg-1:#020617; 
-  --bg-2:#0f172a; 
-  --neon:#38bdf8; 
+  --bg-1:#020617;
+  --bg-2:#0f172a;
+  --neon:#38bdf8;
   --glass-border:rgba(56,189,248,0.22);
   --muted:rgba(255,255,255,0.45);
+  --card-w:380px;
+  --btn-bg:#38bdf8;
 }
-*{box-sizing:border-box;margin:0;padding:0;}
-html, body{
-  height:100%;
-  font-family:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+*{box-sizing:border-box;}
+html,body{
+  height:100%; margin:0; font-family:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial;
+  background: radial-gradient(1200px 600px at 10% 10%, rgba(56,189,248,0.03), transparent),
+              radial-gradient(900px 500px at 90% 85%, rgba(56,189,248,0.02), transparent),
+              linear-gradient(180deg,var(--bg-1),var(--bg-2));
   color:#dfffe6;
-  background: linear-gradient(270deg, #020617, #0f172a, #020617);
-  background-size: 600% 600%;
-  animation: gradientAnim 15s ease infinite;
-  overflow:hidden;
 }
-
-/* Gradient animé */
-@keyframes gradientAnim{
-  0%{background-position:0% 50%;}
-  50%{background-position:100% 50%;}
-  100%{background-position:0% 50%;}
-}
-
-/* Conteneur central */
-.stage{
-  position:relative;
-  height:100vh;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  padding:24px;
-}
-
-/* Cadre style glass */
+.stage{position:relative;height:100vh;display:flex;align-items:center;justify-content:center;padding:36px;}
 .glass-card{
-  width:380px;
-  max-width:92vw;
+  width:var(--card-w); max-width:92vw;
   background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
-  border-radius:18px;
-  padding:24px;
+  border-radius:18px; padding:22px;
   box-shadow:0 10px 40px rgba(0,0,0,0.7),0 0 40px rgba(56,189,248,0.05) inset;
-  backdrop-filter: blur(10px) saturate(140%);
+  backdrop-filter: blur(12px) saturate(140%);
   border:1px solid var(--glass-border);
   text-align:center;
-  display:flex;
-  flex-direction:column;
-  gap:12px;
+  position:relative;
 }
-
-/* Header */
 .card-header h1{
   font-family:"JetBrains Mono", monospace;
-  font-size:20px;
-  color:var(--neon);
+  font-size:20px;margin:0;color:var(--neon);
   text-transform:uppercase;
   text-shadow:0 0 18px rgba(56,189,248,0.22);
 }
-.card-header .small-url{
-  font-size:12px;
-  color:var(--muted);
-  margin-top:4px;
+.card-header .small-url{font-size:12px;color:var(--muted);margin-top:6px;}
+.avatar { margin: 16px 0; text-align: center; }
+.avatar img { width: 60px; height: 60px; border-radius: 50%; border: 2px solid var(--neon); box-shadow: 0 0 12px var(--neon); }
+.timer, .coins, h2, .store-card h3, .store-card p{
+  font-family:"JetBrains Mono", monospace;
 }
-
-/* Avatar */
-.avatar{
-  margin:16px 0;
-  text-align:center;
-}
-.avatar img{
-  width:80px;
-  height:80px;
-  border-radius:50%;
-  border:2px solid var(--neon);
-  box-shadow:0 0 12px var(--neon);
-}
-
-/* Texte et timer */
-.timer{margin:6px 0;font-size:14px;color:var(--neon);font-weight:bold;}
-.result-message{margin-top:10px;font-weight:bold;text-align:center;color:#ef4444;}
-
-/* Store cards */
+.timer, .coins{margin:8px 0;font-weight:bold;color:var(--neon);}
 .store-card{
   background:rgba(255,255,255,0.02);
   border:1px solid var(--glass-border);
-  border-radius:15px;
-  padding:12px;
+  border-radius:12px;
+  padding:10px;
+  margin-bottom:8px;
   cursor:pointer;
   transition:.2s;
-  margin-bottom:8px;
+  text-align:left;
+  font-size:14px;
 }
-.store-card:hover{
-  box-shadow:0 0 20px var(--neon);
-  transform:scale(1.03);
-}
-.price{color:var(--neon); font-weight:bold;margin:4px 0;}
+.store-card:hover{box-shadow:0 0 16px var(--neon); transform:scale(1.02);}
 .select-pay{
-  margin-top:6px;
-  padding:6px 10px;
-  border-radius:6px;
-  border:1px solid var(--glass-border);
-  background:rgba(255,255,255,0.02);
-  color:#dfffe6;
-  width:100%;
+  margin-top:6px; padding:4px 8px; border-radius:6px; border:1px solid var(--glass-border);
+  background:rgba(255,255,255,0.02); color:#dfffe6; width:100%;
+  font-family:"JetBrains Mono", monospace;
+  font-size:13px;
 }
-
-/* Boutons style login */
 .btn{
-  display:block;
-  background:var(--neon);
-  color:#020617;
-  padding:12px;
-  border-radius:30px;
-  font-weight:700;
-  text-decoration:none;
-  text-align:center;
-  margin:8px 0;
-  transition:.2s;
+  display:flex; align-items:center; justify-content:center;
+  background:var(--btn-bg); color:#000; padding:10px;
+  border-radius:24px; font-weight:700; text-decoration:none; text-align:center; margin:6px 0; transition:.2s;
+  font-family:"JetBrains Mono", monospace;
+  gap:8px;
 }
-.btn:hover{
-  transform:scale(1.03);
-  box-shadow:0 0 20px rgba(56,189,248,.4);
-}
-
-/* Footer bouton déconnexion */
-.logout-btn{
-  background:#ef4444;
-  color:#fff;
-}
+.btn i{font-size:14px;}
+.btn:hover{transform:scale(1.03); box-shadow:0 0 16px rgba(56,189,248,.4);}
+.menu-btn{position:absolute; top:12px; right:12px; font-size:22px; cursor:pointer; color:var(--neon);}
+.menu-content{display:none; position:absolute; top:46px; right:12px; background:rgba(255,255,255,0.02); border:1px solid var(--glass-border); border-radius:12px; padding:8px; text-align:left; backdrop-filter: blur(12px);}
+.menu-content a{display:block; color:#dfffe6; text-decoration:none; padding:4px 0; font-size:14px; font-family:"JetBrains Mono", monospace;}
+.menu-content a:hover{color:var(--neon);}
+.result-message{margin-top:6px;font-weight:bold;text-align:center;font-size:14px;font-family:"JetBrains Mono", monospace;}
 </style>
 </head>
 <body>
-
 <main class="stage">
 <section class="glass-card">
 
+<div class="menu-btn" onclick="toggleMenu()">☰</div>
+<div class="menu-content" id="menu">
+  <a href="/logout">Déconnexion</a>
+  <a href="https://wa.me/699777530" target="_blank">Contacter l’équipe 1</a>
+  <a href="https://wa.me/237673941535" target="_blank">Contacter l’équipe 2</a>
+  <a href="#" id="referralLink">Lien de parrainage</a>
+  <a href="#">Help</a>
+</div>
+
 <header class="card-header">
-  <h1>ROK XD • Dashboard</h1>
-  <div class="small-url">Déployez vos bots WhatsApp</div>
+<h1>ROK XD • Dashboard</h1>
+<div class="small-url">Connexion sécurisée</div>
 </header>
 
 <div class="avatar">
@@ -152,15 +104,17 @@ html, body{
 </div>
 
 <div class="timer" id="botTimer">Bot inactif</div>
-<div>Coins : <span id="coins">0</span></div>
+<div class="coins">Coins : <span id="coins">0</span></div>
 
 <div class="section">
-  <h3>Activer le bot</h3>
+  <h2 style="font-size:16px;margin:6px 0;">Activer le bot</h2>
+  <p style="font-size:13px;margin:2px 0;">Choisissez la durée et le type de paiement :</p>
 
   <div class="store">
     <div class="store-card">
-      <div>24 heures</div>
-      <div class="price">20 coins / 800 F CFA</div>
+      <h3 style="font-size:14px;margin:0;">24 heures</h3>
+      <p style="font-size:12px;margin:2px 0;">Activation 24h</p>
+      <div class="price" style="font-size:13px;">20 coins / 800 F CFA</div>
       <select class="select-pay" onchange="selectPayment(this,24)">
         <option value="">--Payer avec--</option>
         <option value="coins">Coins</option>
@@ -168,8 +122,9 @@ html, body{
       </select>
     </div>
     <div class="store-card">
-      <div>48 heures</div>
-      <div class="price">40 coins / 1 600 F CFA</div>
+      <h3 style="font-size:14px;margin:0;">48 heures</h3>
+      <p style="font-size:12px;margin:2px 0;">Activation 48h</p>
+      <div class="price" style="font-size:13px;">40 coins / 1 600 F CFA</div>
       <select class="select-pay" onchange="selectPayment(this,48)">
         <option value="">--Payer avec--</option>
         <option value="coins">Coins</option>
@@ -177,8 +132,9 @@ html, body{
       </select>
     </div>
     <div class="store-card">
-      <div>72 heures</div>
-      <div class="price">60 coins / 2 400 F CFA</div>
+      <h3 style="font-size:14px;margin:0;">72 heures</h3>
+      <p style="font-size:12px;margin:2px 0;">Activation 72h</p>
+      <div class="price" style="font-size:13px;">60 coins / 2 400 F CFA</div>
       <select class="select-pay" onchange="selectPayment(this,72)">
         <option value="">--Payer avec--</option>
         <option value="coins">Coins</option>
@@ -188,32 +144,62 @@ html, body{
   </div>
 </div>
 
-<a href="/pair" class="btn" id="pairBtn">Pairing Code</a>
-<a href="/qrpage" class="btn" id="qrBtn">QR Code</a>
-<a href="/logout" class="btn logout-btn">Déconnexion</a>
+<a href="/pair" class="btn"><i class="fas fa-link"></i> Pairing Code</a>
+<a href="/qrpage" class="btn"><i class="fas fa-qrcode"></i> QR Code</a>
 
 <div class="result-message" id="resultMsg"></div>
-
 </section>
 </main>
 
 <script>
-let botTimeRemaining = 0;
-let userCoins = 0;
+// Menu hamburger
+function toggleMenu() {
+  const menu = document.getElementById('menu');
+  menu.style.display = menu.style.display==='block' ? 'none' : 'block';
+}
 
-// Charger coins et timer
+// Messages flottants
+function showMessage(msg, color = '#ef4444', duration = 3000) {
+  if(!msg) return;
+  const container = document.createElement('div');
+  container.style.position='fixed';
+  container.style.top='50%';
+  container.style.left='50%';
+  container.style.transform='translate(-50%, -50%)';
+  container.style.background='linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01))';
+  container.style.backdropFilter='blur(12px) saturate(140%)';
+  container.style.border='1px solid rgba(56,189,248,0.22)';
+  container.style.padding='20px 28px';
+  container.style.borderRadius='18px';
+  container.style.color=color;
+  container.style.fontWeight='bold';
+  container.style.textAlign='center';
+  container.style.fontFamily='"JetBrains Mono", monospace';
+  container.style.fontSize='14px';
+  container.style.textShadow=color==='red'?'0 0 12px rgba(239,68,68,0.8)':'0 0 12px rgba(56,189,248,0.8)';
+  container.style.zIndex=9999;
+  container.style.boxShadow='0 10px 30px rgba(0,0,0,0.6), 0 0 20px rgba(56,189,248,0.05) inset';
+  container.textContent=msg;
+  document.body.appendChild(container);
+  setTimeout(()=>container.remove(), duration);
+}
+
+let botTimeRemaining=0;
+let userCoins=0;
+
 async function loadStatus(){
-  try {
+  try{
     const res = await fetch('/coins');
     const data = await res.json();
     userCoins = data.coins || 0;
     botTimeRemaining = data.botActiveRemaining || 0;
-    document.getElementById('coins').textContent = userCoins;
+    document.getElementById('coins').textContent=userCoins;
     updateTimer();
-  } catch(e){ console.error(e); }
+    const referral = document.getElementById('referralLink');
+    referral.href=`/referral?user=${encodeURIComponent(data.email||'user')}`;
+  }catch(e){ console.error(e); }
 }
 
-// Timer
 function updateTimer(){
   const el = document.getElementById('botTimer');
   if(botTimeRemaining<=0){ el.textContent="Bot inactif"; return; }
@@ -227,38 +213,34 @@ function updateTimer(){
   },1000);
 }
 
-// Gestion paiement
-async function selectPayment(select, hours){
-  const choice = select.value;
+async function selectPayment(select,hours){
+  const choice=select.value;
   if(!choice) return;
+  const priceCoins={24:20,48:40,72:60};
+  const priceFcfa={24:800,48:1600,72:2400};
 
-  const priceCoins = {24:20,48:40,72:60};
-  const priceFcfa  = {24:800,48:1600,72:2400};
-
-  if(choice==="coins"){
+  if(choice==='coins'){
     if(userCoins<priceCoins[hours]){
-      document.getElementById('resultMsg').textContent = `Coins insuffisants (${priceCoins[hours]} requis)`;
-      select.value="";
-      return;
+      showMessage(`Coins insuffisants (${priceCoins[hours]} requis)`,'#ef4444');
+      select.value=''; return;
     }
     const res = await fetch('/buy-bot',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({duration:hours})
     });
-    const data = await res.json();
-    document.getElementById('resultMsg').textContent = data.error || data.status;
+    const data=await res.json();
+    showMessage(data.error || data.status, data.error ? '#ef4444' : '#38bdf8');
     loadStatus();
   }
 
-  if(choice==="fcfa"){
+  if(choice==='fcfa'){
     const paymentId = "moneyfusion_" + Date.now();
     const amount = priceFcfa[hours];
     const url = `https://payin.moneyfusion.net/payment/69620e03013a0771970d2b80/${amount}/${paymentId}`;
     window.location.href = url;
   }
-
-  select.value="";
+  select.value='';
 }
 
 loadStatus();

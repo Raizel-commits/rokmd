@@ -91,40 +91,40 @@ html,body{
 
 <!-- 🔹 ACHAT DE COINS -->
 <div class="store">
-  <div class="store-card" onclick="pay(50)">
-    <h3>4 Coins</h3>
+  <div class="store-card" onclick="pay(800)">
+    <h3>80 Coins</h3>
     <p>Recharge Mobile Money</p>
-    <div class="price">50 F CFA</div>
-  </div>
-
-  <div class="store-card" onclick="pay(100)">
-    <h3>8 Coins</h3>
-    <p>Recharge Mobile Money</p>
-    <div class="price">100 F CFA</div>
-  </div>
-
-  <div class="store-card" onclick="pay(250)">
-    <h3>20 Coins</h3>
-    <p>Recharge Mobile Money</p>
-    <div class="price">250 F CFA</div>
-  </div>
-
-  <div class="store-card" onclick="pay(500)">
-    <h3>40 Coins</h3>
-    <p>Recharge Mobile Money</p>
-    <div class="price">500 F CFA</div>
-  </div>
-
-  <div class="store-card" onclick="pay(750)">
-    <h3>60 Coins</h3>
-    <p>Recharge Mobile Money</p>
-    <div class="price">750 F CFA</div>
+    <div class="price">800 F CFA</div>
   </div>
 
   <div class="store-card" onclick="pay(1000)">
-    <h3>80 Coins</h3>
+    <h3>100 Coins</h3>
     <p>Recharge Mobile Money</p>
     <div class="price">1000 F CFA</div>
+  </div>
+
+  <div class="store-card" onclick="pay(1500)">
+    <h3>150 Coins</h3>
+    <p>Recharge Mobile Money</p>
+    <div class="price">1500 F CFA</div>
+  </div>
+
+  <div class="store-card" onclick="pay(2000)">
+    <h3>200 Coins</h3>
+    <p>Recharge Mobile Money</p>
+    <div class="price">2000 F CFA</div>
+  </div>
+
+  <div class="store-card" onclick="pay(3000)">
+    <h3>300 Coins</h3>
+    <p>Recharge Mobile Money</p>
+    <div class="price">3000 F CFA</div>
+  </div>
+
+  <div class="store-card" onclick="pay(5000)">
+    <h3>500 Coins</h3>
+    <p>Recharge Mobile Money</p>
+    <div class="price">5000 F CFA</div>
   </div>
 </div>
 
@@ -135,6 +135,10 @@ html,body{
 
 <script>
 function pay(amount){
+  if(amount < 800){
+    alert("Le montant minimum est de 800 F CFA");
+    return;
+  }
   const paymentId = "moneyfusion_" + Date.now();
   const url =
     "https://payin.moneyfusion.net/payment/69620e03013a0771970d2b80/"

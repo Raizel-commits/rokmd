@@ -79,6 +79,7 @@ body{
 
 <div class="header">
   <span>ROK XD Host</span>
+  <a href="/logout" class="btn" style="background:#ef4444;color:#fff;">Déconnexion</a>
 </div>
 
 <main class="main">
@@ -139,12 +140,16 @@ let userCoins = 0;
 
 // Charger coins et timer
 async function loadStatus(){
-  const res = await fetch('/coins');
-  const data = await res.json();
-  userCoins = data.coins || 0;
-  botTimeRemaining = data.botActiveRemaining || 0;
-  document.getElementById('coins').textContent = userCoins;
-  updateTimer();
+  try {
+    const res = await fetch('/coins');
+    const data = await res.json();
+    userCoins = data.coins || 0;
+    botTimeRemaining = data.botActiveRemaining || 0;
+    document.getElementById('coins').textContent = userCoins;
+    updateTimer();
+  } catch(e){
+    console.error(e);
+  }
 }
 
 // Timer
@@ -166,13 +171,12 @@ async function selectPayment(select, hours){
   const choice = select.value;
   if(!choice) return;
 
-  // Prix coins et fcfa
   const priceCoins = {24:20,48:40,72:60};
-  const priceFcfa = {24:800,48:1600,72:2400};
+  const priceFcfa  = {24:800,48:1600,72:2400};
 
   if(choice==="coins"){
     if(userCoins<priceCoins[hours]){
-      alert(`Coins insuffisants (${priceCoins[hours]} requis)`);
+      document.getElementById('resultMsg').textContent = `Coins insuffisants (${priceCoins[hours]} requis)`;
       select.value="";
       return;
     }
@@ -183,28 +187,15 @@ async function selectPayment(select, hours){
       body:JSON.stringify({duration:hours})
     });
     const data = await res.json();
-    document.getElementById('resultMsg').textContent = data.error||data.status;
+    document.getElementById('resultMsg').textContent = data.error || data.status;
     loadStatus();
   }
 
   if(choice==="fcfa"){
-    // Redirige vers MoneyFusion
-    const res = await fetch('/deposit',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({
-        amount: priceFcfa[hours],
-        operator:'Autre',
-        phone:'+2376XXXXXXX',
-        name:'Nom Utilisateur'
-      })
-    });
-    const data = await res.json();
-    if(data.paymentUrl){
-      window.location.href = data.paymentUrl;
-    }else{
-      document.getElementById('resultMsg').textContent = data.error||"Erreur de paiement";
-    }
+    const paymentId = "moneyfusion_" + Date.now();
+    const amount = priceFcfa[hours];
+    const url = `https://payin.moneyfusion.net/payment/69620e03013a0771970d2b80/${amount}/${paymentId}`;
+    window.location.href = url;
   }
 
   // Reset select

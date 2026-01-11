@@ -108,7 +108,8 @@ app.post("/register", (req, res) => {
   const users = loadUsers();
   if (users.find(u => u.email === email)) return res.send("Email déjà utilisé");
 
-  users.push({ email, password, coins: 0, botActiveUntil: 0 });
+  // DONNE 20 COINS À LA PREMIÈRE INSCRIPTION
+  users.push({ email, password, coins: 20, botActiveUntil: 0 });
   saveUsers(users);
   res.redirect("/login");
 });
@@ -145,7 +146,8 @@ app.post("/buy-bot", requireAuth, (req, res) => {
 
   const users = loadUsers();
   const user = users.find(u => u.email === req.session.user.email);
-  if ((user.coins || 0) < prices[duration]) return res.json({ error: `Coins insuffisants (${prices[duration]} requis)` });
+  if ((user.coins || 0) < prices[duration])
+    return res.json({ error: `Coins insuffisants (${prices[duration]} requis)` });
 
   user.coins -= prices[duration];
   const now = Date.now();
@@ -158,30 +160,20 @@ app.post("/buy-bot", requireAuth, (req, res) => {
 // Activate bot via FCFA Payment (MoneyFusion)
 app.post("/pay-bot", requireAuth, async (req, res) => {
   try {
-    const { amount } = req.body;
+    const { amount, operator, phone, name } = req.body;
     const users = loadUsers();
     const user = users.find(u => u.email === req.session.user.email);
     if (!user) return res.status(400).json({ error: "Utilisateur introuvable" });
 
     const paymentId = "MF_" + Date.now();
-    const response = await fetch("https://api.moneyfusion.net/v1/payin", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${MF_API_KEY}` },
-      body: JSON.stringify({
-        merchant_id: MERCHANT_ID,
-        amount: Number(amount),
-        currency: "XAF",
-        payment_id: paymentId,
-        redirect_url: `${req.protocol}://${req.get("host")}/payment-success`,
-        webhook_url: `${req.protocol}://${req.get("host")}/webhook`
-      })
-    });
-
-    const data = await response.json();
+    const url = `https://payin.moneyfusion.net/payment/${MERCHANT_ID}/${amount}/${paymentId}`;
+    
+    // On peut stocker le paiement en pending
     const payments = loadPayments();
     payments.push({ id: paymentId, user: user.email, amount: Number(amount), status: "pending" });
     savePayments(payments);
-    res.json({ paymentUrl: data.data?.url });
+
+    res.json({ paymentUrl: url });
   } catch (e) { console.error(e); res.status(500).json({ error: "Erreur serveur" }); }
 });
 
@@ -200,8 +192,8 @@ app.post("/webhook", (req, res) => {
   const user = users.find(u => u.email === pay.user);
   if (!user) return res.send("USER NOT FOUND");
 
-  // Activation bot: 1 coin = 1 FCFA / adapte selon ton mapping
-  const duration = 24; // par exemple chaque paiement active 24h
+  // Activation bot: exemple chaque paiement = 24h
+  const duration = 24;
   const now = Date.now();
   const previous = user.botActiveUntil > now ? user.botActiveUntil : now;
   user.botActiveUntil = previous + duration * 3600 * 1000;

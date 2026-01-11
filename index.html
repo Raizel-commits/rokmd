@@ -134,7 +134,7 @@ html,body{
     <a href="/"><i class="fas fa-home"></i> Accueil</a>
     <a href="/pair"><i class="fas fa-link"></i> Pairing</a>
     <a href="/qrpage"><i class="fas fa-qrcode"></i> QR Code</a>
-    <a href="#" id="menuReferral"><i class="fas fa-user-plus"></i> Parrainage</a>
+    <a href="#" id="menuReferral"> <i class="fas fa-user-plus"></i> Parrainage</a>
     <a href="https://wa.me/237699777530" target="_blank"><i class="fab fa-whatsapp"></i> Support 1</a>
     <a href="https://wa.me/237673941535" target="_blank"><i class="fab fa-whatsapp"></i> Support 2</a>
     <a href="/logout"><i class="fas fa-power-off"></i> Déconnexion</a>
@@ -211,33 +211,83 @@ let botTimeRemaining=0;
 let userCoins=0;
 let timerInterval;
 
+const sideMenu=document.getElementById('sideMenu');
+const menuOverlay=document.getElementById('menuOverlay');
+const coinsEl=document.getElementById('coins');
+const botTimer=document.getElementById('botTimer');
+const pairBtn=document.getElementById('pairBtn');
+const qrBtn=document.getElementById('qrBtn');
+const menuUser=document.getElementById('menuUser');
+const menuReferral=document.getElementById('menuReferral');
+
 function toggleMenu(){
   sideMenu.classList.toggle('active');
   menuOverlay.classList.toggle('active');
 }
 
-// load status
-async function loadStatus(){
-  const res=await fetch('/coins');
-  const data=await res.json();
-  if(data.error){ window.location='/login'; return; }
-  userCoins=data.coins||0;
-  botTimeRemaining=data.botActiveRemaining||0;
-  coins.textContent=userCoins;
-  menuUser.textContent='👤 '+(data.username||'User');
-  menuReferral.href='/referral?user='+encodeURIComponent(data.username||'user');
-  updateTimer();
+// 🔹 Messages flottants
+function showMessage(msg,color='#ef4444',duration=3000){
+  if(!msg) return;
+  const container=document.createElement('div');
+  container.style.position='fixed';
+  container.style.top='50%';
+  container.style.left='50%';
+  container.style.transform='translate(-50%,-50%)';
+  container.style.background='linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01))';
+  container.style.backdropFilter='blur(12px) saturate(140%)';
+  container.style.border='1px solid rgba(56,189,248,0.22)';
+  container.style.padding='20px 28px';
+  container.style.borderRadius='18px';
+  container.style.color=color;
+  container.style.fontWeight='bold';
+  container.style.textAlign='center';
+  container.style.fontFamily='"JetBrains Mono", monospace';
+  container.style.fontSize='14px';
+  container.style.textShadow=color==='red'?'0 0 12px rgba(239,68,68,0.8)':'0 0 12px rgba(56,189,248,0.8)';
+  container.style.zIndex=9999;
+  container.style.boxShadow='0 10px 30px rgba(0,0,0,0.6), 0 0 20px rgba(56,189,248,0.05) inset';
+  container.textContent=msg;
+  document.body.appendChild(container);
+  setTimeout(()=>container.remove(),duration);
 }
 
-// timer
+// 🔹 Charger status utilisateur
+async function loadStatus(){
+  try{
+    const res=await fetch('/coins');
+    const data=await res.json();
+    if(data.error){ window.location.href='/login'; return; }
+    userCoins=data.coins||0;
+    botTimeRemaining=data.botActiveRemaining||0;
+    coinsEl.textContent=userCoins;
+    menuUser.textContent='👤 '+(data.username||'User');
+    menuReferral.href='/referral?user='+encodeURIComponent(data.username||'user');
+
+    if(botTimeRemaining<=0){
+      pairBtn.classList.add('disabled'); qrBtn.classList.add('disabled');
+      pairBtn.onclick=e=>e.preventDefault();
+      qrBtn.onclick=e=>e.preventDefault();
+    } else {
+      pairBtn.classList.remove('disabled'); qrBtn.classList.remove('disabled');
+      pairBtn.onclick=null; qrBtn.onclick=null;
+    }
+
+    updateTimer();
+  }catch(e){ console.error(e); }
+}
+
+// 🔹 Timer bot
 function updateTimer(){
   if(timerInterval) clearInterval(timerInterval);
   if(botTimeRemaining<=0){ botTimer.textContent='Bot inactif'; return; }
+
   const update=()=>{
     if(botTimeRemaining<=0){
       botTimer.textContent='Bot inactif';
       clearInterval(timerInterval);
       pairBtn.classList.add('disabled'); qrBtn.classList.add('disabled');
+      pairBtn.onclick=e=>e.preventDefault();
+      qrBtn.onclick=e=>e.preventDefault();
       return;
     }
     const h=Math.floor(botTimeRemaining/3600000);
@@ -246,9 +296,43 @@ function updateTimer(){
     botTimer.textContent=`Bot actif : ${h}h ${m}m ${s}s`;
     botTimeRemaining-=1000;
   };
-  update(); timerInterval=setInterval(update,1000);
+  update();
+  timerInterval=setInterval(update,1000);
 }
 
+// 🔹 Achat du bot
+async function selectPayment(select,hours){
+  const choice=select.value; if(!choice) return;
+  const priceCoins={24:20,48:40,72:60};
+  const priceFcfa={24:800,48:1600,72:2400};
+
+  if(choice==='coins'){
+    if(userCoins<priceCoins[hours]){ showMessage(`Coins insuffisants (${priceCoins[hours]} requis)`); select.value=''; return; }
+    if(!confirm(`Confirmer l'activation du bot pour ${hours}h pour ${priceCoins[hours]} coins ?`)){ select.value=''; return; }
+    const res=await fetch('/buy-bot',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({duration:hours})});
+    const data=await res.json();
+    if(data.error) showMessage(data.error);
+    else{
+      showMessage(data.status,'#38bdf8');
+      userCoins=data.coins;
+      botTimeRemaining=data.botActiveRemaining;
+      coinsEl.textContent=userCoins;
+      updateTimer();
+      pairBtn.classList.remove('disabled'); qrBtn.classList.remove('disabled');
+      pairBtn.onclick=null; qrBtn.onclick=null;
+    }
+  }
+
+  if(choice==='fcfa'){
+    const paymentId="moneyfusion_"+Date.now();
+    const amount=priceFcfa[hours];
+    const url=`https://payin.moneyfusion.net/payment/69620e03013a0771970d2b80/${amount}/${paymentId}`;
+    window.location.href=url;
+  }
+  select.value='';
+}
+
+// 🔹 Init
 loadStatus();
 </script>
 </body>

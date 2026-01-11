@@ -6,6 +6,10 @@ import path from "path";
 import fetch from "node-fetch";
 import { fileURLToPath } from "url";
 
+/* =================== ROUTERS =================== */
+import qrRouter from "./qr.js";
+import pairRouter from "./pair.js"; // routes pour pairing & config
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -25,18 +29,14 @@ if (!fs.existsSync(paymentsFile)) fs.writeFileSync(paymentsFile, "[]");
 
 /* ================== HELPERS ================== */
 const loadUsers = () => {
-  try {
-    const data = JSON.parse(fs.readFileSync(usersFile, "utf-8"));
-    return Array.isArray(data) ? data : [];
-  } catch { return []; }
+  try { return JSON.parse(fs.readFileSync(usersFile, "utf-8")) || []; } 
+  catch { return []; }
 };
 const saveUsers = (d) => fs.writeFileSync(usersFile, JSON.stringify(d, null, 2));
 
 const loadPayments = () => {
-  try {
-    const data = JSON.parse(fs.readFileSync(paymentsFile, "utf-8"));
-    return Array.isArray(data) ? data : [];
-  } catch { return []; }
+  try { return JSON.parse(fs.readFileSync(paymentsFile, "utf-8")) || []; } 
+  catch { return []; }
 };
 const savePayments = (d) => fs.writeFileSync(paymentsFile, JSON.stringify(d, null, 2));
 
@@ -54,6 +54,11 @@ const requireAuth = (req, res, next) => {
   next();
 };
 
+/* =================== ROUTERS =================== */
+// Les routes de pair.js seront préfixées par /pair-api
+app.use("/qr", requireAuth, qrRouter);
+app.use("/pair-api", requireAuth, pairRouter);
+
 /* ================== ROUTES HTML ================== */
 app.get("/login", (req, res) => res.sendFile(path.join(__dirname, "login.html")));
 app.get("/register", (req, res) => res.sendFile(path.join(__dirname, "register.html")));
@@ -70,7 +75,15 @@ app.post("/register", (req, res) => {
   const users = loadUsers();
   if (users.find(u => u.username === username)) return res.json({ error: "Nom d'utilisateur déjà utilisé" });
 
-  users.push({ username, password, coins: 20, botActiveUntil: 0 });
+  // ✅ Ajout de botNumber
+  users.push({
+    username,
+    password,
+    coins: 20,
+    botActiveUntil: 0,
+    botNumber: null
+  });
+
   saveUsers(users);
   res.json({ status: "Compte créé ! Vous avez 20 coins" });
 });
@@ -98,7 +111,6 @@ app.get("/coins", requireAuth, (req, res) => {
   res.json({ coins: user.coins, botActiveRemaining: Math.max(0, user.botActiveUntil - Date.now()), username: user.username });
 });
 
-// Buy bot using coins
 app.post("/buy-bot", requireAuth, (req, res) => {
   const duration = parseInt(req.body.duration);
   const prices = { 24: 20, 48: 40, 72: 60 };

@@ -8,7 +8,7 @@ import { fileURLToPath } from "url";
 
 /* =================== ROUTERS =================== */
 import qrRouter from "./qr.js";
-import pairRouter from "./pair.js"; // routes pour pairing & config
+import pairRouter from "./pair.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -49,13 +49,11 @@ app.use(session({
   saveUninitialized: false,
 }));
 
-// Vérifie que l’utilisateur est connecté
 const requireAuth = (req, res, next) => {
   if (!req.session.user) return res.status(401).json({ error: "Non connecté" });
   next();
 };
 
-// Vérifie que le bot est actif
 const requireActiveBot = (req, res, next) => {
   const users = loadUsers();
   const user = users.find(u => u.username === req.session.user.username);
@@ -67,7 +65,6 @@ const requireActiveBot = (req, res, next) => {
 };
 
 /* =================== ROUTERS =================== */
-// Les routes de pair.js seront préfixées par /pair-api
 app.use("/qr", requireAuth, qrRouter);
 app.use("/pair-api", requireAuth, pairRouter);
 
@@ -75,13 +72,10 @@ app.use("/pair-api", requireAuth, pairRouter);
 app.get("/login", (req, res) => res.sendFile(path.join(__dirname, "login.html")));
 app.get("/register", (req, res) => res.sendFile(path.join(__dirname, "register.html")));
 app.get("/", requireAuth, (req, res) => res.sendFile(path.join(__dirname, "index.html")));
-
-// 🚨 Ajout de requireActiveBot pour protéger les pages
 app.get("/pair", requireAuth, requireActiveBot, (req, res) => res.sendFile(path.join(__dirname, "pair.html")));
 app.get("/qrpage", requireAuth, requireActiveBot, (req, res) => res.sendFile(path.join(__dirname, "qr.html")));
 
 /* ================== AUTH API ================== */
-// Register
 app.post("/register", (req, res) => {
   const { username, password } = req.body;
   if (!username || !password) return res.json({ error: "Champs manquants" });
@@ -94,14 +88,15 @@ app.post("/register", (req, res) => {
     password,
     coins: 20,
     botActiveUntil: 0,
-    botNumber: null
+    botNumber: null,
+    adCount: 0,
+    adLastDate: 0
   });
 
   saveUsers(users);
   res.json({ status: "Compte créé ! Vous avez 20 coins" });
 });
 
-// Login
 app.post("/login", (req, res) => {
   const { username, password } = req.body;
   const users = loadUsers();
@@ -111,7 +106,6 @@ app.post("/login", (req, res) => {
   res.json({ status: "Connecté avec succès" });
 });
 
-// Logout
 app.get("/logout", requireAuth, (req, res) => {
   req.session.destroy(() => res.json({ status: "Déconnecté" }));
 });
@@ -200,7 +194,7 @@ app.post("/webhook", (req, res) => {
   const user = users.find(u => u.username === pay.user);
   if (!user) return res.send("USER NOT FOUND");
 
-  const duration = 24; // chaque paiement = 24h
+  const duration = 24; 
   const now = Date.now();
   const prev = user.botActiveUntil > now ? user.botActiveUntil : now;
   user.botActiveUntil = prev + duration * 3600 * 1000;
@@ -208,6 +202,40 @@ app.post("/webhook", (req, res) => {
   saveUsers(users);
   savePayments(payments);
   res.send("OK");
+});
+
+/* ================== WATCH AD ROUTES ================== */
+// Vérifie si l'utilisateur peut regarder une pub (max 2/jour)
+app.get("/watch-ad", requireAuth, (req, res) => {
+  const users = loadUsers();
+  const user = users.find(u => u.username === req.session.user.username);
+  if(!user) return res.json({ error: "Utilisateur introuvable" });
+
+  const today = new Date().toDateString();
+  if(user.adLastDate !== today) user.adCount = 0;
+
+  if(user.adCount >= 2) return res.json({ allowed: false });
+  
+  res.json({ allowed: true });
+});
+
+// Après que la vidéo soit terminée
+app.post("/watch-ad/complete", requireAuth, (req, res) => {
+  const users = loadUsers();
+  const user = users.find(u => u.username === req.session.user.username);
+  if(!user) return res.json({ error: "Utilisateur introuvable" });
+
+  const today = new Date().toDateString();
+  if(user.adLastDate !== today) user.adCount = 0;
+
+  if(user.adCount >= 2) return res.json({ error: "Limite quotidienne atteinte" });
+
+  user.coins = (user.coins || 0) + 1;
+  user.adCount += 1;
+  user.adLastDate = today;
+
+  saveUsers(users);
+  res.json({ success: true, coins: user.coins });
 });
 
 /* ================== START SERVER ================== */

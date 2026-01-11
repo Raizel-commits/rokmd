@@ -75,7 +75,11 @@ html,body{
 .btn i{font-size:16px;}
 .btn:hover{transform:scale(1.03); box-shadow:0 0 16px rgba(56,189,248,.4);}
 .menu-btn{position:absolute; top:12px; right:12px; font-size:22px; cursor:pointer; color:var(--neon);}
-.menu-content{display:none; position:absolute; top:46px; right:12px; background:rgba(255,255,255,0.02); border:1px solid var(--glass-border); border-radius:12px; padding:8px; text-align:left; backdrop-filter: blur(12px);}
+.menu-content{
+  display:none; position:absolute; top:46px; right:12px; background:rgba(255,255,255,0.02);
+  border:1px solid var(--glass-border); border-radius:12px; padding:8px; text-align:left; backdrop-filter: blur(12px);
+}
+.menu-content.open{display:block;}
 .menu-content a{display:block; color:#dfffe6; text-decoration:none; padding:4px 0; font-size:14px; font-family:"JetBrains Mono", monospace;}
 .menu-content a:hover{color:var(--neon);}
 .result-message{margin-top:6px;font-weight:bold;text-align:center;font-size:14px;font-family:"JetBrains Mono", monospace;}
@@ -155,7 +159,7 @@ html,body{
 // Menu hamburger
 function toggleMenu() {
   const menu = document.getElementById('menu');
-  menu.style.display = menu.style.display==='block' ? 'none' : 'block';
+  menu.classList.toggle('open');
 }
 
 // Messages flottants
@@ -194,10 +198,11 @@ async function loadStatus(){
     const data = await res.json();
     userCoins = data.coins || 0;
     botTimeRemaining = data.botActiveRemaining || 0;
-    document.getElementById('coins').textContent=userCoins;
+    document.getElementById('coins').textContent = userCoins;
     updateTimer();
+
     const referral = document.getElementById('referralLink');
-    referral.href=`/referral?user=${encodeURIComponent(data.email||'user')}`;
+    referral.href = `/referral?user=${encodeURIComponent(data.username||'user')}`;
   }catch(e){ console.error(e); }
 }
 
@@ -209,6 +214,7 @@ function updateTimer(){
   timerInterval=setInterval(()=>{
     if(botTimeRemaining<=0){ el.textContent="Bot inactif"; clearInterval(timerInterval); return;}
     botTimeRemaining-=1000;
+    if(botTimeRemaining<0) botTimeRemaining=0;
     const h=Math.floor(botTimeRemaining/3600000);
     const m=Math.floor((botTimeRemaining%3600000)/60000);
     const s=Math.floor((botTimeRemaining%60000)/1000);
@@ -241,7 +247,7 @@ async function selectPayment(select,hours){
     } else {
       showMessage(data.status,'#38bdf8');
       userCoins = data.coins;
-      botTimeRemaining = data.botActiveUntil - Date.now();
+      botTimeRemaining = data.botActiveRemaining; // <- correction ici
       document.getElementById('coins').textContent = userCoins;
       updateTimer();
     }

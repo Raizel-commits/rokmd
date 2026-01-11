@@ -24,28 +24,22 @@ if (!fs.existsSync(paymentsFile)) fs.writeFileSync(paymentsFile, "[]");
 const loadUsers = () => {
   try {
     const data = fs.readFileSync(usersFile, "utf-8");
-    const json = JSON.parse(data);
-    return Array.isArray(json) ? json : [];
+    return Array.isArray(JSON.parse(data)) ? JSON.parse(data) : [];
   } catch {
     return [];
   }
 };
-
-const saveUsers = (d) =>
-  fs.writeFileSync(usersFile, JSON.stringify(d, null, 2));
+const saveUsers = (d) => fs.writeFileSync(usersFile, JSON.stringify(d, null, 2));
 
 const loadPayments = () => {
   try {
     const data = fs.readFileSync(paymentsFile, "utf-8");
-    const json = JSON.parse(data);
-    return Array.isArray(json) ? json : [];
+    return Array.isArray(JSON.parse(data)) ? JSON.parse(data) : [];
   } catch {
     return [];
   }
 };
-
-const savePayments = (d) =>
-  fs.writeFileSync(paymentsFile, JSON.stringify(d, null, 2));
+const savePayments = (d) => fs.writeFileSync(paymentsFile, JSON.stringify(d, null, 2));
 
 /* ================== MIDDLEWARE ================== */
 app.use(bodyParser.json());
@@ -68,14 +62,8 @@ const requireAuth = (req, res, next) => {
 app.get("/", requireAuth, (req, res) =>
   res.sendFile(path.resolve("index.html"))
 );
-
-app.get("/login", (req, res) =>
-  res.sendFile(path.resolve("login.html"))
-);
-
-app.get("/register", (req, res) =>
-  res.sendFile(path.resolve("register.html"))
-);
+app.get("/login", (req, res) => res.sendFile(path.resolve("login.html")));
+app.get("/register", (req, res) => res.sendFile(path.resolve("register.html")));
 
 /* ================== REGISTER ================== */
 app.post("/register", (req, res) => {
@@ -83,16 +71,9 @@ app.post("/register", (req, res) => {
   if (!email || !password) return res.send("Champs manquants");
 
   const users = loadUsers();
-  if (users.find((u) => u.email === email))
-    return res.send("Email déjà utilisé");
+  if (users.find((u) => u.email === email)) return res.send("Email déjà utilisé");
 
-  users.push({
-    email,
-    password,
-    coins: 0,
-    botActiveUntil: 0,
-  });
-
+  users.push({ email, password, coins: 0, botActiveUntil: 0 });
   saveUsers(users);
   res.redirect("/login");
 });
@@ -100,12 +81,7 @@ app.post("/register", (req, res) => {
 /* ================== LOGIN ================== */
 app.post("/login", (req, res) => {
   const { email, password } = req.body;
-
-  const users = loadUsers();
-  const user = users.find(
-    (u) => u.email === email && u.password === password
-  );
-
+  const user = loadUsers().find((u) => u.email === email && u.password === password);
   if (!user) return res.send("Identifiants incorrects");
 
   req.session.user = { email: user.email };
@@ -119,102 +95,62 @@ app.get("/logout", (req, res) => {
 
 /* ================== COINS ================== */
 app.get("/coins", requireAuth, (req, res) => {
-  const users = loadUsers();
-  const user = users.find((u) => u.email === req.session.user.email);
-
-  if (!user)
-    return res.json({ coins: 0, botActiveRemaining: 0 });
+  const user = loadUsers().find((u) => u.email === req.session.user.email);
+  if (!user) return res.json({ coins: 0, botActiveRemaining: 0 });
 
   res.json({
     coins: user.coins,
-    botActiveRemaining: Math.max(
-      0,
-      user.botActiveUntil - Date.now()
-    ),
+    botActiveRemaining: Math.max(0, user.botActiveUntil - Date.now()),
   });
 });
 
-/* ================== DEPOSIT (MoneyFusion) ================== */
+/* ================== DEPOSIT ================== */
 app.post("/deposit", requireAuth, async (req, res) => {
-  try {
-    const { amount, operator, phone, name } = req.body;
+  const { amount, operator, phone, name } = req.body;
+  if (amount < 800) return res.status(400).json({ error: "Montant minimum : 800 F" });
 
-    const users = loadUsers();
-    const user = users.find(
-      (u) => u.email === req.session.user.email
-    );
-    if (!user)
-      return res.status(400).json({ error: "Utilisateur introuvable" });
+  const users = loadUsers();
+  const user = users.find((u) => u.email === req.session.user.email);
+  if (!user) return res.status(400).json({ error: "Utilisateur introuvable" });
 
-    const paymentId = "MF_" + Date.now();
-
-    const response = await fetch(
-      "https://api.moneyfusion.net/v1/payin",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${MF_API_KEY}`,
-        },
-        body: JSON.stringify({
-          merchant_id: MERCHANT_ID,
-          amount: Number(amount),
-          currency: "XAF",
-          payment_id: paymentId,
-          operator,
-          phone_number: phone,
-          customer_name: name,
-          redirect_url: `${req.protocol}://${req.get(
-            "host"
-          )}/payment-success`,
-          webhook_url: `${req.protocol}://${req.get(
-            "host"
-          )}/webhook`,
-        }),
-      }
-    );
-
-    const data = await response.json();
-    console.log("MoneyFusion:", data);
-
-    if (!data.data || !data.data.url) {
-      return res
-        .status(500)
-        .json({ error: "MoneyFusion URL manquante" });
-    }
-
-    const payments = loadPayments();
-    payments.push({
-      id: paymentId,
-      user: user.email,
+  const paymentId = "MF_" + Date.now();
+  const response = await fetch("https://api.moneyfusion.net/v1/payin", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${MF_API_KEY}`,
+    },
+    body: JSON.stringify({
+      merchant_id: MERCHANT_ID,
       amount: Number(amount),
-      status: "pending",
-    });
-    savePayments(payments);
+      currency: "XAF",
+      payment_id: paymentId,
+      operator,
+      phone_number: phone,
+      customer_name: name,
+      redirect_url: `${req.protocol}://${req.get("host")}/payment-success`,
+      webhook_url: `${req.protocol}://${req.get("host")}/webhook`,
+    }),
+  });
 
-    res.json({ paymentUrl: data.data.url });
-  } catch (e) {
-    console.error(e);
-    res.status(500).json({ error: "Erreur serveur" });
-  }
+  const data = await response.json();
+  if (!data.data || !data.data.url) return res.status(500).json({ error: "MoneyFusion URL manquante" });
+
+  const payments = loadPayments();
+  payments.push({ id: paymentId, user: user.email, amount: Number(amount), status: "pending" });
+  savePayments(payments);
+
+  res.json({ paymentUrl: data.data.url });
 });
 
 /* ================== WEBHOOK ================== */
 app.post("/webhook", (req, res) => {
   const data = req.body;
-  console.log("Webhook:", data);
-
-  if (!data || data.status !== "success")
-    return res.send("IGNORED");
+  if (!data || data.status !== "success") return res.send("IGNORED");
 
   const payments = loadPayments();
-  const pay = payments.find(
-    (p) => p.id === data.payment_id
-  );
-  if (!pay) return res.send("NOT FOUND");
-
-  if (pay.status === "success")
-    return res.send("ALREADY PAID");
+  const pay = payments.find((p) => p.id === data.payment_id);
+  if (!pay || pay.status === "success") return res.send("OK");
 
   pay.status = "success";
 
@@ -223,14 +159,12 @@ app.post("/webhook", (req, res) => {
   if (!user) return res.send("USER NOT FOUND");
 
   const coinsMap = {
-    50: 4,
-    100: 8,
-    250: 20,
-    500: 40,
-    750: 60,
-    1000: 80,
-    1500: 120,
-    2000: 160,
+    800: 80,
+    1000: 100,
+    1500: 150,
+    2000: 200,
+    3000: 300,
+    5000: 500,
   };
 
   user.coins += coinsMap[pay.amount] || 0;
@@ -246,29 +180,17 @@ app.post("/buy-bot", requireAuth, (req, res) => {
   const { duration } = req.body;
   const prices = { 24: 20, 48: 40, 72: 60 };
 
-  const users = loadUsers();
-  const user = users.find(
-    (u) => u.email === req.session.user.email
-  );
-  if (!user)
-    return res.json({ error: "Utilisateur introuvable" });
+  const user = loadUsers().find((u) => u.email === req.session.user.email);
+  if (!user) return res.json({ error: "Utilisateur introuvable" });
 
-  if (user.coins < prices[duration])
-    return res.json({ error: "Coins insuffisants" });
+  if (user.coins < prices[duration]) return res.json({ error: "Coins insuffisants" });
 
   user.coins -= prices[duration];
-  user.botActiveUntil =
-    Math.max(user.botActiveUntil, Date.now()) +
-    duration * 3600000;
+  user.botActiveUntil = Math.max(user.botActiveUntil, Date.now()) + duration * 3600000;
 
-  saveUsers(users);
-  res.json({
-    status: `Bot activé ${duration}h`,
-    expires: user.botActiveUntil,
-  });
+  saveUsers(loadUsers());
+  res.json({ status: `Bot activé ${duration}h`, expires: user.botActiveUntil });
 });
 
-/* ================== START ================== */
-app.listen(PORT, () =>
-  console.log(`✅ Server lancé sur le port ${PORT}`)
-);
+/* ================== START SERVER ================== */
+app.listen(PORT, () => console.log(`✅ Server lancé sur le port ${PORT}`));

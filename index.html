@@ -6,104 +6,74 @@
 <title>ROK XD • Dashboard</title>
 <style>
 :root{
-  --bg-1:#020617;
-  --bg-2:#0f172a;
-  --neon:#38bdf8;
+  --bg-1:#020617; 
+  --bg-2:#0f172a; 
+  --neon:#38bdf8; 
   --glass-border:rgba(56,189,248,0.22);
   --muted:rgba(255,255,255,0.45);
-  --card-w:400px;
 }
-*{box-sizing:border-box;}
-html,body{
+*{box-sizing:border-box;margin:0;padding:0;}
+html, body{
   height:100%;
-  margin:0;
-  font-family:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial;
-  background: radial-gradient(1200px 600px at 10% 10%, rgba(56,189,248,0.03), transparent),
-              radial-gradient(900px 500px at 90% 85%, rgba(56,189,248,0.02), transparent),
-              linear-gradient(180deg,var(--bg-1),var(--bg-2));
+  font-family:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
   color:#dfffe6;
+  background: linear-gradient(270deg, #020617, #0f172a, #020617);
+  background-size: 600% 600%;
+  animation: gradientAnim 15s ease infinite;
+  overflow:hidden;
 }
+
+/* Gradient animé */
+@keyframes gradientAnim{
+  0%{background-position:0% 50%;}
+  50%{background-position:100% 50%;}
+  100%{background-position:0% 50%;}
+}
+
+/* Conteneur central */
 .stage{
   position:relative;
-  min-height:100vh;
+  height:100vh;
   display:flex;
   align-items:center;
   justify-content:center;
-  padding:36px;
+  padding:24px;
 }
+
+/* Cadre style glass */
 .glass-card{
-  width:var(--card-w);
+  width:380px;
   max-width:92vw;
   background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
   border-radius:18px;
-  padding:22px;
+  padding:24px;
   box-shadow:0 10px 40px rgba(0,0,0,0.7),0 0 40px rgba(56,189,248,0.05) inset;
   backdrop-filter: blur(10px) saturate(140%);
   border:1px solid var(--glass-border);
   text-align:center;
+  display:flex;
+  flex-direction:column;
+  gap:12px;
 }
+
+/* Header */
 .card-header h1{
   font-family:"JetBrains Mono", monospace;
   font-size:20px;
-  margin:0;
   color:var(--neon);
   text-transform:uppercase;
   text-shadow:0 0 18px rgba(56,189,248,0.22);
 }
-.timer, .coins{
-  margin-top:12px;
-  font-weight:bold;
-  font-size:14px;
-  color:var(--neon);
+.card-header .small-url{
+  font-size:12px;
+  color:var(--muted);
+  margin-top:4px;
 }
-.store-card{
-  background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
-  border:1px solid var(--glass-border);
-  border-radius:15px;
-  padding:16px;
-  margin:12px 0;
-  cursor:pointer;
-  transition:.2s;
-  text-align:left;
-}
-.store-card:hover{
-  transform:scale(1.03);
-  box-shadow:0 0 20px var(--neon);
-}
-.price{color:var(--neon); font-weight:bold;}
-.select-pay{
-  margin-top:8px; 
-  padding:6px 10px; 
-  border-radius:6px; 
-  border:1px solid var(--glass-border); 
-  background:rgba(255,255,255,0.02); 
-  color:#dfffe6; 
-  width:100%;
-}
-.btn{
-  display:block;
-  background:var(--neon);
-  color:#000;
-  padding:16px;
-  border-radius:30px;
-  font-weight:700;
-  text-decoration:none;
-  text-align:center;
-  margin:12px 0;
-  transition:.2s;
-}
-.btn:hover{
-  transform:scale(1.03);
-  box-shadow:0 0 20px rgba(56,189,248,.4);
-}
-.result-message{
-  margin-top:12px;
-  font-weight:bold;
-  text-align:center;
-  color:#ef4444;
-}
+
+/* Avatar */
 .avatar{
   margin:16px 0;
+  text-align:center;
 }
 .avatar img{
   width:80px;
@@ -111,6 +81,59 @@ html,body{
   border-radius:50%;
   border:2px solid var(--neon);
   box-shadow:0 0 12px var(--neon);
+}
+
+/* Texte et timer */
+.timer{margin:6px 0;font-size:14px;color:var(--neon);font-weight:bold;}
+.result-message{margin-top:10px;font-weight:bold;text-align:center;color:#ef4444;}
+
+/* Store cards */
+.store-card{
+  background:rgba(255,255,255,0.02);
+  border:1px solid var(--glass-border);
+  border-radius:15px;
+  padding:12px;
+  cursor:pointer;
+  transition:.2s;
+  margin-bottom:8px;
+}
+.store-card:hover{
+  box-shadow:0 0 20px var(--neon);
+  transform:scale(1.03);
+}
+.price{color:var(--neon); font-weight:bold;margin:4px 0;}
+.select-pay{
+  margin-top:6px;
+  padding:6px 10px;
+  border-radius:6px;
+  border:1px solid var(--glass-border);
+  background:rgba(255,255,255,0.02);
+  color:#dfffe6;
+  width:100%;
+}
+
+/* Boutons style login */
+.btn{
+  display:block;
+  background:var(--neon);
+  color:#020617;
+  padding:12px;
+  border-radius:30px;
+  font-weight:700;
+  text-decoration:none;
+  text-align:center;
+  margin:8px 0;
+  transition:.2s;
+}
+.btn:hover{
+  transform:scale(1.03);
+  box-shadow:0 0 20px rgba(56,189,248,.4);
+}
+
+/* Footer bouton déconnexion */
+.logout-btn{
+  background:#ef4444;
+  color:#fff;
 }
 </style>
 </head>
@@ -121,6 +144,7 @@ html,body{
 
 <header class="card-header">
   <h1>ROK XD • Dashboard</h1>
+  <div class="small-url">Déployez vos bots WhatsApp</div>
 </header>
 
 <div class="avatar">
@@ -128,16 +152,14 @@ html,body{
 </div>
 
 <div class="timer" id="botTimer">Bot inactif</div>
-<div class="coins">Coins : <span id="coins">0</span></div>
+<div>Coins : <span id="coins">0</span></div>
 
 <div class="section">
-  <h2>Activer le bot</h2>
-  <p>Choisissez la durée et le type de paiement :</p>
+  <h3>Activer le bot</h3>
 
   <div class="store">
     <div class="store-card">
-      <h3>24 heures</h3>
-      <p>Activation 24h</p>
+      <div>24 heures</div>
       <div class="price">20 coins / 800 F CFA</div>
       <select class="select-pay" onchange="selectPayment(this,24)">
         <option value="">--Payer avec--</option>
@@ -146,8 +168,7 @@ html,body{
       </select>
     </div>
     <div class="store-card">
-      <h3>48 heures</h3>
-      <p>Activation 48h</p>
+      <div>48 heures</div>
       <div class="price">40 coins / 1 600 F CFA</div>
       <select class="select-pay" onchange="selectPayment(this,48)">
         <option value="">--Payer avec--</option>
@@ -156,8 +177,7 @@ html,body{
       </select>
     </div>
     <div class="store-card">
-      <h3>72 heures</h3>
-      <p>Activation 72h</p>
+      <div>72 heures</div>
       <div class="price">60 coins / 2 400 F CFA</div>
       <select class="select-pay" onchange="selectPayment(this,72)">
         <option value="">--Payer avec--</option>
@@ -168,11 +188,12 @@ html,body{
   </div>
 </div>
 
-<a href="/pair" class="btn">Pairing Code</a>
-<a href="/qrpage" class="btn">QR Code</a>
-<a href="/logout" class="btn" style="background:#ef4444;color:#fff;">Déconnexion</a>
+<a href="/pair" class="btn" id="pairBtn">Pairing Code</a>
+<a href="/qrpage" class="btn" id="qrBtn">QR Code</a>
+<a href="/logout" class="btn logout-btn">Déconnexion</a>
 
 <div class="result-message" id="resultMsg"></div>
+
 </section>
 </main>
 
@@ -180,6 +201,7 @@ html,body{
 let botTimeRemaining = 0;
 let userCoins = 0;
 
+// Charger coins et timer
 async function loadStatus(){
   try {
     const res = await fetch('/coins');
@@ -188,11 +210,10 @@ async function loadStatus(){
     botTimeRemaining = data.botActiveRemaining || 0;
     document.getElementById('coins').textContent = userCoins;
     updateTimer();
-  } catch(e){
-    console.error(e);
-  }
+  } catch(e){ console.error(e); }
 }
 
+// Timer
 function updateTimer(){
   const el = document.getElementById('botTimer');
   if(botTimeRemaining<=0){ el.textContent="Bot inactif"; return; }
@@ -206,6 +227,7 @@ function updateTimer(){
   },1000);
 }
 
+// Gestion paiement
 async function selectPayment(select, hours){
   const choice = select.value;
   if(!choice) return;
@@ -241,6 +263,5 @@ async function selectPayment(select, hours){
 
 loadStatus();
 </script>
-
 </body>
 </html>

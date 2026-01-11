@@ -91,6 +91,31 @@ function renderError(message, back = "/") {
   `;
 }
 
+function renderSuccess(message, back = "/") {
+  return `
+  <!DOCTYPE html>
+  <html lang="fr">
+  <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Succès</title>
+  <style>
+    body { font-family: "Inter", sans-serif; background: linear-gradient(180deg,#020617,#0f172a); color: #dfffe6; display:flex; justify-content:center; align-items:center; height:100vh; margin:0; }
+    .glass-card { background: rgba(255,255,255,0.02); padding:24px 36px; border-radius:18px; box-shadow:0 10px 40px rgba(0,0,0,0.7); border:1px solid rgba(56,189,248,0.22); text-align:center; max-width:400px; }
+    h2 { color: #38bdf8; margin-bottom:16px; }
+    a { display:inline-block; padding:10px 20px; background:#38bdf8; color:#020617; text-decoration:none; border-radius:6px; font-weight:bold; margin-top:10px; }
+  </style>
+  </head>
+  <body>
+    <section class="glass-card">
+      <h2>${message}</h2>
+      <a href="${back}">Retour</a>
+    </section>
+  </body>
+  </html>
+  `;
+}
+
 /* ================== ROUTES ================== */
 
 // Login/Register HTML
@@ -103,15 +128,15 @@ app.get("/", requireAuth, (req, res) => res.sendFile(path.join(__dirname, "index
 // Register
 app.post("/register", (req, res) => {
   const { email, password } = req.body;
-  if (!email || !password) return res.send("Champs manquants");
+  if (!email || !password) return res.send(renderError("Champs manquants", "/register"));
 
   const users = loadUsers();
-  if (users.find(u => u.email === email)) return res.send("Email déjà utilisé");
+  if (users.find(u => u.email === email)) return res.send(renderError("Email déjà utilisé", "/register"));
 
-  // DONNE 20 COINS À LA PREMIÈRE INSCRIPTION
+  // Attribuer 20 coins à la première inscription
   users.push({ email, password, coins: 20, botActiveUntil: 0 });
   saveUsers(users);
-  res.redirect("/login");
+  res.send(renderSuccess("Compte créé avec succès ! Vous avez 20 coins", "/login"));
 });
 
 // Login
@@ -119,7 +144,7 @@ app.post("/login", (req, res) => {
   const { email, password } = req.body;
   const users = loadUsers();
   const user = users.find(u => u.email === email && u.password === password);
-  if (!user) return res.send("Identifiants incorrects");
+  if (!user) return res.send(renderError("Identifiants incorrects", "/login"));
   req.session.user = { email: user.email };
   res.redirect("/");
 });
@@ -133,7 +158,7 @@ app.get("/logout", (req, res) => {
 app.get("/coins", requireAuth, (req, res) => {
   const users = loadUsers();
   const user = users.find(u => u.email === req.session.user.email);
-  if (!user) return res.status(401).json({ error: "Non autorisé" });
+  if (!user) return res.status(401).json({ error: "Utilisateur introuvable" });
   const remainingTime = Math.max(0, user.botActiveUntil - Date.now());
   res.json({ coins: user.coins || 0, botActiveRemaining: remainingTime });
 });
@@ -142,39 +167,60 @@ app.get("/coins", requireAuth, (req, res) => {
 app.post("/buy-bot", requireAuth, (req, res) => {
   const duration = parseInt(req.body.duration);
   const prices = { 24: 20, 48: 40, 72: 60 }; // coins
-  if (!prices[duration]) return res.json({ error: "Durée invalide" });
-
   const users = loadUsers();
   const user = users.find(u => u.email === req.session.user.email);
-  if ((user.coins || 0) < prices[duration])
-    return res.json({ error: `Coins insuffisants (${prices[duration]} requis)` });
+  if (!user) return res.send(renderError("Utilisateur introuvable", "/"));
+
+  if (!prices[duration]) return res.send(renderError("Durée invalide", "/"));
+  if ((user.coins || 0) < prices[duration]) 
+      return res.send(renderError(`Coins insuffisants (${prices[duration]} requis)`, "/"));
 
   user.coins -= prices[duration];
   const now = Date.now();
   const previous = user.botActiveUntil > now ? user.botActiveUntil : now;
   user.botActiveUntil = previous + duration * 3600 * 1000;
   saveUsers(users);
-  res.json({ status: `Bot activé pour ${duration}h`, expires: user.botActiveUntil });
+
+  res.send(renderSuccess(`Bot activé pour ${duration}h`, "/"));
 });
 
 // Activate bot via FCFA Payment (MoneyFusion)
 app.post("/pay-bot", requireAuth, async (req, res) => {
   try {
-    const { amount, operator, phone, name } = req.body;
+    const { amount } = req.body;
     const users = loadUsers();
     const user = users.find(u => u.email === req.session.user.email);
-    if (!user) return res.status(400).json({ error: "Utilisateur introuvable" });
+    if (!user) return res.send(renderError("Utilisateur introuvable", "/"));
 
     const paymentId = "MF_" + Date.now();
-    const url = `https://payin.moneyfusion.net/payment/${MERCHANT_ID}/${amount}/${paymentId}`;
-    
-    // On peut stocker le paiement en pending
+    const response = await fetch("https://api.moneyfusion.net/v1/payin", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${MF_API_KEY}` },
+      body: JSON.stringify({
+        merchant_id: MERCHANT_ID,
+        amount: Number(amount),
+        currency: "XAF",
+        payment_id: paymentId,
+        redirect_url: `${req.protocol}://${req.get("host")}/payment-success`,
+        webhook_url: `${req.protocol}://${req.get("host")}/webhook`
+      })
+    });
+
+    const data = await response.json();
+    if (!data.data || !data.data.url) {
+      return res.send(renderError("Erreur paiement MoneyFusion", "/"));
+    }
+
     const payments = loadPayments();
     payments.push({ id: paymentId, user: user.email, amount: Number(amount), status: "pending" });
     savePayments(payments);
 
-    res.json({ paymentUrl: url });
-  } catch (e) { console.error(e); res.status(500).json({ error: "Erreur serveur" }); }
+    // Redirige directement
+    res.redirect(data.data.url);
+  } catch (e) { 
+    console.error(e); 
+    res.send(renderError("Erreur serveur", "/"));
+  }
 });
 
 // Webhook MoneyFusion

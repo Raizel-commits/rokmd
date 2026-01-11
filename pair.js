@@ -1,3 +1,5 @@
+// =======================
+// IMPORTS
 import express from "express";
 import fs from "fs-extra";
 import path from "path";
@@ -8,39 +10,36 @@ import {
   useMultiFileAuthState,
   Browsers,
   fetchLatestBaileysVersion,
+  DisconnectReason,
   makeCacheableSignalKeyStore,
   delay
 } from "@whiskeysockets/baileys";
+import { db } from "./firebase.js";
 
 const router = express.Router();
 const PAIRING_DIR = "./sessions";
 const CONFIG_FILE = "./config.json";
-const USERS_FILE = "./users.json";
 
-/* ================== HELPERS ================== */
+// =======================
+// UTILITIES
 function formatNumber(num) {
   const phone = pn("+" + num.replace(/\D/g, ""));
   if (!phone.isValid()) throw new Error("Numéro invalide");
   return phone.getNumber("e164").replace("+", "");
 }
 
-const loadUsers = () => {
-  try { return JSON.parse(fs.readFileSync(USERS_FILE, "utf-8")) || []; }
-  catch { return []; }
-};
-const saveUsers = (d) => fs.writeFileSync(USERS_FILE, JSON.stringify(d, null, 2));
+const jidClean = (jid = "") => jid.split(":")[0];
 
-let CONFIG = {};
-if (fs.existsSync(CONFIG_FILE)) CONFIG = JSON.parse(fs.readFileSync(CONFIG_FILE, "utf-8"));
+async function removeSession(dir) {
+  if (await fs.pathExists(dir)) await fs.remove(dir);
+}
 
-const bots = new Map(); // number => { sock, config, features }
-
-/* ================== LOAD COMMANDS ================== */
 async function loadCommands() {
   const commands = new Map();
   const folder = path.join("./commands");
   await fs.ensureDir(folder);
   const files = fs.readdirSync(folder).filter(f => f.endsWith(".js"));
+
   for (const file of files) {
     const modulePath = `./commands/${file}?update=${Date.now()}`;
     const cmd = await import(modulePath);
@@ -51,7 +50,27 @@ async function loadCommands() {
   return commands;
 }
 
-/* ================== START PAIRING ================== */
+// =======================
+// CONFIG LOAD / SAVE
+let CONFIG = {};
+if (fs.existsSync(CONFIG_FILE)) CONFIG = JSON.parse(fs.readFileSync(CONFIG_FILE, "utf8"));
+async function saveConfig() { await fs.writeFile(CONFIG_FILE, JSON.stringify(CONFIG, null, 2)); }
+
+// =======================
+// BOTS MAP
+const bots = new Map(); // number => { sock, commands, config }
+
+function getLid(number, sock) {
+  try {
+    const data = JSON.parse(fs.readFileSync(`${PAIRING_DIR}/${number}/creds.json`, "utf8"));
+    return data?.me?.lid || sock.user?.lid || "";
+  } catch {
+    return sock.user?.lid || "";
+  }
+}
+
+// =======================
+// START PAIRING SESSION
 async function startPairingSession(number) {
   const SESSION_DIR = path.join(PAIRING_DIR, number);
   await fs.ensureDir(SESSION_DIR);
@@ -72,28 +91,35 @@ async function startPairingSession(number) {
   });
 
   sock.ev.on("creds.update", async () => {
-    await saveCreds();
-    console.log("💾 Session sauvegardée localement :", number);
-  });
+  await saveCreds();
+
+  try {
+    const credsPath = `${SESSION_DIR}/creds.json`;
+    if (!fs.existsSync(credsPath)) return;
+
+    const creds = JSON.parse(fs.readFileSync(credsPath, "utf8"));
+
+    await db.collection("sessions").doc(number).set({
+      number,
+      creds,
+      updatedAt: new Date()
+    });
+
+    console.log("☁️ Session sauvegardée Firebase :", number);
+  } catch (e) {
+    console.error("Firebase save error:", e.message);
+  }
+});
 
   const commands = await loadCommands();
   const config = CONFIG[number] || { prefix: "!" };
-  const features = {
-    autoreact: false,
-    autotyping: false,
-    autorecording: false,
-    autoread: false,
-    welcome: false,
-    bye: false,
-    antilink: false
-  };
+  bots.set(number, { sock, commands, config });
 
-  bots.set(number, { sock, commands, config, features });
-
-  // ================== MESSAGE HANDLER ==================
+  // =======================
+  // MESSAGE HANDLER
   sock.ev.on("messages.upsert", async ({ messages }) => {
     const msg = messages[0];
-    if (!msg?.message) return;
+    if (!msg || !msg.message) return;
 
     const remoteJid = msg.key.remoteJid;
     const participant = msg.key.participant || remoteJid;
@@ -102,83 +128,137 @@ async function startPairingSession(number) {
       msg.message?.extendedTextMessage?.text ||
       msg.message?.imageMessage?.caption ||
       "";
-
     if (!text) return;
 
     const bot = bots.get(number);
-    if (!bot) return;
-    const { commands, features } = bot;
 
-    // AUTO FEATURES
-    if (!msg.key.fromMe) {
-      if (features.autoread) await sock.sendReadReceipt(remoteJid, participant, [msg.key.id]);
-      if (features.autoreact) {
-        const reactions = ["👍","❤️","😂","😮","😢","👏","🎉","🤔","🔥","😎","🙌","💯","✨","🥳","😡","😱","🤩","🙏","💔","🤷"];
-        await sock.sendMessage(remoteJid, { react: { text: reactions[Math.floor(Math.random()*reactions.length)], key: msg.key } });
-      }
+    // ----------------------
+    // Récupération du LID du bot
+    const botNumber = sock.user?.id ? sock.user.id.split(":")[0] : "";
+    let userLid = "";
+    try {
+      const data = JSON.parse(fs.readFileSync(`sessions/${botNumber}/creds.json`, "utf8"));
+      userLid = data?.me?.lid || sock.user?.lid || "";
+    } catch (e) {
+      userLid = sock.user?.lid || "";
     }
+    const lid = userLid ? [userLid.split(":")[0] + "@lid"] : [];
 
-    // COMMANDS HANDLER
+    const cleanParticipant = participant ? participant.split("@") : [];
+    const cleanRemoteJid = remoteJid ? remoteJid.split("@") : [];
+
     const prefix = bot.config.prefix;
-    if (!text.startsWith(prefix)) return;
+    const approvedUsers = bot.config.sudoList || [];
 
-    const args = text.slice(prefix.length).trim().split(/\s+/);
-    const commandName = args.shift().toLowerCase();
+    // ----------------------
+    // Vérification des autorisations
+    if (
+      text.startsWith(prefix) &&
+      (msg.key.fromMe || approvedUsers.includes(cleanParticipant[0] || cleanRemoteJid[0]) || lid.includes(participant || remoteJid))
+    ) {
+      const args = text.slice(prefix.length).trim().split(/\s+/);
+      const commandName = args.shift().toLowerCase();
 
-    if (commands.has(commandName)) {
-      try {
-        await commands.get(commandName).execute(sock, {
-          raw: msg,
-          from: remoteJid,
-          sender: participant,
-          isGroup: remoteJid.endsWith("@g.us"),
-          reply: t => sock.sendMessage(remoteJid, { text: t }),
-          bots
-        }, args);
-      } catch (err) {
-        console.error("Command error:", err);
-        await sock.sendMessage(remoteJid, { text: "❌ Error executing command" });
+      if (commands.has(commandName)) {
+        try {
+          await commands.get(commandName).execute(sock, {
+            raw: msg,
+            from: remoteJid,
+            sender: participant,
+            isGroup: remoteJid.endsWith("@g.us"),
+            reply: (t) => sock.sendMessage(remoteJid, { text: t })
+          }, args);
+        } catch (err) {
+          console.error("Erreur commande:", err);
+          sock.sendMessage(remoteJid, { text: "❌ Erreur commande" });
+        }
       }
     }
   });
 
-  // ================== PAIRING ==================
+  // =======================
+  // CONNECTION HANDLER
+  sock.ev.on("connection.update", async ({ connection, lastDisconnect }) => {
+    if (connection === "close") {
+      const status = lastDisconnect?.error?.output?.statusCode;
+      if (status === DisconnectReason.loggedOut) {
+        await removeSession(SESSION_DIR);
+        bots.delete(number);
+      } else {
+        setTimeout(() => startPairingSession(number), 2000);
+      }
+    }
+  });
+
+  // =======================
+  // PAIRING CODE
   if (!sock.authState.creds.registered) {
-    await delay(1000);
-    const qr = await sock.generatePairingQrCode();
-    return qr; // retourne le QR code pour affichage
+    await delay(1500);
+    const code = await sock.requestPairingCode(number);
+    return code.match(/.{1,4}/g).join("-");
   }
 
   return null;
 }
 
-/* ================== PAIR-API ================== */
+// =======================
+// ROUTES
 router.get("/code", async (req, res) => {
   let num = req.query.number;
   if (!num) return res.status(400).json({ error: "Numéro requis" });
 
   try {
     num = formatNumber(num);
+    const code = await startPairingSession(num);
 
-    const users = loadUsers();
-    const user = users.find(u => u.username === req.session.user.username);
-    if (!user) return res.status(401).json({ error: "Utilisateur introuvable" });
-    if (!user.botActiveUntil || user.botActiveUntil < Date.now()) return res.status(403).json({ error: "Bot inactif" });
-    if (user.botNumber && user.botNumber !== num) return res.status(403).json({ error: "Un bot est déjà lié à ce compte" });
-
-    if (!user.botNumber) {
-      user.botNumber = num;
-      saveUsers(users);
-    }
-
-    const qr = await startPairingSession(num);
-    if (qr) return res.json({ qr });
-    return res.json({ status: "Bot déjà connecté" });
-
+    if (code) return res.json({ code });
+    return res.json({ status: "Déjà connecté" });
   } catch (err) {
-    console.error("Pairing error:", err);
+    console.error("Pairing error:", err.message);
     return res.status(500).json({ error: err.message });
   }
 });
+
+router.post("/config", async (req, res) => {
+  try {
+    let { number, prefix } = req.body;
+    if (!number) return res.status(400).json({ error: "Numéro requis" });
+
+    number = formatNumber(number);
+    if (!prefix) prefix = "!";
+
+    CONFIG[number] = { prefix };
+    if (bots.has(number)) bots.get(number).config = { prefix };
+
+    await fs.writeFile(CONFIG_FILE, JSON.stringify(CONFIG, null, 2));
+    res.json({ status: "✅ Configuration sauvegardée pour ce bot", prefix });
+  } catch (err) {
+    console.error("Config error:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+export async function restoreFromFirebase() {
+  try {
+    const snap = await db.collection("sessions").get();
+    if (snap.empty) {
+      console.log("ℹ️ Aucune session Firebase à restaurer");
+      return;
+    }
+
+    for (const doc of snap.docs) {
+      const { number, creds } = doc.data();
+      const dir = `${PAIRING_DIR}/${number}`;
+
+      await fs.ensureDir(dir);
+      await fs.writeFile(`${dir}/creds.json`, JSON.stringify(creds, null, 2));
+
+      console.log("♻️ Session restaurée :", number);
+      await startPairingSession(number);
+    }
+  } catch (err) {
+    console.error("Firebase restore error:", err.message);
+  }
+}
 
 export default router;

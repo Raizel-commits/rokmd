@@ -83,11 +83,31 @@ html,body{
 .btn i{font-size:16px;}
 .btn:hover:not(.disabled){transform:scale(1.03); box-shadow:0 0 16px rgba(56,189,248,.4);}
 .btn.disabled{opacity:0.5; cursor:not-allowed;}
-.menu-btn{position:absolute; top:12px; right:12px; font-size:22px; cursor:pointer; color:var(--neon);}
-.menu-content{display:none; position:absolute; top:46px; right:12px; background:rgba(255,255,255,0.02); border:1px solid var(--glass-border); border-radius:12px; padding:8px; text-align:left; backdrop-filter: blur(12px);}
-.menu-content a{display:block; color:#dfffe6; text-decoration:none; padding:4px 0; font-size:14px; font-family:"JetBrains Mono", monospace;}
-.menu-content a:hover{color:var(--neon);}
 .result-message{margin-top:6px;font-weight:bold;text-align:center;font-size:14px;font-family:"JetBrains Mono", monospace;}
+
+/* ======================= */
+/* MENU FIXE DANS LA CARTE */
+.menu-content {
+  display: block; /* Toujours visible */
+  position: relative; /* Dans la carte */
+  top: auto; right: auto; 
+  background: rgba(0,0,0,0.25); /* Fond sombre semi-transparent */
+  border: 1px solid rgba(56,189,248,0.22);
+  border-radius: 12px;
+  padding: 8px;
+  text-align: left;
+  backdrop-filter: blur(8px);
+  margin-bottom: 12px;
+}
+.menu-content a {
+  color: #38bdf8; /* Bleu néon pour bien voir */
+  text-decoration: none;
+  padding: 4px 0;
+  font-size: 14px;
+  font-family: "JetBrains Mono", monospace;
+  display: block;
+}
+.menu-content a:hover { color: #fff; }
 
 /* ======================= */
 /* RESPONSIVE POUR PETITES FENÊTRES */
@@ -115,9 +135,6 @@ html,body{
   .timer, .coins {
     font-size: 12px;
   }
-  .menu-btn {
-    font-size: 20px;
-  }
 }
 </style>
 </head>
@@ -125,69 +142,69 @@ html,body{
 <main class="stage">
 <section class="glass-card">
 
-<div class="menu-btn" onclick="toggleMenu()">☰</div>
-<div class="menu-content" id="menu">
-  <a href="/logout">Déconnexion</a>
-  <a href="https://wa.me/699777530" target="_blank">Contacter l’équipe 1</a>
-  <a href="https://wa.me/237673941535" target="_blank">Contacter l’équipe 2</a>
-  <a href="#" id="referralLink">Lien de parrainage</a>
-  <a href="#">Help</a>
-</div>
+  <!-- MENU FIXE -->
+  <div class="menu-content" id="menu">
+    <a href="/logout">Déconnexion</a>
+    <a href="https://wa.me/699777530" target="_blank">Contacter l’équipe 1</a>
+    <a href="https://wa.me/237673941535" target="_blank">Contacter l’équipe 2</a>
+    <a href="#" id="referralLink">Lien de parrainage</a>
+    <a href="#">Help</a>
+  </div>
 
-<header class="card-header">
-<h1>ROK XD • Dashboard</h1>
-<div class="small-url">Connexion sécurisée</div>
-</header>
+  <header class="card-header">
+    <h1>ROK XD • Dashboard</h1>
+    <div class="small-url">Connexion sécurisée</div>
+  </header>
 
-<div class="avatar">
-  <img src="https://files.catbox.moe/36ywf8.jpeg" alt="Avatar">
-</div>
+  <div class="avatar">
+    <img src="https://files.catbox.moe/36ywf8.jpeg" alt="Avatar">
+  </div>
 
-<div class="timer" id="botTimer">Bot inactif</div>
-<div class="coins">Coins : <span id="coins">0</span></div>
+  <div class="timer" id="botTimer">Bot inactif</div>
+  <div class="coins">Coins : <span id="coins">0</span></div>
 
-<div class="section">
-  <h2 style="font-size:16px;margin:6px 0;">Activer le bot</h2>
-  <p style="font-size:13px;margin:2px 0;">Choisissez la durée et le type de paiement :</p>
+  <div class="section">
+    <h2 style="font-size:16px;margin:6px 0;">Activer le bot</h2>
+    <p style="font-size:13px;margin:2px 0;">Choisissez la durée et le type de paiement :</p>
 
-  <div class="store">
-    <div class="store-card">
-      <h3>24 heures</h3>
-      <p>Activation 24h</p>
-      <div class="price">20 coins / 800 F CFA</div>
-      <select class="select-pay" onchange="selectPayment(this,24)">
-        <option value="">--Payer avec--</option>
-        <option value="coins">Coins</option>
-        <option value="fcfa">FCFA</option>
-      </select>
-    </div>
-    <div class="store-card">
-      <h3>48 heures</h3>
-      <p>Activation 48h</p>
-      <div class="price">40 coins / 1 600 F CFA</div>
-      <select class="select-pay" onchange="selectPayment(this,48)">
-        <option value="">--Payer avec--</option>
-        <option value="coins">Coins</option>
-        <option value="fcfa">FCFA</option>
-      </select>
-    </div>
-    <div class="store-card">
-      <h3>72 heures</h3>
-      <p>Activation 72h</p>
-      <div class="price">60 coins / 2 400 F CFA</div>
-      <select class="select-pay" onchange="selectPayment(this,72)">
-        <option value="">--Payer avec--</option>
-        <option value="coins">Coins</option>
-        <option value="fcfa">FCFA</option>
-      </select>
+    <div class="store">
+      <div class="store-card">
+        <h3>24 heures</h3>
+        <p>Activation 24h</p>
+        <div class="price">20 coins / 800 F CFA</div>
+        <select class="select-pay" onchange="selectPayment(this,24)">
+          <option value="">--Payer avec--</option>
+          <option value="coins">Coins</option>
+          <option value="fcfa">FCFA</option>
+        </select>
+      </div>
+      <div class="store-card">
+        <h3>48 heures</h3>
+        <p>Activation 48h</p>
+        <div class="price">40 coins / 1 600 F CFA</div>
+        <select class="select-pay" onchange="selectPayment(this,48)">
+          <option value="">--Payer avec--</option>
+          <option value="coins">Coins</option>
+          <option value="fcfa">FCFA</option>
+        </select>
+      </div>
+      <div class="store-card">
+        <h3>72 heures</h3>
+        <p>Activation 72h</p>
+        <div class="price">60 coins / 2 400 F CFA</div>
+        <select class="select-pay" onchange="selectPayment(this,72)">
+          <option value="">--Payer avec--</option>
+          <option value="coins">Coins</option>
+          <option value="fcfa">FCFA</option>
+        </select>
+      </div>
     </div>
   </div>
-</div>
 
-<a href="/pair" class="btn" id="pairBtn"><i class="fas fa-link"></i> Pairing Code</a>
-<a href="/qrpage" class="btn" id="qrBtn"><i class="fas fa-qrcode"></i> QR Code</a>
+  <a href="/pair" class="btn" id="pairBtn"><i class="fas fa-link"></i> Pairing Code</a>
+  <a href="/qrpage" class="btn" id="qrBtn"><i class="fas fa-qrcode"></i> QR Code</a>
 
-<div class="result-message" id="resultMsg"></div>
+  <div class="result-message" id="resultMsg"></div>
 </section>
 </main>
 
@@ -195,38 +212,6 @@ html,body{
 let botTimeRemaining=0;
 let userCoins=0;
 let timerInterval;
-
-// menu
-function toggleMenu(){
-  const menu=document.getElementById('menu');
-  menu.style.display=menu.style.display==='block'?'none':'block';
-}
-
-// messages flottants
-function showMessage(msg,color='#ef4444',duration=3000){
-  if(!msg) return;
-  const container=document.createElement('div');
-  container.style.position='fixed';
-  container.style.top='50%';
-  container.style.left='50%';
-  container.style.transform='translate(-50%,-50%)';
-  container.style.background='linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01))';
-  container.style.backdropFilter='blur(12px) saturate(140%)';
-  container.style.border='1px solid rgba(56,189,248,0.22)';
-  container.style.padding='20px 28px';
-  container.style.borderRadius='18px';
-  container.style.color=color;
-  container.style.fontWeight='bold';
-  container.style.textAlign='center';
-  container.style.fontFamily='"JetBrains Mono", monospace';
-  container.style.fontSize='14px';
-  container.style.textShadow=color==='red'?'0 0 12px rgba(239,68,68,0.8)':'0 0 12px rgba(56,189,248,0.8)';
-  container.style.zIndex=9999;
-  container.style.boxShadow='0 10px 30px rgba(0,0,0,0.6), 0 0 20px rgba(56,189,248,0.05) inset';
-  container.textContent=msg;
-  document.body.appendChild(container);
-  setTimeout(()=>container.remove(),duration);
-}
 
 // load status
 async function loadStatus(){
@@ -288,13 +273,13 @@ async function selectPayment(select,hours){
   const priceCoins={24:20,48:40,72:60};
   const priceFcfa={24:800,48:1600,72:2400};
   if(choice==='coins'){
-    if(userCoins<priceCoins[hours]){ showMessage(`Coins insuffisants (${priceCoins[hours]} requis)`); select.value=''; return; }
+    if(userCoins<priceCoins[hours]){ alert(`Coins insuffisants (${priceCoins[hours]} requis)`); select.value=''; return; }
     if(!confirm(`Confirmer l'activation du bot pour ${hours}h pour ${priceCoins[hours]} coins ?`)){ select.value=''; return; }
     const res=await fetch('/buy-bot',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({duration:hours})});
     const data=await res.json();
-    if(data.error) showMessage(data.error);
+    if(data.error) alert(data.error);
     else{
-      showMessage(data.status,'#38bdf8');
+      alert(data.status);
       userCoins=data.coins;
       botTimeRemaining=data.botActiveRemaining;
       document.getElementById('coins').textContent=userCoins;

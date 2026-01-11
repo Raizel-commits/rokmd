@@ -73,132 +73,143 @@ async function saveConfig() { await fs.writeFile(CONFIG_FILE, JSON.stringify(CON
 const bots = new Map(); // number => { sock, commands, config, features }
 
 // =======================
-// START PAIRING SESSION
+// START PAIRING SESSION - SAFE
 async function startPairingSession(number) {
   const SESSION_DIR = path.join(PAIRING_DIR, number);
   await fs.ensureDir(SESSION_DIR);
 
-  const { state, saveCreds } = await useMultiFileAuthState(SESSION_DIR);
-  const { version } = await fetchLatestBaileysVersion();
+  try {
+    const { state, saveCreds } = await useMultiFileAuthState(SESSION_DIR);
+    const { version } = await fetchLatestBaileysVersion();
 
-  const sock = makeWASocket({
-    version,
-    auth: {
-      creds: state.creds,
-      keys: makeCacheableSignalKeyStore(state.keys, pino({ level: "fatal" }))
-    },
-    logger: pino({ level: "silent" }),
-    browser: Browsers.windows("Chrome"),
-    printQRInTerminal: false,
-    markOnlineOnConnect: false
-  });
+    const sock = makeWASocket({
+      version,
+      auth: {
+        creds: state.creds,
+        keys: makeCacheableSignalKeyStore(state.keys, pino({ level: "fatal" }))
+      },
+      logger: pino({ level: "silent" }),
+      browser: Browsers.windows("Chrome"),
+      printQRInTerminal: false,
+      markOnlineOnConnect: false
+    });
 
-  sock.ev.on("creds.update", async () => {
-    await saveCreds();
-    console.log("💾 Session sauvegardée localement :", number);
-  });
+    sock.ev.on("creds.update", async () => {
+      try { await saveCreds(); } catch {}
+      console.log("💾 Session sauvegardée localement :", number);
+    });
 
-  const commands = await loadCommands();
-  const config = CONFIG[number] || { prefix: "!" };
-  const features = {
-    autoreact: false,
-    autotyping: false,
-    autorecording: false,
-    autoread: false,
-    welcome: false,
-    bye: false,
-    antilink: false
-  };
-
-  bots.set(number, { sock, commands, config, features });
-
-  // =======================
-  // MESSAGE HANDLER
-  sock.ev.on("messages.upsert", async ({ messages }) => {
-    const msg = messages[0];
-    if (!msg || !msg.message) return;
-
-    const remoteJid = msg.key.remoteJid;
-    const participant = msg.key.participant || remoteJid;
-    const text =
-      msg.message?.conversation ||
-      msg.message?.extendedTextMessage?.text ||
-      msg.message?.imageMessage?.caption ||
-      "";
-    if (!text) return;
-
-    const bot = bots.get(number);
-    if (!bot) return;
-    const { commands, features } = bot;
+    const commands = await loadCommands();
+    const config = CONFIG[number] || { prefix: "!" };
+    const features = {
+      autoreact: false,
+      autotyping: false,
+      autorecording: false,
+      autoread: false,
+      welcome: false,
+      bye: false,
+      antilink: false
+    };
+    bots.set(number, { sock, commands, config, features });
 
     // =======================
-    // AUTO FEATURES
-    if (!msg.key.fromMe) {
-      if (features.autoread) await sock.sendReadReceipt(remoteJid, participant, [msg.key.id]);
-      if (features.autoreact) {
-        const reactions = ["👍","❤️","😂","😮","😢","👏","🎉","🤔","🔥","😎","🙌","💯","✨","🥳","😡","😱","🤩","🙏","💔","🤷"];
-        await sock.sendMessage(remoteJid, { react: { text: reactions[Math.floor(Math.random() * reactions.length)], key: msg.key } });
+    // MESSAGE HANDLER
+    sock.ev.on("messages.upsert", async ({ messages }) => {
+      try {
+        const msg = messages[0];
+        if (!msg || !msg.message) return;
+
+        const remoteJid = msg.key.remoteJid;
+        const participant = msg.key.participant || remoteJid;
+        const text =
+          msg.message?.conversation ||
+          msg.message?.extendedTextMessage?.text ||
+          msg.message?.imageMessage?.caption ||
+          "";
+        if (!text) return;
+
+        const bot = bots.get(number);
+        if (!bot) return;
+
+        const { commands, features } = bot;
+
+        // AUTO FEATURES
+        if (!msg.key.fromMe) {
+          if (features.autoread) await sock.sendReadReceipt(remoteJid, participant, [msg.key.id]);
+          if (features.autoreact) {
+            const reactions = ["👍","❤️","😂","😮","😢","👏","🎉","🤔","🔥","😎","🙌","💯","✨","🥳","😡","😱","🤩","🙏","💔","🤷"];
+            await sock.sendMessage(remoteJid, { react: { text: reactions[Math.floor(Math.random() * reactions.length)], key: msg.key } });
+          }
+          if (features.autotyping && remoteJid.endsWith("@g.us")) await sock.sendPresenceUpdate("composing", remoteJid);
+          if (features.autorecording && remoteJid.endsWith("@g.us")) await sock.sendPresenceUpdate("recording", remoteJid);
+        }
+
+        // COMMANDS
+        const botNumber = sock.user?.id?.split(":")[0] || "";
+        const lid = botNumber ? [botNumber + "@lid"] : [];
+        const cleanParticipant = participant?.split("@")[0] || "";
+        const prefix = bot.config.prefix;
+        const approvedUsers = bot.config.sudoList || [];
+
+        if (
+          text.startsWith(prefix) &&
+          (msg.key.fromMe || approvedUsers.includes(cleanParticipant) || lid.includes(participant))
+        ) {
+          const args = text.slice(prefix.length).trim().split(/\s+/);
+          const commandName = args.shift().toLowerCase();
+
+          if (commands.has(commandName)) {
+            try {
+              await commands.get(commandName).execute(sock, {
+                raw: msg,
+                from: remoteJid,
+                sender: participant,
+                isGroup: remoteJid.endsWith("@g.us"),
+                reply: t => sock.sendMessage(remoteJid,{text:t}),
+                bots
+              }, args);
+            } catch (err) {
+              console.error("Command error:", err);
+              await sock.sendMessage(remoteJid, { text: "❌ Error executing command" });
+            }
+          }
+        }
+      } catch (e) {
+        console.error("Message handler error:", e);
       }
-      if (features.autotyping && remoteJid.endsWith("@g.us")) await sock.sendPresenceUpdate("composing", remoteJid);
-      if (features.autorecording && remoteJid.endsWith("@g.us")) await sock.sendPresenceUpdate("recording", remoteJid);
-    }
+    });
 
-    // =======================
-    // COMMANDS HANDLER
-    const botNumber = sock.user?.id?.split(":")[0] || "";
-    const lid = botNumber ? [botNumber + "@lid"] : [];
-    const cleanParticipant = participant?.split("@")[0] || "";
-    const prefix = bot.config.prefix;
-    const approvedUsers = bot.config.sudoList || [];
-
-    if (
-      text.startsWith(prefix) &&
-      (msg.key.fromMe || approvedUsers.includes(cleanParticipant) || lid.includes(participant))
-    ) {
-      const args = text.slice(prefix.length).trim().split(/\s+/);
-      const commandName = args.shift().toLowerCase();
-
-      if (commands.has(commandName)) {
-        try {
-          await commands.get(commandName).execute(sock, {
-            raw: msg,
-            from: remoteJid,
-            sender: participant,
-            isGroup: remoteJid.endsWith("@g.us"),
-            reply: t => sock.sendMessage(remoteJid,{text:t}),
-            bots
-          }, args);
-        } catch (err) {
-          console.error("Command error:", err);
-          await sock.sendMessage(remoteJid, { text: "❌ Error executing command" });
+    // CONNECTION HANDLER
+    sock.ev.on("connection.update", async ({ connection, lastDisconnect }) => {
+      if (connection === "close") {
+        const status = lastDisconnect?.error?.output?.statusCode;
+        if (status === DisconnectReason.loggedOut) {
+          await removeSession(SESSION_DIR);
+          bots.delete(number);
+        } else {
+          setTimeout(() => startPairingSession(number), 2000);
         }
       }
-    }
-  });
+    });
 
-  // =======================
-  // CONNECTION HANDLER
-  sock.ev.on("connection.update", async ({ connection, lastDisconnect }) => {
-    if (connection === "close") {
-      const status = lastDisconnect?.error?.output?.statusCode;
-      if (status === DisconnectReason.loggedOut) {
-        await removeSession(SESSION_DIR);
-        bots.delete(number);
-      } else {
-        setTimeout(() => startPairingSession(number), 2000);
+    // =======================
+    // PAIRING CODE SAFE
+    if (!sock.authState.creds.registered) {
+      try {
+        await delay(500);
+        const code = await sock.requestPairingCode(number); // pairing code manuel
+        return code.match(/.{1,4}/g).join("-");
+      } catch (err) {
+        console.error("❌ Pairing code error:", err.message);
+        return null;
       }
     }
-  });
 
-  // =======================
-  // PAIRING CODE
-  if (!sock.authState.creds.registered) {
-    await delay(1500);
-    const code = await sock.requestPairingCode(number);
-    return code.match(/.{1,4}/g).join("-");
+    return null;
+  } catch (err) {
+    console.error("❌ StartPairingSession error:", err.message);
+    return null;
   }
-
-  return null;
 }
 
 // =======================
@@ -223,14 +234,15 @@ router.get("/code", async (req, res) => {
 
     const code = await startPairingSession(num);
     if (code) return res.json({ code });
-    return res.json({ status: "Bot déjà connecté" });
+    return res.json({ status: "Bot déjà connecté ou erreur de pairing" });
 
   } catch (err) {
-    console.error("Pairing error:", err);
+    console.error("Pairing route error:", err);
     return res.status(500).json({ error: err.message });
   }
 });
 
+// CONFIG ROUTE
 router.post("/config", async (req,res)=>{
   try {
     let { number, prefix } = req.body;
@@ -249,7 +261,6 @@ router.post("/config", async (req,res)=>{
   }
 });
 
-// =======================
 // CLEANUP EXPIRED BOTS
 setInterval(async ()=>{
   const users = loadUsers();

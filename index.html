@@ -75,11 +75,7 @@ html,body{
 .btn i{font-size:16px;}
 .btn:hover{transform:scale(1.03); box-shadow:0 0 16px rgba(56,189,248,.4);}
 .menu-btn{position:absolute; top:12px; right:12px; font-size:22px; cursor:pointer; color:var(--neon);}
-.menu-content{
-  display:none; position:absolute; top:46px; right:12px; background:rgba(255,255,255,0.02);
-  border:1px solid var(--glass-border); border-radius:12px; padding:8px; text-align:left; backdrop-filter: blur(12px);
-}
-.menu-content.open{display:block;}
+.menu-content{display:none; position:absolute; top:46px; right:12px; background:rgba(255,255,255,0.02); border:1px solid var(--glass-border); border-radius:12px; padding:8px; text-align:left; backdrop-filter: blur(12px);}
 .menu-content a{display:block; color:#dfffe6; text-decoration:none; padding:4px 0; font-size:14px; font-family:"JetBrains Mono", monospace;}
 .menu-content a:hover{color:var(--neon);}
 .result-message{margin-top:6px;font-weight:bold;text-align:center;font-size:14px;font-family:"JetBrains Mono", monospace;}
@@ -156,20 +152,24 @@ html,body{
 </main>
 
 <script>
-// Menu hamburger
-function toggleMenu() {
-  const menu = document.getElementById('menu');
-  menu.classList.toggle('open');
+let botTimeRemaining=0;
+let userCoins=0;
+let timerInterval;
+
+// menu
+function toggleMenu(){
+  const menu=document.getElementById('menu');
+  menu.style.display=menu.style.display==='block'?'none':'block';
 }
 
-// Messages flottants
-function showMessage(msg, color = '#ef4444', duration = 3000) {
+// messages flottants
+function showMessage(msg,color='#ef4444',duration=3000){
   if(!msg) return;
-  const container = document.createElement('div');
+  const container=document.createElement('div');
   container.style.position='fixed';
   container.style.top='50%';
   container.style.left='50%';
-  container.style.transform='translate(-50%, -50%)';
+  container.style.transform='translate(-50%,-50%)';
   container.style.background='linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01))';
   container.style.backdropFilter='blur(12px) saturate(140%)';
   container.style.border='1px solid rgba(56,189,248,0.22)';
@@ -185,79 +185,65 @@ function showMessage(msg, color = '#ef4444', duration = 3000) {
   container.style.boxShadow='0 10px 30px rgba(0,0,0,0.6), 0 0 20px rgba(56,189,248,0.05) inset';
   container.textContent=msg;
   document.body.appendChild(container);
-  setTimeout(()=>container.remove(), duration);
+  setTimeout(()=>container.remove(),duration);
 }
 
-let botTimeRemaining=0;
-let userCoins=0;
-let timerInterval;
-
+// load status
 async function loadStatus(){
   try{
     const res = await fetch('/coins');
     const data = await res.json();
-    userCoins = data.coins || 0;
-    botTimeRemaining = data.botActiveRemaining || 0;
-    document.getElementById('coins').textContent = userCoins;
+    if(data.error){ window.location.href='/login'; return; }
+    userCoins=data.coins||0;
+    botTimeRemaining=data.botActiveRemaining||0;
+    document.getElementById('coins').textContent=userCoins;
     updateTimer();
-
-    const referral = document.getElementById('referralLink');
-    referral.href = `/referral?user=${encodeURIComponent(data.username||'user')}`;
+    document.getElementById('referralLink').href=`/referral?user=${encodeURIComponent(data.username||'user')}`;
   }catch(e){ console.error(e); }
 }
 
+// timer
 function updateTimer(){
-  const el = document.getElementById('botTimer');
+  const el=document.getElementById('botTimer');
   if(timerInterval) clearInterval(timerInterval);
   if(botTimeRemaining<=0){ el.textContent="Bot inactif"; return; }
-
-  timerInterval=setInterval(()=>{
-    if(botTimeRemaining<=0){ el.textContent="Bot inactif"; clearInterval(timerInterval); return;}
-    botTimeRemaining-=1000;
-    if(botTimeRemaining<0) botTimeRemaining=0;
+  const update=()=>{
+    if(botTimeRemaining<=0){ el.textContent="Bot inactif"; clearInterval(timerInterval); return; }
     const h=Math.floor(botTimeRemaining/3600000);
     const m=Math.floor((botTimeRemaining%3600000)/60000);
     const s=Math.floor((botTimeRemaining%60000)/1000);
     el.textContent=`Bot actif : ${h}h ${m}m ${s}s`;
-  },1000);
+    botTimeRemaining-=1000;
+  };
+  update();
+  timerInterval=setInterval(update,1000);
 }
 
+// select payment
 async function selectPayment(select,hours){
   const choice=select.value;
   if(!choice) return;
   const priceCoins={24:20,48:40,72:60};
   const priceFcfa={24:800,48:1600,72:2400};
-
   if(choice==='coins'){
-    if(userCoins<priceCoins[hours]){
-      showMessage(`Coins insuffisants (${priceCoins[hours]} requis)`,'#ef4444');
-      select.value=''; return;
-    }
-    if(!confirm(`Confirmer l'activation du bot pour ${hours}h pour ${priceCoins[hours]} coins ?`)){
-      select.value=''; return;
-    }
-    const res = await fetch('/buy-bot',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({duration:hours})
-    });
+    if(userCoins<priceCoins[hours]){ showMessage(`Coins insuffisants (${priceCoins[hours]} requis)`); select.value=''; return; }
+    if(!confirm(`Confirmer l'activation du bot pour ${hours}h pour ${priceCoins[hours]} coins ?`)){ select.value=''; return; }
+    const res=await fetch('/buy-bot',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({duration:hours})});
     const data=await res.json();
-    if(data.error){
-      showMessage(data.error,'#ef4444');
-    } else {
+    if(data.error) showMessage(data.error);
+    else{
       showMessage(data.status,'#38bdf8');
-      userCoins = data.coins;
-      botTimeRemaining = data.botActiveRemaining; // <- correction ici
-      document.getElementById('coins').textContent = userCoins;
+      userCoins=data.coins;
+      botTimeRemaining=data.botActiveRemaining;
+      document.getElementById('coins').textContent=userCoins;
       updateTimer();
     }
   }
-
   if(choice==='fcfa'){
-    const paymentId = "moneyfusion_" + Date.now();
-    const amount = priceFcfa[hours];
-    const url = `https://payin.moneyfusion.net/payment/69620e03013a0771970d2b80/${amount}/${paymentId}`;
-    window.location.href = url;
+    const paymentId="moneyfusion_"+Date.now();
+    const amount=priceFcfa[hours];
+    const url=`https://payin.moneyfusion.net/payment/69620e03013a0771970d2b80/${amount}/${paymentId}`;
+    window.location.href=url;
   }
   select.value='';
 }

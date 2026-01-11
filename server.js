@@ -1,5 +1,6 @@
 import express from "express";
 import session from "express-session";
+import FileStore from "session-file-store";
 import bodyParser from "body-parser";
 import fs from "fs";
 import path from "path";
@@ -40,17 +41,30 @@ const loadPayments = () => {
 };
 const savePayments = (d) => fs.writeFileSync(paymentsFile, JSON.stringify(d, null, 2));
 
-/* ================== MIDDLEWARE ================== */
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }));
+/* ================== SESSION ================== */
+const FileStoreSession = FileStore(session);
+
 app.use(session({
+  store: new FileStoreSession({
+    path: "./session_store",
+    retries: 1,
+    ttl: 24 * 60 * 60, // 1 jour
+  }),
   secret: "ROK_XD_SECRET",
   resave: false,
   saveUninitialized: false,
+  cookie: {
+    maxAge: 24 * 60 * 60 * 1000, // 1 jour
+    secure: false, // true si HTTPS
+  }
 }));
 
+/* ================== MIDDLEWARE ================== */
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
+
 const requireAuth = (req, res, next) => {
-  if (!req.session.user) return res.status(401).json({ error: "Non connectÃ©" });
+  if (!req.session.user) return res.status(401).json({ error: "Non connecté" });
   next();
 };
 
@@ -59,7 +73,7 @@ const requireActiveBot = (req, res, next) => {
   const user = users.find(u => u.username === req.session.user.username);
   if(!user) return res.status(401).send("Utilisateur introuvable");
   if(user.botActiveUntil <= Date.now()){
-    return res.status(403).send("Bot inactif. Veuillez acheter une activation pour accÃ©der Ã  cette page.");
+    return res.status(403).send("Bot inactif. Veuillez acheter une activation pour accéder à cette page.");
   }
   next();
 };
@@ -82,8 +96,8 @@ app.post("/register", (req, res) => {
   if (!username || !password || !email) return res.json({ error: "Champs manquants" });
 
   const users = loadUsers();
-  if (users.find(u => u.username === username)) return res.json({ error: "Nom d'utilisateur dÃ©jÃ  utilisÃ©" });
-  if (users.find(u => u.email === email)) return res.json({ error: "Email dÃ©jÃ  utilisÃ©" });
+  if (users.find(u => u.username === username)) return res.json({ error: "Nom d'utilisateur déjà utilisé" });
+  if (users.find(u => u.email === email)) return res.json({ error: "Email déjà utilisé" });
 
   const newUser = {
     username,
@@ -99,7 +113,7 @@ app.post("/register", (req, res) => {
 
   users.push(newUser);
 
-  // Attribution des 5 coins au parrain si prÃ©sent
+  // Attribution des 5 coins au parrain si présent
   if(ref){
     const parrain = users.find(u => u.username === ref);
     if(parrain){
@@ -109,7 +123,7 @@ app.post("/register", (req, res) => {
   }
 
   saveUsers(users);
-  res.json({ status: "Compte crÃ©Ã© ! Vous avez 20 coins" });
+  res.json({ status: "Compte créé ! Vous avez 20 coins" });
 });
 
 app.post("/login", (req, res) => {
@@ -118,11 +132,11 @@ app.post("/login", (req, res) => {
   const user = users.find(u => u.username === username && u.password === password);
   if (!user) return res.json({ error: "Identifiants incorrects" });
   req.session.user = { username: user.username };
-  res.json({ status: "ConnectÃ© avec succÃ¨s" });
+  res.json({ status: "Connecté avec succès" });
 });
 
 app.get("/logout", requireAuth, (req, res) => {
-  req.session.destroy(() => res.json({ status: "DÃ©connectÃ©" }));
+  req.session.destroy(() => res.json({ status: "Déconnecté" }));
 });
 
 /* ================== COINS & BOT ================== */
@@ -138,7 +152,6 @@ app.get("/coins", requireAuth, (req, res) => {
   });
 });
 
-// Pour referral.html
 app.get("/users-list", requireAuth, (req, res) => {
   const users = loadUsers();
   res.json(users);
@@ -151,7 +164,7 @@ app.post("/buy-bot", requireAuth, (req, res) => {
   const users = loadUsers();
   const user = users.find(u => u.username === req.session.user.username);
   if (!user) return res.json({ error: "Utilisateur introuvable" });
-  if (!prices[duration]) return res.json({ error: "DurÃ©e invalide" });
+  if (!prices[duration]) return res.json({ error: "Durée invalide" });
   if ((user.coins || 0) < prices[duration]) return res.json({ error: `Coins insuffisants (${prices[duration]} requis)` });
 
   user.coins -= prices[duration];
@@ -161,7 +174,7 @@ app.post("/buy-bot", requireAuth, (req, res) => {
   saveUsers(users);
 
   res.json({
-    status: `Bot activÃ© pour ${duration}h`,
+    status: `Bot activé pour ${duration}h`,
     coins: user.coins,
     botActiveRemaining: user.botActiveUntil - now
   });
@@ -260,6 +273,4 @@ app.post("/watch-ad/complete", requireAuth, (req, res) => {
 });
 
 /* ================== START SERVER ================== */
-app.listen(PORT, () => console.log(`â Server lancÃ© sur le port ${PORT}`));
-
-
+app.listen(PORT, () => console.log(`✔ Server lancé sur le port ${PORT}`));

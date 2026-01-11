@@ -28,8 +28,6 @@ function formatNumber(num) {
   return phone.getNumber("e164").replace("+", "");
 }
 
-const jidClean = (jid = "") => jid.split(":")[0];
-
 async function removeSession(dir) {
   if (await fs.pathExists(dir)) await fs.remove(dir);
 }
@@ -39,7 +37,6 @@ async function loadCommands() {
   const folder = path.join("./commands");
   await fs.ensureDir(folder);
   const files = fs.readdirSync(folder).filter(f => f.endsWith(".js"));
-
   for (const file of files) {
     const modulePath = `./commands/${file}?update=${Date.now()}`;
     const cmd = await import(modulePath);
@@ -58,16 +55,7 @@ async function saveConfig() { await fs.writeFile(CONFIG_FILE, JSON.stringify(CON
 
 // =======================
 // BOTS MAP
-const bots = new Map(); // number => { sock, commands, config }
-
-function getLid(number, sock) {
-  try {
-    const data = JSON.parse(fs.readFileSync(`${PAIRING_DIR}/${number}/creds.json`, "utf8"));
-    return data?.me?.lid || sock.user?.lid || "";
-  } catch {
-    return sock.user?.lid || "";
-  }
-}
+const bots = new Map(); // number => { sock, commands, config, features }
 
 // =======================
 // START PAIRING SESSION
@@ -89,212 +77,182 @@ async function startPairingSession(number) {
     printQRInTerminal: false,
     markOnlineOnConnect: false
   });
-  
-   sock.ev.on("creds.update", async () => {
-  await saveCreds();
-  console.log("💾 Session sauvegardée localement :", number);
-});
-  
+
+  sock.ev.on("creds.update", async () => {
+    await saveCreds();
+    console.log("💾 Session sauvegardée localement :", number);
+  });
 
   const commands = await loadCommands();
   const config = CONFIG[number] || { prefix: "!" };
- const features = {
-  autoreact: false,
-  autotyping: false,
-  autorecording: false,
-  autoread: false,
-  welcome: false,
-  bye: false,
-  antilink: false
-};
+  const features = {
+    autoreact: false,
+    autotyping: false,
+    autorecording: false,
+    autoread: false,
+    welcome: false,
+    bye: false,
+    antilink: false
+  };
 
-bots.set(number, { sock, commands, config, features }); 
+  bots.set(number, { sock, commands, config, features });
 
   // =======================
   // MESSAGE HANDLER
-  // =======================
-// MESSAGE HANDLER
-sock.ev.on("messages.upsert", async ({ messages }) => {
-  const msg = messages[0];
-  if (!msg || !msg.message) return;
+  sock.ev.on("messages.upsert", async ({ messages }) => {
+    const msg = messages[0];
+    if (!msg || !msg.message) return;
 
-  const remoteJid = msg.key.remoteJid;
-  const participant = msg.key.participant || remoteJid;
-  const text =
-    msg.message?.conversation ||
-    msg.message?.extendedTextMessage?.text ||
-    msg.message?.imageMessage?.caption ||
-    "";
+    const remoteJid = msg.key.remoteJid;
+    const participant = msg.key.participant || remoteJid;
+    const text =
+      msg.message?.conversation ||
+      msg.message?.extendedTextMessage?.text ||
+      msg.message?.imageMessage?.caption ||
+      "";
 
-  if (!text) return;
+    if (!text) return;
 
-  const bot = bots.get(number);
-  if (!bot) return;
-  const { commands, features } = bot; // ✅ récupère commands et features
+    const bot = bots.get(number);
+    if (!bot) return;
+    const { commands, features } = bot;
 
-  // ----------------------
-  // AUTO FEATURES (si ce n'est pas un message du bot)
-  if (!msg.key.fromMe) {
-    // AutoRead
-    if (features.autoread) await sock.sendReadReceipt(remoteJid, participant, [msg.key.id]);
+    // =======================
+    // AUTO FEATURES
+    if (!msg.key.fromMe) {
+      if (features.autoread) await sock.sendReadReceipt(remoteJid, participant, [msg.key.id]);
+      if (features.autoreact) {
+        const reactions = ["👍","❤️","😂","😮","😢","👏","🎉","🤔","🔥","😎","🙌","💯","✨","🥳","😡","😱","🤩","🙏","💔","🤷"];
+        await sock.sendMessage(remoteJid, { react: { text: reactions[Math.floor(Math.random() * reactions.length)], key: msg.key } });
+      }
+      if (features.autotyping && remoteJid.endsWith("@g.us")) await sock.sendPresenceUpdate("composing", remoteJid);
+      if (features.autorecording && remoteJid.endsWith("@g.us")) await sock.sendPresenceUpdate("recording", remoteJid);
 
-    // AutoReact 20 réactions
-    if (features.autoreact) {
-      const reactions = ["👍","❤️","😂","😮","😢","👏","🎉","🤔","🔥","😎","🙌","💯","✨","🥳","😡","😱","🤩","🙏","💔","🤷"];
-      const react = reactions[Math.floor(Math.random() * reactions.length)];
-      await sock.sendMessage(remoteJid, { react: { text: react, key: msg.key } });
-    }
+      // ANTI-LINK
+      if (features.antilink && remoteJid.endsWith("@g.us")) {
+        try {
+          const metadata = await sock.groupMetadata(remoteJid);
+          const botJid = sock.user.id;
+          const botParticipant = metadata.participants.find(p => p.id === botJid);
+          const botIsAdmin = botParticipant?.admin === "admin" || botParticipant?.admin === "superadmin";
+          if (!botIsAdmin) return;
 
-    // AutoTyping
-    if (features.autotyping && remoteJid.endsWith("@g.us")) await sock.sendPresenceUpdate("composing", remoteJid);
+          const senderJid = participant;
+          const senderParticipant = metadata.participants.find(p => p.id === senderJid);
+          const senderLid = senderParticipant?.id || "";
+          if (senderJid === botJid || senderLid === botJid) return;
 
-    // AutoRecording
-    if (features.autorecording && remoteJid.endsWith("@g.us")) await sock.sendPresenceUpdate("recording", remoteJid);
-// =======================
-// ANTI-LINK
-if (features.antilink && remoteJid.endsWith("@g.us")) {
-  try {
-    const metadata = await sock.groupMetadata(remoteJid);
-
-    // Récupération correcte du JID du bot
-    const botJid = sock.user.id;
-    const botParticipant = metadata.participants.find(p => p.id === botJid);
-    const botIsAdmin = botParticipant?.admin === "admin" || botParticipant?.admin === "superadmin";
-    if (!botIsAdmin) return; // Si le bot n'est pas admin, ne rien faire
-
-    // Vérification du LID pour éviter de kicker les superadmins
-    const senderJid = participant;
-    const senderParticipant = metadata.participants.find(p => p.id === senderJid);
-    const senderLid = senderParticipant?.id || "";
-
-    if (senderJid === botJid) return; // Ne pas kicker soi-même
-    if (senderLid === botJid) return; // Ne pas kicker le bot par LID
-
-    // Regex améliorée pour tous types de liens
-    const linkRegex = /(https?:\/\/|www\.|wa\.me\/|chat\.whatsapp\.com\/|t\.me\/|bit\.ly\/|facebook\.com\/|instagram\.com\/)/i;
-
-    if (text.match(linkRegex)) {
-      // Supprime le participant
-      await sock.groupParticipantsUpdate(remoteJid, [participant], "remove");
-
-      // Message stylé avec mention
-      await sock.sendMessage(remoteJid, {
-        text: `❌ @${participant.split("@")[0]} 𝙻𝚒𝚗𝚔𝚜 𝚊𝚛𝚎 𝚗𝚘𝚝 𝚊𝚕𝚕𝚘𝚠𝚎𝚍!`,
-        mentions: [participant]
-      });
-    }
-
-  } catch (e) {
-    console.error("Anti-link error:", e);
-  }
-} 
-  }
-  // ----------------------
-  // COMMANDS HANDLER
-  const botNumber = sock.user?.id ? sock.user.id.split(":")[0] : "";
-  let userLid = "";
-  try {
-    const data = JSON.parse(fs.readFileSync(`sessions/${botNumber}/creds.json`, "utf8"));
-    userLid = data?.me?.lid || sock.user?.lid || "";
-  } catch (e) {
-    userLid = sock.user?.lid || "";
-  }
-  const lid = userLid ? [userLid.split(":")[0] + "@lid"] : [];
-
-  const cleanParticipant = participant ? participant.split("@") : [];
-  const cleanRemoteJid = remoteJid ? remoteJid.split("@") : [];
-
-  const prefix = bot.config.prefix;
-  const approvedUsers = bot.config.sudoList || [];
-
-  if (
-    text.startsWith(prefix) &&
-    (msg.key.fromMe || approvedUsers.includes(cleanParticipant[0] || cleanRemoteJid[0]) || lid.includes(participant || remoteJid))
-  ) {
-    const args = text.slice(prefix.length).trim().split(/\s+/);
-    const commandName = args.shift().toLowerCase();
- // =======================
-// BUILT-IN FEATURE COMMANDS
-// =======================
-if (text.startsWith(prefix)) {
-  const args = text.slice(prefix.length).trim().split(/\s+/);
-  const cmd = args[0]?.toLowerCase();
-  const state = args[1]?.toLowerCase();
-
-  const featureMap = {
-    autorecording: "autorecording",
-    autotyping: "autotyping",
-    autoread: "autoread",
-    autoreact: "autoreact", 
-    welcome: "welcome",
-    bye: "bye",
-    antilink: "antilink"
-  };
-
-  if (featureMap[cmd]) {
-    if (!["on", "off"].includes(state)) {
-      await sock.sendMessage(remoteJid, {
-        text: `❌ Usage: .${cmd} on/off`
-      });
-      return;
-    }
-
-    bot.features[featureMap[cmd]] = state === "on";
-
-    await sock.sendMessage(remoteJid, {
-      text: `✅ 𝙰𝚌𝚝𝚒𝚟𝚎: ${cmd.toUpperCase()} → ${state.toUpperCase()}`
-    });
-    return;
-  }
-}
-
-    if (commands.has(commandName)) {
-      try {
-        await commands.get(commandName).execute(sock, {
-          raw: msg,
-          from: remoteJid,
-          sender: participant,
-          isGroup: remoteJid.endsWith("@g.us"),
-          reply: (t) => sock.sendMessage(remoteJid, { text: t }),
-    bots
-        }, args);
-      } catch (err) {
-        console.error("❌ Command error:", err);
-        await sock.sendMessage(remoteJid, { text: "❌ 𝙴𝚛𝚛𝚘𝚛 𝚌𝚘𝚖𝚖𝚊𝚗𝚍" });
+          const linkRegex = /(https?:\/\/|www\.|wa\.me\/|chat\.whatsapp\.com\/|t\.me\/|bit\.ly\/|facebook\.com\/|instagram\.com\/)/i;
+          if (text.match(linkRegex)) {
+            await sock.groupParticipantsUpdate(remoteJid, [participant], "remove");
+            await sock.sendMessage(remoteJid, { text: `❌ @${participant.split("@")[0]} Links not allowed!`, mentions: [participant] });
+          }
+        } catch (e) { console.error("Anti-link error:", e); }
       }
     }
-  }
-});
-    
-sock.ev.on("group-participants.update", async (update) => {
-  const bot = bots.get(number);
-  const { features } = bot;
-  const { participants, action, id: groupId } = update;
 
-  for (const userJid of participants) {
-    let profileName = "Member";
+    // =======================
+    // COMMANDS HANDLER
+    const botNumber = sock.user?.id ? sock.user.id.split(":")[0] : "";
+    let userLid = "";
     try {
-      const vcard = await sock.onWhatsApp(userJid);
-      profileName = vcard?.[0]?.notify || userJid.split("@")[0];
-    } catch {}
-
-    let ppUrl;
-    try { ppUrl = await sock.profilePictureUrl(userJid, "image"); } catch { ppUrl = null; }
-    const numberFormatted = userJid.split("@")[0];
-
-    if (action === "add" && features.welcome) {
-      const text = `👋 Welcome @${numberFormatted}\n📛 Name: ${profileName}\n📱 Number: ${numberFormatted}`;
-      if (ppUrl) await sock.sendMessage(groupId, { image: { url: ppUrl }, caption: text, mentions: [userJid] });
-      else await sock.sendMessage(groupId, { text, mentions: [userJid] });
+      const data = JSON.parse(fs.readFileSync(`sessions/${botNumber}/creds.json`, "utf8"));
+      userLid = data?.me?.lid || sock.user?.lid || "";
+    } catch (e) {
+      userLid = sock.user?.lid || "";
     }
+    const lid = userLid ? [userLid.split(":")[0] + "@lid"] : [];
 
-    if (action === "remove" && features.bye) {
-      const text = `😢 Goodbye @${numberFormatted}\n📛 Name: ${profileName}\n📱 Number: ${numberFormatted}`;
-      if (ppUrl) await sock.sendMessage(groupId, { image: { url: ppUrl }, caption: text, mentions: [userJid] });
-      else await sock.sendMessage(groupId, { text, mentions: [userJid] });
-    }
+    const cleanParticipant = participant ? participant.split("@") : [];
+    const cleanRemoteJid = remoteJid ? remoteJid.split("@") : [];
+
+    const prefix = bot.config.prefix;
+    const approvedUsers = bot.config.sudoList || [];
+
+    if (
+      text.startsWith(prefix) &&
+      (msg.key.fromMe || approvedUsers.includes(cleanParticipant[0]) || lid.includes(participant || remoteJid))
+    ) {
+      const args = text.slice(prefix.length).trim().split(/\s+/);
+      const commandName = args.shift().toLowerCase();
+
+// =======================
+// BUILT-IN FEATURE COMMANDS
+const cmd = args[0]?.toLowerCase();      // commande demandée, ex: autoread
+const state = args[1]?.toLowerCase();    // état demandé: on/off
+
+const featureMap = {
+  autorecording: "autorecording",
+  autotyping: "autotyping",
+  autoread: "autoread",
+  autoreact: "autoreact",
+  welcome: "welcome",
+  bye: "bye",
+  antilink: "antilink"
+};
+
+if (featureMap[cmd]) {
+  if (!["on","off"].includes(state)) {
+    await sock.sendMessage(remoteJid, { text: `❌ Usage: .${cmd} on/off` });
+    return;
   }
-});
+
+  // Active/désactive la feature
+  bot.features[featureMap[cmd]] = state === "on";
+
+  await sock.sendMessage(remoteJid, {
+    text: `✅ 𝙰𝚌𝚝𝚒𝚟é: ${cmd.toUpperCase()} → ${state.toUpperCase()}`
+  });
+  return;
+}
+
+      // CUSTOM COMMANDS
+      if (commands.has(commandName)) {
+        try {
+          await commands.get(commandName).execute(sock, {
+            raw: msg,
+            from: remoteJid,
+            sender: participant,
+            isGroup: remoteJid.endsWith("@g.us"),
+            reply: t => sock.sendMessage(remoteJid,{text:t}),
+            bots
+          }, args);
+        } catch (err) {
+          console.error("Command error:", err);
+          await sock.sendMessage(remoteJid, { text: "❌ Error executing command" });
+        }
+      }
+    }
+  });
+
+  // =======================
+  // GROUP PARTICIPANTS HANDLER
+  sock.ev.on("group-participants.update", async update => {
+    const bot = bots.get(number);
+    const { features } = bot;
+    const { participants, action, id: groupId } = update;
+
+    for (const userJid of participants) {
+      let profileName = "Member";
+      try { profileName = (await sock.onWhatsApp(userJid))?.[0]?.notify || userJid.split("@")[0]; } catch {}
+      let ppUrl;
+      try { ppUrl = await sock.profilePictureUrl(userJid, "image"); } catch { ppUrl = null; }
+      const numberFormatted = userJid.split("@")[0];
+
+      if (action === "add" && features.welcome) {
+        const text = `👋 Welcome @${numberFormatted}\n📛 Name: ${profileName}\n📱 Number: ${numberFormatted}`;
+        if (ppUrl) await sock.sendMessage(groupId, { image: { url: ppUrl }, caption: text, mentions: [userJid] });
+        else await sock.sendMessage(groupId, { text, mentions: [userJid] });
+      }
+
+      if (action === "remove" && features.bye) {
+        const text = `😢 Goodbye @${numberFormatted}\n📛 Name: ${profileName}\n📱 Number: ${numberFormatted}`;
+        if (ppUrl) await sock.sendMessage(groupId, { image: { url: ppUrl }, caption: text, mentions: [userJid] });
+        else await sock.sendMessage(groupId, { text, mentions: [userJid] });
+      }
+    }
+  });
+
   // =======================
   // CONNECTION HANDLER
   sock.ev.on("connection.update", async ({ connection, lastDisconnect }) => {
@@ -321,119 +279,76 @@ sock.ev.on("group-participants.update", async (update) => {
 }
 
 // =======================
-// ROUTE : PAIRING CODE
-router.get("/code", async (req, res) => {
+// ROUTE : PAIR-API
+router.get("/pair-api", async (req, res) => {
   let num = req.query.number;
-
-  if (!num) {
-    return res.status(400).json({ error: "Numéro requis" });
-  }
+  if (!num) return res.status(400).json({ error: "Numéro requis" });
 
   try {
-    // 1️⃣ Normalisation et validation du numéro
     num = formatNumber(num);
+    let users = [];
+    try { users = JSON.parse(fs.readFileSync(USERS_FILE,"utf8")); } catch { users = []; }
+    if (!Array.isArray(users)) users = [];
 
-    // 2️⃣ Charger les utilisateurs
-    const users = JSON.parse(fs.readFileSync("./users.json", "utf8"));
-    const user = users.find(
-      u => u.username === req.session.user.username
-    );
+    const user = users.find(u => u.username === req.session.user.username);
+    if (!user) return res.status(401).json({ error: "Utilisateur introuvable" });
+    if (!user.botActiveUntil || user.botActiveUntil < Date.now()) return res.status(403).json({ error: "Bot inactif" });
+    if (user.botNumber && user.botNumber !== num) return res.status(403).json({ error: "Un bot est déjà lié à ce compte" });
 
-    if (!user) {
-      return res.status(401).json({ error: "Utilisateur introuvable" });
-    }
-
-    // 3️⃣ Vérifier si le bot est actif (temps)
-    if (!user.botActiveUntil || user.botActiveUntil < Date.now()) {
-      return res.status(403).json({
-        error: "Bot inactif. Achetez du temps pour l’activer."
-      });
-    }
-
-    // 4️⃣ 1 bot par utilisateur (sécurité)
-    if (user.botNumber && user.botNumber !== num) {
-      return res.status(403).json({
-        error: "Un bot est déjà lié à ce compte"
-      });
-    }
-
-    // 5️⃣ Lier le bot à l’utilisateur (si pas encore fait)
     if (!user.botNumber) {
       user.botNumber = num;
-      fs.writeFileSync("./users.json", JSON.stringify(users, null, 2));
+      fs.writeFileSync(USERS_FILE, JSON.stringify(users,null,2));
     }
 
-    // ===============================
-    // 6️⃣ ICI SEULEMENT on lance WhatsApp
     const code = await startPairingSession(num);
-
-    if (code) {
-      return res.json({ code });
-    }
-
+    if (code) return res.json({ code });
     return res.json({ status: "Bot déjà connecté" });
 
   } catch (err) {
-    console.error("❌ Pairing error:", err);
+    console.error("Pairing error:", err);
     return res.status(500).json({ error: err.message });
   }
 });
 
-router.post("/config", async (req, res) => {
+// =======================
+// CONFIG ROUTE
+router.post("/config", async (req,res)=>{
   try {
     let { number, prefix } = req.body;
     if (!number) return res.status(400).json({ error: "Numéro requis" });
-
     number = formatNumber(number);
     if (!prefix) prefix = "!";
 
     CONFIG[number] = { prefix };
     if (bots.has(number)) bots.get(number).config = { prefix };
 
-    await fs.writeFile(CONFIG_FILE, JSON.stringify(CONFIG, null, 2));
-    res.json({ status: "✅ Configuration sauvegardée pour ce bot", prefix });
-  } catch (err) {
-    console.error("Config error:", err);
+    await fs.writeFile(CONFIG_FILE, JSON.stringify(CONFIG,null,2));
+    res.json({ status: "Configuration sauvegardée", prefix });
+  } catch(err){
+    console.error("Config error:",err);
     res.status(500).json({ error: err.message });
   }
 });
 
-setInterval(async () => {
+// =======================
+// INTERVALLE NETTOYAGE SESSIONS EXPIRÉES
+setInterval(async ()=>{
   let users = [];
-  try {
-    users = JSON.parse(fs.readFileSync("./users.json", "utf8"));
-    if (!Array.isArray(users)) users = [];
-  } catch (err) {
-    users = [];
-  }
+  try { users = JSON.parse(fs.readFileSync(USERS_FILE,"utf8")); } catch { users = []; }
+  if (!Array.isArray(users)) users = [];
 
   const now = Date.now();
-
   for (const user of users) {
-    if (
-      user.botNumber &&
-      user.botActiveUntil &&
-      user.botActiveUntil < now
-    ) {
+    if (user.botNumber && user.botActiveUntil && user.botActiveUntil < now) {
       const bot = bots.get(user.botNumber);
-      if (bot) {
-        try {
-          await bot.sock.logout();
-        } catch {}
-        bots.delete(user.botNumber);
-      }
-
-      // Supprimer session
+      if (bot) try { await bot.sock.logout(); } catch{}
+      bots.delete(user.botNumber);
       const dir = `./sessions/${user.botNumber}`;
-      if (fs.existsSync(dir)) {
-        fs.rmSync(dir, { recursive: true, force: true });
-      }
-
+      if (fs.existsSync(dir)) fs.rmSync(dir,{recursive:true,force:true});
       user.botNumber = null;
     }
   }
-
-  fs.writeFileSync("./users.json", JSON.stringify(users, null, 2));
-}, 60 * 1000); // check chaque minute
+  fs.writeFileSync(USERS_FILE, JSON.stringify(users,null,2));
+}, 60*1000);
 
 export default router;

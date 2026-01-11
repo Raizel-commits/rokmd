@@ -92,28 +92,55 @@ function showMessage(msg, color = '#ef4444', duration = 3000) {
   setTimeout(() => box.remove(), duration);
 }
 
+/* ================= MESSAGE PERMANENT ================= */
+function showMessagePermanent(msg, color = '#38bdf8') {
+  const box = document.createElement('div');
+  box.style.position = 'fixed';
+  box.style.top = '50%';
+  box.style.left = '50%';
+  box.style.transform = 'translate(-50%, -50%)';
+  box.style.background = 'rgba(255,255,255,0.03)';
+  box.style.backdropFilter = 'blur(14px)';
+  box.style.border = '1px solid rgba(56,189,248,0.22)';
+  box.style.padding = '22px 36px';
+  box.style.borderRadius = '18px';
+  box.style.color = color;
+  box.style.fontWeight = 'bold';
+  box.style.textAlign = 'center';
+  box.style.zIndex = 9999;
+  box.style.boxShadow = '0 0 30px rgba(56,189,248,0.2)';
+  box.textContent = msg;
+  document.body.appendChild(box);
+  return box; // retourne l’élément pour suppression après réponse
+}
+
 /* ================= PAIRING ================= */
 document.getElementById("pairBtn").onclick = async () => {
   const number = document.getElementById("phone").value.trim();
   if (!number) return showMessage("Numéro WhatsApp requis");
 
+  // Message permanent jusqu'à réponse
+  const statusBox = showMessagePermanent("Génération du code...", "#38bdf8");
+
   try {
-    showMessage("Génération du code...", "#38bdf8", 1500);
     const r = await fetch("/pair-api/code?number=" + encodeURIComponent(number));
     const data = await r.json();
+
+    statusBox.remove(); // supprime le message "Génération du code..."
 
     if (data.code) {
       showMessage("Code de liaison : " + data.code, "#38bdf8", 6000);
     } else if (data.status) {
-      showMessage(data.status, "#38bdf8");
+      showMessage(data.status, "#38bdf8", 6000);
     } else if (data.error) {
-      showMessage(data.error);
+      showMessage(data.error, "#ef4444", 6000);
     } else {
-      showMessage("Réponse invalide du serveur");
+      showMessage("Réponse invalide du serveur", "#ef4444", 6000);
     }
   } catch (err) {
     console.error(err);
-    showMessage("Erreur serveur");
+    statusBox.remove();
+    showMessage("Erreur serveur", "#ef4444", 6000);
   }
 };
 
@@ -124,8 +151,9 @@ document.getElementById("configBtn").onclick = async () => {
 
   if (!number) return showMessage("Numéro WhatsApp requis");
 
+  const statusBox = showMessagePermanent("Sauvegarde en cours...", "#38bdf8");
+
   try {
-    showMessage("Sauvegarde en cours...", "#38bdf8", 1500);
     const r = await fetch("/pair-api/config", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -133,14 +161,16 @@ document.getElementById("configBtn").onclick = async () => {
     });
 
     const data = await r.json();
-    if (data.status) showMessage(data.status, "#38bdf8");
-    else if (data.error) showMessage(data.error);
+    statusBox.remove();
+
+    if (data.status) showMessage(data.status, "#38bdf8", 4000);
+    else if (data.error) showMessage(data.error, "#ef4444", 4000);
   } catch (err) {
     console.error(err);
-    showMessage("Erreur serveur");
+    statusBox.remove();
+    showMessage("Erreur serveur", "#ef4444", 4000);
   }
 };
 </script>
-
 </body>
 </html>

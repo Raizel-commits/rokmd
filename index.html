@@ -30,7 +30,7 @@ html,body{
   align-items:center;
   justify-content:center;
   padding:36px;
-  overflow-y:auto; /* permet scroll si fenêtre réduite */
+  overflow-y:auto;
 }
 .glass-card{
   width:var(--card-w); max-width:92vw;
@@ -83,128 +83,126 @@ html,body{
 .btn i{font-size:16px;}
 .btn:hover:not(.disabled){transform:scale(1.03); box-shadow:0 0 16px rgba(56,189,248,.4);}
 .btn.disabled{opacity:0.5; cursor:not-allowed;}
-.result-message{margin-top:6px;font-weight:bold;text-align:center;font-size:14px;font-family:"JetBrains Mono", monospace;}
 
-/* ======================= */
-/* MENU FIXE DANS LA CARTE */
-.menu-content {
-  display: block; /* Toujours visible */
-  position: relative; /* Dans la carte */
-  top: auto; right: auto; 
-  background: rgba(0,0,0,0.25); /* Fond sombre semi-transparent */
-  border: 1px solid rgba(56,189,248,0.22);
-  border-radius: 12px;
-  padding: 8px;
-  text-align: left;
-  backdrop-filter: blur(8px);
-  margin-bottom: 12px;
+/* ===== MENU LATÉRAL ===== */
+.side-menu{
+  position:fixed; top:0; left:-260px; width:260px; height:100%; background:linear-gradient(180deg,#020617,#0f172a);
+  border-right:1px solid var(--glass-border);
+  backdrop-filter:blur(12px);
+  transition:.3s;
+  z-index:1000;
+  display:flex; flex-direction:column;
 }
-.menu-content a {
-  color: #38bdf8; /* Bleu néon pour bien voir */
-  text-decoration: none;
-  padding: 4px 0;
-  font-size: 14px;
-  font-family: "JetBrains Mono", monospace;
-  display: block;
+.side-menu.active{left:0;}
+.menu-overlay{
+  position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:900; display:none;
 }
-.menu-content a:hover { color: #fff; }
+.menu-overlay.active{display:block;}
+.side-header{padding:16px; border-bottom:1px solid var(--glass-border);}
+.side-title{font-family:"JetBrains Mono", monospace; font-size:20px; color:var(--neon);}
+.side-user{font-size:12px;color:var(--muted);}
+.side-links{padding:14px; flex:1;}
+.side-links a{display:flex; align-items:center; gap:12px; padding:12px; color:#e5e7eb; text-decoration:none; border-radius:10px; transition:.2s; font-family:"JetBrains Mono", monospace;}
+.side-links a:hover{background:rgba(56,189,248,.1); color:var(--neon);}
+.side-footer{padding:14px; font-size:12px; text-align:center; color:var(--muted); border-top:1px solid var(--glass-border);}
+.hamburger{position:fixed; top:16px; left:16px; font-size:22px; color:var(--neon); cursor:pointer; z-index:1100;}
 
-/* ======================= */
-/* RESPONSIVE POUR PETITES FENÊTRES */
-@media (max-width: 480px) {
-  .glass-card {
-    width: 90vw;
-    padding: 12px;
-  }
-  .card-header h1 {
-    font-size: 16px;
-  }
-  .avatar img {
-    width: 50px;
-    height: 50px;
-  }
-  .store-card {
-    font-size: 12px;
-    padding: 8px;
-  }
-  .btn {
-    padding: 8px 10px;
-    font-size: 13px;
-    gap: 6px;
-  }
-  .timer, .coins {
-    font-size: 12px;
-  }
+/* Responsive */
+@media (max-width:480px){
+  .glass-card{width:90vw;padding:12px;}
+  .card-header h1{font-size:16px;}
+  .avatar img{width:50px;height:50px;}
+  .store-card{font-size:12px;padding:8px;}
+  .btn{padding:8px 10px;font-size:13px;gap:6px;}
+  .timer,.coins{font-size:12px;}
+  .hamburger{font-size:20px;}
 }
 </style>
 </head>
 <body>
+
+<!-- BOUTON MENU -->
+<div class="hamburger" onclick="toggleMenu()"><i class="fas fa-bars"></i></div>
+
+<!-- MENU LATÉRAL -->
+<div id="sideMenu" class="side-menu">
+  <div class="side-header">
+    <div class="side-title">ROK XD</div>
+    <div class="side-user" id="menuUser">👤 User</div>
+  </div>
+  <div class="side-links">
+    <a href="/"><i class="fas fa-home"></i> Accueil</a>
+    <a href="/pair"><i class="fas fa-link"></i> Pairing</a>
+    <a href="/qrpage"><i class="fas fa-qrcode"></i> QR Code</a>
+    <a href="#" id="menuReferral"><i class="fas fa-user-plus"></i> Parrainage</a>
+    <a href="https://wa.me/237699777530" target="_blank"><i class="fab fa-whatsapp"></i> Support 1</a>
+    <a href="https://wa.me/237673941535" target="_blank"><i class="fab fa-whatsapp"></i> Support 2</a>
+    <a href="/logout"><i class="fas fa-power-off"></i> Déconnexion</a>
+  </div>
+  <div class="side-footer">
+    © 2025 <strong>ROK XD</strong><br>
+    <span style="font-size:11px;">BY RAIZEL & KNUT</span>
+  </div>
+</div>
+
+<div id="menuOverlay" class="menu-overlay" onclick="toggleMenu()"></div>
+
 <main class="stage">
 <section class="glass-card">
 
-  <!-- MENU FIXE -->
-  <div class="menu-content" id="menu">
-    <a href="/logout">Déconnexion</a>
-    <a href="https://wa.me/699777530" target="_blank">Contacter l’équipe 1</a>
-    <a href="https://wa.me/237673941535" target="_blank">Contacter l’équipe 2</a>
-    <a href="#" id="referralLink">Lien de parrainage</a>
-    <a href="#">Help</a>
-  </div>
+<header class="card-header">
+<h1>ROK XD • Dashboard</h1>
+<div class="small-url">Connexion sécurisée</div>
+</header>
 
-  <header class="card-header">
-    <h1>ROK XD • Dashboard</h1>
-    <div class="small-url">Connexion sécurisée</div>
-  </header>
+<div class="avatar">
+  <img src="https://files.catbox.moe/36ywf8.jpeg" alt="Avatar">
+</div>
 
-  <div class="avatar">
-    <img src="https://files.catbox.moe/36ywf8.jpeg" alt="Avatar">
-  </div>
+<div class="timer" id="botTimer">Bot inactif</div>
+<div class="coins">Coins : <span id="coins">0</span></div>
 
-  <div class="timer" id="botTimer">Bot inactif</div>
-  <div class="coins">Coins : <span id="coins">0</span></div>
-
-  <div class="section">
-    <h2 style="font-size:16px;margin:6px 0;">Activer le bot</h2>
-    <p style="font-size:13px;margin:2px 0;">Choisissez la durée et le type de paiement :</p>
-
-    <div class="store">
-      <div class="store-card">
-        <h3>24 heures</h3>
-        <p>Activation 24h</p>
-        <div class="price">20 coins / 800 F CFA</div>
-        <select class="select-pay" onchange="selectPayment(this,24)">
-          <option value="">--Payer avec--</option>
-          <option value="coins">Coins</option>
-          <option value="fcfa">FCFA</option>
-        </select>
-      </div>
-      <div class="store-card">
-        <h3>48 heures</h3>
-        <p>Activation 48h</p>
-        <div class="price">40 coins / 1 600 F CFA</div>
-        <select class="select-pay" onchange="selectPayment(this,48)">
-          <option value="">--Payer avec--</option>
-          <option value="coins">Coins</option>
-          <option value="fcfa">FCFA</option>
-        </select>
-      </div>
-      <div class="store-card">
-        <h3>72 heures</h3>
-        <p>Activation 72h</p>
-        <div class="price">60 coins / 2 400 F CFA</div>
-        <select class="select-pay" onchange="selectPayment(this,72)">
-          <option value="">--Payer avec--</option>
-          <option value="coins">Coins</option>
-          <option value="fcfa">FCFA</option>
-        </select>
-      </div>
+<div class="section">
+  <h2 style="font-size:16px;margin:6px 0;">Activer le bot</h2>
+  <p style="font-size:13px;margin:2px 0;">Choisissez la durée et le type de paiement :</p>
+  <div class="store">
+    <div class="store-card">
+      <h3>24 heures</h3>
+      <p>Activation 24h</p>
+      <div class="price">20 coins / 800 F CFA</div>
+      <select class="select-pay" onchange="selectPayment(this,24)">
+        <option value="">--Payer avec--</option>
+        <option value="coins">Coins</option>
+        <option value="fcfa">FCFA</option>
+      </select>
+    </div>
+    <div class="store-card">
+      <h3>48 heures</h3>
+      <p>Activation 48h</p>
+      <div class="price">40 coins / 1 600 F CFA</div>
+      <select class="select-pay" onchange="selectPayment(this,48)">
+        <option value="">--Payer avec--</option>
+        <option value="coins">Coins</option>
+        <option value="fcfa">FCFA</option>
+      </select>
+    </div>
+    <div class="store-card">
+      <h3>72 heures</h3>
+      <p>Activation 72h</p>
+      <div class="price">60 coins / 2 400 F CFA</div>
+      <select class="select-pay" onchange="selectPayment(this,72)">
+        <option value="">--Payer avec--</option>
+        <option value="coins">Coins</option>
+        <option value="fcfa">FCFA</option>
+      </select>
     </div>
   </div>
+</div>
 
-  <a href="/pair" class="btn" id="pairBtn"><i class="fas fa-link"></i> Pairing Code</a>
-  <a href="/qrpage" class="btn" id="qrBtn"><i class="fas fa-qrcode"></i> QR Code</a>
+<a href="/pair" class="btn" id="pairBtn"><i class="fas fa-link"></i> Pairing Code</a>
+<a href="/qrpage" class="btn" id="qrBtn"><i class="fas fa-qrcode"></i> QR Code</a>
 
-  <div class="result-message" id="resultMsg"></div>
+<div class="result-message" id="resultMsg"></div>
 </section>
 </main>
 
@@ -213,92 +211,42 @@ let botTimeRemaining=0;
 let userCoins=0;
 let timerInterval;
 
+function toggleMenu(){
+  sideMenu.classList.toggle('active');
+  menuOverlay.classList.toggle('active');
+}
+
 // load status
 async function loadStatus(){
-  try{
-    const res = await fetch('/coins');
-    const data = await res.json();
-    if(data.error){ window.location.href='/login'; return; }
-    userCoins=data.coins||0;
-    botTimeRemaining=data.botActiveRemaining||0;
-    document.getElementById('coins').textContent=userCoins;
-    updateTimer();
-    document.getElementById('referralLink').href=`/referral?user=${encodeURIComponent(data.username||'user')}`;
-
-    const pairBtn=document.getElementById('pairBtn');
-    const qrBtn=document.getElementById('qrBtn');
-    if(botTimeRemaining<=0){
-      pairBtn.classList.add('disabled');
-      qrBtn.classList.add('disabled');
-      pairBtn.onclick=e=>e.preventDefault();
-      qrBtn.onclick=e=>e.preventDefault();
-    } else {
-      pairBtn.classList.remove('disabled');
-      qrBtn.classList.remove('disabled');
-      pairBtn.onclick=null;
-      qrBtn.onclick=null;
-    }
-  }catch(e){ console.error(e); }
+  const res=await fetch('/coins');
+  const data=await res.json();
+  if(data.error){ window.location='/login'; return; }
+  userCoins=data.coins||0;
+  botTimeRemaining=data.botActiveRemaining||0;
+  coins.textContent=userCoins;
+  menuUser.textContent='👤 '+(data.username||'User');
+  menuReferral.href='/referral?user='+encodeURIComponent(data.username||'user');
+  updateTimer();
 }
 
 // timer
 function updateTimer(){
-  const el=document.getElementById('botTimer');
   if(timerInterval) clearInterval(timerInterval);
-  if(botTimeRemaining<=0){ el.textContent="Bot inactif"; return; }
+  if(botTimeRemaining<=0){ botTimer.textContent='Bot inactif'; return; }
   const update=()=>{
     if(botTimeRemaining<=0){
-      el.textContent="Bot inactif";
+      botTimer.textContent='Bot inactif';
       clearInterval(timerInterval);
-      document.getElementById('pairBtn').classList.add('disabled');
-      document.getElementById('qrBtn').classList.add('disabled');
-      document.getElementById('pairBtn').onclick=e=>e.preventDefault();
-      document.getElementById('qrBtn').onclick=e=>e.preventDefault();
+      pairBtn.classList.add('disabled'); qrBtn.classList.add('disabled');
       return;
     }
     const h=Math.floor(botTimeRemaining/3600000);
     const m=Math.floor((botTimeRemaining%3600000)/60000);
     const s=Math.floor((botTimeRemaining%60000)/1000);
-    el.textContent=`Bot actif : ${h}h ${m}m ${s}s`;
+    botTimer.textContent=`Bot actif : ${h}h ${m}m ${s}s`;
     botTimeRemaining-=1000;
   };
-  update();
-  timerInterval=setInterval(update,1000);
-}
-
-// select payment
-async function selectPayment(select,hours){
-  const choice=select.value;
-  if(!choice) return;
-  const priceCoins={24:20,48:40,72:60};
-  const priceFcfa={24:800,48:1600,72:2400};
-  if(choice==='coins'){
-    if(userCoins<priceCoins[hours]){ alert(`Coins insuffisants (${priceCoins[hours]} requis)`); select.value=''; return; }
-    if(!confirm(`Confirmer l'activation du bot pour ${hours}h pour ${priceCoins[hours]} coins ?`)){ select.value=''; return; }
-    const res=await fetch('/buy-bot',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({duration:hours})});
-    const data=await res.json();
-    if(data.error) alert(data.error);
-    else{
-      alert(data.status);
-      userCoins=data.coins;
-      botTimeRemaining=data.botActiveRemaining;
-      document.getElementById('coins').textContent=userCoins;
-      updateTimer();
-      const pairBtn=document.getElementById('pairBtn');
-      const qrBtn=document.getElementById('qrBtn');
-      pairBtn.classList.remove('disabled');
-      qrBtn.classList.remove('disabled');
-      pairBtn.onclick=null;
-      qrBtn.onclick=null;
-    }
-  }
-  if(choice==='fcfa'){
-    const paymentId="moneyfusion_"+Date.now();
-    const amount=priceFcfa[hours];
-    const url=`https://payin.moneyfusion.net/payment/69620e03013a0771970d2b80/${amount}/${paymentId}`;
-    window.location.href=url;
-  }
-  select.value='';
+  update(); timerInterval=setInterval(update,1000);
 }
 
 loadStatus();

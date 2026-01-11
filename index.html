@@ -73,7 +73,8 @@ html,body{
   gap:8px;
 }
 .btn i{font-size:16px;}
-.btn:hover{transform:scale(1.03); box-shadow:0 0 16px rgba(56,189,248,.4);}
+.btn:hover:not(.disabled){transform:scale(1.03); box-shadow:0 0 16px rgba(56,189,248,.4);}
+.btn.disabled{opacity:0.5; cursor:not-allowed;}
 .menu-btn{position:absolute; top:12px; right:12px; font-size:22px; cursor:pointer; color:var(--neon);}
 .menu-content{display:none; position:absolute; top:46px; right:12px; background:rgba(255,255,255,0.02); border:1px solid var(--glass-border); border-radius:12px; padding:8px; text-align:left; backdrop-filter: blur(12px);}
 .menu-content a{display:block; color:#dfffe6; text-decoration:none; padding:4px 0; font-size:14px; font-family:"JetBrains Mono", monospace;}
@@ -144,8 +145,8 @@ html,body{
   </div>
 </div>
 
-<a href="/pair" class="btn"><i class="fas fa-link"></i> Pairing Code</a>
-<a href="/qrpage" class="btn"><i class="fas fa-qrcode"></i> QR Code</a>
+<a href="/pair" class="btn" id="pairBtn"><i class="fas fa-link"></i> Pairing Code</a>
+<a href="/qrpage" class="btn" id="qrBtn"><i class="fas fa-qrcode"></i> QR Code</a>
 
 <div class="result-message" id="resultMsg"></div>
 </section>
@@ -199,6 +200,21 @@ async function loadStatus(){
     document.getElementById('coins').textContent=userCoins;
     updateTimer();
     document.getElementById('referralLink').href=`/referral?user=${encodeURIComponent(data.username||'user')}`;
+
+    // 🔹 Désactive boutons si bot inactif
+    const pairBtn=document.getElementById('pairBtn');
+    const qrBtn=document.getElementById('qrBtn');
+    if(botTimeRemaining<=0){
+      pairBtn.classList.add('disabled');
+      qrBtn.classList.add('disabled');
+      pairBtn.onclick=e=>e.preventDefault();
+      qrBtn.onclick=e=>e.preventDefault();
+    } else {
+      pairBtn.classList.remove('disabled');
+      qrBtn.classList.remove('disabled');
+      pairBtn.onclick=null;
+      qrBtn.onclick=null;
+    }
   }catch(e){ console.error(e); }
 }
 
@@ -208,7 +224,16 @@ function updateTimer(){
   if(timerInterval) clearInterval(timerInterval);
   if(botTimeRemaining<=0){ el.textContent="Bot inactif"; return; }
   const update=()=>{
-    if(botTimeRemaining<=0){ el.textContent="Bot inactif"; clearInterval(timerInterval); return; }
+    if(botTimeRemaining<=0){
+      el.textContent="Bot inactif";
+      clearInterval(timerInterval);
+      // Désactive les boutons
+      document.getElementById('pairBtn').classList.add('disabled');
+      document.getElementById('qrBtn').classList.add('disabled');
+      document.getElementById('pairBtn').onclick=e=>e.preventDefault();
+      document.getElementById('qrBtn').onclick=e=>e.preventDefault();
+      return;
+    }
     const h=Math.floor(botTimeRemaining/3600000);
     const m=Math.floor((botTimeRemaining%3600000)/60000);
     const s=Math.floor((botTimeRemaining%60000)/1000);
@@ -237,6 +262,13 @@ async function selectPayment(select,hours){
       botTimeRemaining=data.botActiveRemaining;
       document.getElementById('coins').textContent=userCoins;
       updateTimer();
+      // Active les boutons après achat
+      const pairBtn=document.getElementById('pairBtn');
+      const qrBtn=document.getElementById('qrBtn');
+      pairBtn.classList.remove('disabled');
+      qrBtn.classList.remove('disabled');
+      pairBtn.onclick=null;
+      qrBtn.onclick=null;
     }
   }
   if(choice==='fcfa'){

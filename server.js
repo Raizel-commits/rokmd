@@ -74,24 +74,39 @@ app.get("/register", (req, res) => res.sendFile(path.join(__dirname, "register.h
 app.get("/", requireAuth, (req, res) => res.sendFile(path.join(__dirname, "index.html")));
 app.get("/pair", requireAuth, requireActiveBot, (req, res) => res.sendFile(path.join(__dirname, "pair.html")));
 app.get("/qrpage", requireAuth, requireActiveBot, (req, res) => res.sendFile(path.join(__dirname, "qr.html")));
+app.get("/referral", requireAuth, (req, res) => res.sendFile(path.join(__dirname, "referral.html")));
 
 /* ================== AUTH API ================== */
 app.post("/register", (req, res) => {
-  const { username, password } = req.body;
-  if (!username || !password) return res.json({ error: "Champs manquants" });
+  const { username, password, email, ref } = req.body;
+  if (!username || !password || !email) return res.json({ error: "Champs manquants" });
 
   const users = loadUsers();
   if (users.find(u => u.username === username)) return res.json({ error: "Nom d'utilisateur déjà utilisé" });
+  if (users.find(u => u.email === email)) return res.json({ error: "Email déjà utilisé" });
 
-  users.push({
+  const newUser = {
     username,
     password,
+    email,
     coins: 20,
     botActiveUntil: 0,
     botNumber: null,
     adCount: 0,
-    adLastDate: 0
-  });
+    adLastDate: 0,
+    referrals: []
+  };
+
+  users.push(newUser);
+
+  // Attribution des 5 coins au parrain si présent
+  if(ref){
+    const parrain = users.find(u => u.username === ref);
+    if(parrain){
+      parrain.coins += 5;
+      parrain.referrals.push(username);
+    }
+  }
 
   saveUsers(users);
   res.json({ status: "Compte créé ! Vous avez 20 coins" });
@@ -118,10 +133,18 @@ app.get("/coins", requireAuth, (req, res) => {
   res.json({
     coins: user.coins,
     botActiveRemaining: Math.max(0, user.botActiveUntil - Date.now()),
-    username: user.username
+    username: user.username,
+    referrals: user.referrals || []
   });
 });
 
+// Pour referral.html
+app.get("/users-list", requireAuth, (req, res) => {
+  const users = loadUsers();
+  res.json(users);
+});
+
+/* ================== ACHAT BOT ================== */
 app.post("/buy-bot", requireAuth, (req, res) => {
   const duration = parseInt(req.body.duration);
   const prices = { 24: 20, 48: 40, 72: 60 };
@@ -204,8 +227,7 @@ app.post("/webhook", (req, res) => {
   res.send("OK");
 });
 
-/* ================== WATCH AD ROUTES ================== */
-// Vérifie si l'utilisateur peut regarder une pub (max 2/jour)
+/* ================== WATCH AD ================== */
 app.get("/watch-ad", requireAuth, (req, res) => {
   const users = loadUsers();
   const user = users.find(u => u.username === req.session.user.username);
@@ -219,7 +241,6 @@ app.get("/watch-ad", requireAuth, (req, res) => {
   res.json({ allowed: true });
 });
 
-// Après que la vidéo soit terminée
 app.post("/watch-ad/complete", requireAuth, (req, res) => {
   const users = loadUsers();
   const user = users.find(u => u.username === req.session.user.username);

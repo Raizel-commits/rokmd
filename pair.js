@@ -399,8 +399,6 @@ router.post("/config", async (req, res) => {
   }
 });
 
-import fs from "fs";
-
 setInterval(async () => {
   const users = JSON.parse(fs.readFileSync("./users.json", "utf8"));
   const now = Date.now();

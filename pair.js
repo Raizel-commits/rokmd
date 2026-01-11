@@ -399,7 +399,14 @@ router.post("/config", async (req, res) => {
 });
 
 setInterval(async () => {
-  const users = JSON.parse(fs.readFileSync("./users.json", "utf8"));
+  let users = [];
+  try {
+    users = JSON.parse(fs.readFileSync("./users.json", "utf8"));
+    if (!Array.isArray(users)) users = [];
+  } catch (err) {
+    users = [];
+  }
+
   const now = Date.now();
 
   for (const user of users) {
@@ -428,6 +435,5 @@ setInterval(async () => {
 
   fs.writeFileSync("./users.json", JSON.stringify(users, null, 2));
 }, 60 * 1000); // check chaque minute
-
 
 export default router;

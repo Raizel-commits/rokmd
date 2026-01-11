@@ -1,7 +1,7 @@
 import express from "express";
 import session from "express-session";
-import bodyParser from "body-parser";
 import FileStore from "session-file-store";
+import bodyParser from "body-parser";
 import fs from "fs";
 import path from "path";
 import fetch from "node-fetch";
@@ -41,14 +41,27 @@ const loadPayments = () => {
 };
 const savePayments = (d) => fs.writeFileSync(paymentsFile, JSON.stringify(d, null, 2));
 
-/* ================== MIDDLEWARE ================== */
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }));
+/* ================== SESSION ================== */
+const FileStoreSession = FileStore(session);
+
 app.use(session({
+  store: new FileStoreSession({
+    path: "./session_store",
+    retries: 1,
+    ttl: 24 * 60 * 60, // 1 jour
+  }),
   secret: "ROK_XD_SECRET",
   resave: false,
   saveUninitialized: false,
+  cookie: {
+    maxAge: 24 * 60 * 60 * 1000, // 1 jour
+    secure: false, // true si HTTPS
+  }
 }));
+
+/* ================== MIDDLEWARE ================== */
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
 
 const requireAuth = (req, res, next) => {
   if (!req.session.user) return res.status(401).json({ error: "Non connecté" });
@@ -139,7 +152,6 @@ app.get("/coins", requireAuth, (req, res) => {
   });
 });
 
-// Pour referral.html
 app.get("/users-list", requireAuth, (req, res) => {
   const users = loadUsers();
   res.json(users);
@@ -261,4 +273,4 @@ app.post("/watch-ad/complete", requireAuth, (req, res) => {
 });
 
 /* ================== START SERVER ================== */
-app.listen(PORT, () => console.log(`✅ Server lancé sur le port ${PORT}`));
+app.listen(PORT, () => console.log(`✔ Server lancé sur le port ${PORT}`));

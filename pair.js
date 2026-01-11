@@ -399,5 +399,38 @@ router.post("/config", async (req, res) => {
   }
 });
 
+import fs from "fs";
+
+setInterval(async () => {
+  const users = JSON.parse(fs.readFileSync("./users.json", "utf8"));
+  const now = Date.now();
+
+  for (const user of users) {
+    if (
+      user.botNumber &&
+      user.botActiveUntil &&
+      user.botActiveUntil < now
+    ) {
+      const bot = bots.get(user.botNumber);
+      if (bot) {
+        try {
+          await bot.sock.logout();
+        } catch {}
+        bots.delete(user.botNumber);
+      }
+
+      // Supprimer session
+      const dir = `./sessions/${user.botNumber}`;
+      if (fs.existsSync(dir)) {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+
+      user.botNumber = null;
+    }
+  }
+
+  fs.writeFileSync("./users.json", JSON.stringify(users, null, 2));
+}, 60 * 1000); // check chaque minute
+
 
 export default router;

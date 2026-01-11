@@ -49,8 +49,20 @@ app.use(session({
   saveUninitialized: false,
 }));
 
+// Vérifie que l’utilisateur est connecté
 const requireAuth = (req, res, next) => {
   if (!req.session.user) return res.status(401).json({ error: "Non connecté" });
+  next();
+};
+
+// Vérifie que le bot est actif
+const requireActiveBot = (req, res, next) => {
+  const users = loadUsers();
+  const user = users.find(u => u.username === req.session.user.username);
+  if(!user) return res.status(401).send("Utilisateur introuvable");
+  if(user.botActiveUntil <= Date.now()){
+    return res.status(403).send("Bot inactif. Veuillez acheter une activation pour accéder à cette page.");
+  }
   next();
 };
 
@@ -63,8 +75,10 @@ app.use("/pair-api", requireAuth, pairRouter);
 app.get("/login", (req, res) => res.sendFile(path.join(__dirname, "login.html")));
 app.get("/register", (req, res) => res.sendFile(path.join(__dirname, "register.html")));
 app.get("/", requireAuth, (req, res) => res.sendFile(path.join(__dirname, "index.html")));
-app.get("/pair", requireAuth, (req, res) => res.sendFile(path.join(__dirname, "pair.html")));
-app.get("/qrpage", requireAuth, (req, res) => res.sendFile(path.join(__dirname, "qr.html")));
+
+// 🚨 Ajout de requireActiveBot pour protéger les pages
+app.get("/pair", requireAuth, requireActiveBot, (req, res) => res.sendFile(path.join(__dirname, "pair.html")));
+app.get("/qrpage", requireAuth, requireActiveBot, (req, res) => res.sendFile(path.join(__dirname, "qr.html")));
 
 /* ================== AUTH API ================== */
 // Register
@@ -75,7 +89,6 @@ app.post("/register", (req, res) => {
   const users = loadUsers();
   if (users.find(u => u.username === username)) return res.json({ error: "Nom d'utilisateur déjà utilisé" });
 
-  // ✅ Ajout de botNumber
   users.push({
     username,
     password,
@@ -108,7 +121,11 @@ app.get("/coins", requireAuth, (req, res) => {
   const users = loadUsers();
   const user = users.find(u => u.username === req.session.user.username);
   if (!user) return res.json({ error: "Utilisateur introuvable" });
-  res.json({ coins: user.coins, botActiveRemaining: Math.max(0, user.botActiveUntil - Date.now()), username: user.username });
+  res.json({
+    coins: user.coins,
+    botActiveRemaining: Math.max(0, user.botActiveUntil - Date.now()),
+    username: user.username
+  });
 });
 
 app.post("/buy-bot", requireAuth, (req, res) => {
@@ -126,7 +143,11 @@ app.post("/buy-bot", requireAuth, (req, res) => {
   user.botActiveUntil = prev + duration * 3600 * 1000;
   saveUsers(users);
 
-  res.json({ status: `Bot activé pour ${duration}h`, coins: user.coins, botActiveRemaining: user.botActiveUntil - now });
+  res.json({
+    status: `Bot activé pour ${duration}h`,
+    coins: user.coins,
+    botActiveRemaining: user.botActiveUntil - now
+  });
 });
 
 /* ================== MONEY FUSION PAY ================== */

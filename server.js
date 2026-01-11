@@ -1,6 +1,7 @@
 import express from "express";
 import session from "express-session";
 import bodyParser from "body-parser";
+import FileStore from "session-file-store";
 import fs from "fs";
 import path from "path";
 import fetch from "node-fetch";

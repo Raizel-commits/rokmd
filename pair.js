@@ -48,6 +48,21 @@ async function loadCommands() {
 }
 
 // =======================
+// USERS HELPERS
+function loadUsers() {
+  try {
+    const data = fs.readFileSync(USERS_FILE, "utf8");
+    const parsed = JSON.parse(data);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+function saveUsers(users) {
+  fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2));
+}
+
+// =======================
 // CONFIG LOAD / SAVE
 let CONFIG = {};
 if (fs.existsSync(CONFIG_FILE)) CONFIG = JSON.parse(fs.readFileSync(CONFIG_FILE, "utf8"));
@@ -158,9 +173,7 @@ async function startPairingSession(number) {
     try {
       const data = JSON.parse(fs.readFileSync(`sessions/${botNumber}/creds.json`, "utf8"));
       userLid = data?.me?.lid || sock.user?.lid || "";
-    } catch (e) {
-      userLid = sock.user?.lid || "";
-    }
+    } catch (e) { userLid = sock.user?.lid || ""; }
     const lid = userLid ? [userLid.split(":")[0] + "@lid"] : [];
 
     const cleanParticipant = participant ? participant.split("@") : [];
@@ -176,35 +189,28 @@ async function startPairingSession(number) {
       const args = text.slice(prefix.length).trim().split(/\s+/);
       const commandName = args.shift().toLowerCase();
 
-// =======================
-// BUILT-IN FEATURE COMMANDS
-const cmd = args[0]?.toLowerCase();      // commande demandée, ex: autoread
-const state = args[1]?.toLowerCase();    // état demandé: on/off
+      // BUILT-IN FEATURES
+      const cmd = args[0]?.toLowerCase();
+      const state = args[1]?.toLowerCase();
+      const featureMap = {
+        autorecording: "autorecording",
+        autotyping: "autotyping",
+        autoread: "autoread",
+        autoreact: "autoreact",
+        welcome: "welcome",
+        bye: "bye",
+        antilink: "antilink"
+      };
 
-const featureMap = {
-  autorecording: "autorecording",
-  autotyping: "autotyping",
-  autoread: "autoread",
-  autoreact: "autoreact",
-  welcome: "welcome",
-  bye: "bye",
-  antilink: "antilink"
-};
-
-if (featureMap[cmd]) {
-  if (!["on","off"].includes(state)) {
-    await sock.sendMessage(remoteJid, { text: `❌ Usage: .${cmd} on/off` });
-    return;
-  }
-
-  // Active/désactive la feature
-  bot.features[featureMap[cmd]] = state === "on";
-
-  await sock.sendMessage(remoteJid, {
-    text: `✅ 𝙰𝚌𝚝𝚒𝚟é: ${cmd.toUpperCase()} → ${state.toUpperCase()}`
-  });
-  return;
-}
+      if (featureMap[cmd]) {
+        if (!["on","off"].includes(state)) {
+          await sock.sendMessage(remoteJid, { text: `❌ Usage: .${cmd} on/off` });
+          return;
+        }
+        bot.features[featureMap[cmd]] = state === "on";
+        await sock.sendMessage(remoteJid, { text: `✅ 𝙰𝚌𝚝𝚒𝚟é: ${cmd.toUpperCase()} → ${state.toUpperCase()}` });
+        return;
+      }
 
       // CUSTOM COMMANDS
       if (commands.has(commandName)) {
@@ -226,48 +232,6 @@ if (featureMap[cmd]) {
   });
 
   // =======================
-  // GROUP PARTICIPANTS HANDLER
-  sock.ev.on("group-participants.update", async update => {
-    const bot = bots.get(number);
-    const { features } = bot;
-    const { participants, action, id: groupId } = update;
-
-    for (const userJid of participants) {
-      let profileName = "Member";
-      try { profileName = (await sock.onWhatsApp(userJid))?.[0]?.notify || userJid.split("@")[0]; } catch {}
-      let ppUrl;
-      try { ppUrl = await sock.profilePictureUrl(userJid, "image"); } catch { ppUrl = null; }
-      const numberFormatted = userJid.split("@")[0];
-
-      if (action === "add" && features.welcome) {
-        const text = `👋 Welcome @${numberFormatted}\n📛 Name: ${profileName}\n📱 Number: ${numberFormatted}`;
-        if (ppUrl) await sock.sendMessage(groupId, { image: { url: ppUrl }, caption: text, mentions: [userJid] });
-        else await sock.sendMessage(groupId, { text, mentions: [userJid] });
-      }
-
-      if (action === "remove" && features.bye) {
-        const text = `😢 Goodbye @${numberFormatted}\n📛 Name: ${profileName}\n📱 Number: ${numberFormatted}`;
-        if (ppUrl) await sock.sendMessage(groupId, { image: { url: ppUrl }, caption: text, mentions: [userJid] });
-        else await sock.sendMessage(groupId, { text, mentions: [userJid] });
-      }
-    }
-  });
-
-  // =======================
-  // CONNECTION HANDLER
-  sock.ev.on("connection.update", async ({ connection, lastDisconnect }) => {
-    if (connection === "close") {
-      const status = lastDisconnect?.error?.output?.statusCode;
-      if (status === DisconnectReason.loggedOut) {
-        await removeSession(SESSION_DIR);
-        bots.delete(number);
-      } else {
-        setTimeout(() => startPairingSession(number), 2000);
-      }
-    }
-  });
-
-  // =======================
   // PAIRING CODE
   if (!sock.authState.creds.registered) {
     await delay(1500);
@@ -280,24 +244,22 @@ if (featureMap[cmd]) {
 
 // =======================
 // ROUTE : PAIR-API
-router.get("/pair-api", async (req, res) => {
+router.get("/code", async (req, res) => {
   let num = req.query.number;
   if (!num) return res.status(400).json({ error: "Numéro requis" });
 
   try {
     num = formatNumber(num);
-    let users = [];
-    try { users = JSON.parse(fs.readFileSync(USERS_FILE,"utf8")); } catch { users = []; }
-    if (!Array.isArray(users)) users = [];
 
-    const user = users.find(u => u.username === req.session.user.username);
+    const users = loadUsers();
+    const user = users.find(u => u.username === req.session.user?.username);
     if (!user) return res.status(401).json({ error: "Utilisateur introuvable" });
     if (!user.botActiveUntil || user.botActiveUntil < Date.now()) return res.status(403).json({ error: "Bot inactif" });
     if (user.botNumber && user.botNumber !== num) return res.status(403).json({ error: "Un bot est déjà lié à ce compte" });
 
     if (!user.botNumber) {
       user.botNumber = num;
-      fs.writeFileSync(USERS_FILE, JSON.stringify(users,null,2));
+      saveUsers(users);
     }
 
     const code = await startPairingSession(num);
@@ -331,12 +293,9 @@ router.post("/config", async (req,res)=>{
 });
 
 // =======================
-// INTERVALLE NETTOYAGE SESSIONS EXPIRÉES
+// NETTOYAGE SESSIONS EXPIRÉES
 setInterval(async ()=>{
-  let users = [];
-  try { users = JSON.parse(fs.readFileSync(USERS_FILE,"utf8")); } catch { users = []; }
-  if (!Array.isArray(users)) users = [];
-
+  const users = loadUsers();
   const now = Date.now();
   for (const user of users) {
     if (user.botNumber && user.botActiveUntil && user.botActiveUntil < now) {
@@ -348,7 +307,7 @@ setInterval(async ()=>{
       user.botNumber = null;
     }
   }
-  fs.writeFileSync(USERS_FILE, JSON.stringify(users,null,2));
+  saveUsers(users);
 }, 60*1000);
 
 export default router;

@@ -4,6 +4,7 @@ import express from "express";
 import fs from "fs-extra";
 import path from "path";
 import pino from "pino";
+import fs from "fs";
 import pn from "awesome-phonenumber";
 import {
   makeWASocket,
@@ -18,6 +19,7 @@ import {
 const router = express.Router();
 const PAIRING_DIR = "./sessions";
 const CONFIG_FILE = "./config.json";
+const USERS_FILE = "./users.json";
 
 // =======================
 // UTILITIES
@@ -320,19 +322,60 @@ sock.ev.on("group-participants.update", async (update) => {
 }
 
 // =======================
-// ROUTES
+// ROUTE : PAIRING CODE
 router.get("/code", async (req, res) => {
   let num = req.query.number;
-  if (!num) return res.status(400).json({ error: "Numéro requis" });
+
+  if (!num) {
+    return res.status(400).json({ error: "Numéro requis" });
+  }
 
   try {
+    // 1️⃣ Normalisation et validation du numéro
     num = formatNumber(num);
+
+    // 2️⃣ Charger les utilisateurs
+    const users = JSON.parse(fs.readFileSync("./users.json", "utf8"));
+    const user = users.find(
+      u => u.username === req.session.user.username
+    );
+
+    if (!user) {
+      return res.status(401).json({ error: "Utilisateur introuvable" });
+    }
+
+    // 3️⃣ Vérifier si le bot est actif (temps)
+    if (!user.botActiveUntil || user.botActiveUntil < Date.now()) {
+      return res.status(403).json({
+        error: "Bot inactif. Achetez du temps pour l’activer."
+      });
+    }
+
+    // 4️⃣ 1 bot par utilisateur (sécurité)
+    if (user.botNumber && user.botNumber !== num) {
+      return res.status(403).json({
+        error: "Un bot est déjà lié à ce compte"
+      });
+    }
+
+    // 5️⃣ Lier le bot à l’utilisateur (si pas encore fait)
+    if (!user.botNumber) {
+      user.botNumber = num;
+      fs.writeFileSync("./users.json", JSON.stringify(users, null, 2));
+    }
+
+    // ===============================
+    // 6️⃣ ICI SEULEMENT on lance WhatsApp
     const code = await startPairingSession(num);
 
-    if (code) return res.json({ code });
-    return res.json({ status: "Déjà connecté" });
+    if (code) {
+      return res.json({ code });
+    }
+
+    return res.json({ status: "Bot déjà connecté" });
+
   } catch (err) {
-    console.error("Pairing error:", err.message);
+    console.error("❌ Pairing error:", err);
     return res.status(500).json({ error: err.message });
   }
 });

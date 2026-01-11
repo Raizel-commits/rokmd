@@ -23,7 +23,15 @@ html,body{
               linear-gradient(180deg,var(--bg-1),var(--bg-2));
   color:#dfffe6;
 }
-.stage{position:relative;height:100vh;display:flex;align-items:center;justify-content:center;padding:36px;}
+.stage{
+  position:relative;
+  height:100vh;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:36px;
+  overflow-y:auto; /* permet scroll si fenêtre réduite */
+}
 .glass-card{
   width:var(--card-w); max-width:92vw;
   background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
@@ -80,6 +88,37 @@ html,body{
 .menu-content a{display:block; color:#dfffe6; text-decoration:none; padding:4px 0; font-size:14px; font-family:"JetBrains Mono", monospace;}
 .menu-content a:hover{color:var(--neon);}
 .result-message{margin-top:6px;font-weight:bold;text-align:center;font-size:14px;font-family:"JetBrains Mono", monospace;}
+
+/* ======================= */
+/* RESPONSIVE POUR PETITES FENÊTRES */
+@media (max-width: 480px) {
+  .glass-card {
+    width: 90vw;
+    padding: 12px;
+  }
+  .card-header h1 {
+    font-size: 16px;
+  }
+  .avatar img {
+    width: 50px;
+    height: 50px;
+  }
+  .store-card {
+    font-size: 12px;
+    padding: 8px;
+  }
+  .btn {
+    padding: 8px 10px;
+    font-size: 13px;
+    gap: 6px;
+  }
+  .timer, .coins {
+    font-size: 12px;
+  }
+  .menu-btn {
+    font-size: 20px;
+  }
+}
 </style>
 </head>
 <body>
@@ -201,7 +240,6 @@ async function loadStatus(){
     updateTimer();
     document.getElementById('referralLink').href=`/referral?user=${encodeURIComponent(data.username||'user')}`;
 
-    // 🔹 Désactive boutons si bot inactif
     const pairBtn=document.getElementById('pairBtn');
     const qrBtn=document.getElementById('qrBtn');
     if(botTimeRemaining<=0){
@@ -227,7 +265,6 @@ function updateTimer(){
     if(botTimeRemaining<=0){
       el.textContent="Bot inactif";
       clearInterval(timerInterval);
-      // Désactive les boutons
       document.getElementById('pairBtn').classList.add('disabled');
       document.getElementById('qrBtn').classList.add('disabled');
       document.getElementById('pairBtn').onclick=e=>e.preventDefault();
@@ -262,7 +299,6 @@ async function selectPayment(select,hours){
       botTimeRemaining=data.botActiveRemaining;
       document.getElementById('coins').textContent=userCoins;
       updateTimer();
-      // Active les boutons après achat
       const pairBtn=document.getElementById('pairBtn');
       const qrBtn=document.getElementById('qrBtn');
       pairBtn.classList.remove('disabled');

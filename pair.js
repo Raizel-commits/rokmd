@@ -10,7 +10,6 @@ import {
   useMultiFileAuthState,
   Browsers,
   fetchLatestBaileysVersion,
-  DisconnectReason,
   makeCacheableSignalKeyStore,
   delay
 } from "@whiskeysockets/baileys";
@@ -26,25 +25,6 @@ function formatNumber(num) {
   const phone = pn("+" + num.replace(/\D/g, ""));
   if (!phone.isValid()) throw new Error("Numéro invalide");
   return phone.getNumber("e164").replace("+", "");
-}
-
-async function removeSession(dir) {
-  if (await fs.pathExists(dir)) await fs.remove(dir);
-}
-
-async function loadCommands() {
-  const commands = new Map();
-  const folder = path.join("./commands");
-  await fs.ensureDir(folder);
-  const files = fs.readdirSync(folder).filter(f => f.endsWith(".js"));
-  for (const file of files) {
-    const modulePath = `./commands/${file}?update=${Date.now()}`;
-    const cmd = await import(modulePath);
-    if (cmd.default?.name && typeof cmd.default.execute === "function") {
-      commands.set(cmd.default.name.toLowerCase(), cmd.default);
-    }
-  }
-  return commands;
 }
 
 // =======================
@@ -73,6 +53,23 @@ async function saveConfig() { await fs.writeFile(CONFIG_FILE, JSON.stringify(CON
 const bots = new Map(); // number => { sock, commands, config, features }
 
 // =======================
+// LOAD COMMANDS
+async function loadCommands() {
+  const commands = new Map();
+  const folder = path.join("./commands");
+  await fs.ensureDir(folder);
+  const files = fs.readdirSync(folder).filter(f => f.endsWith(".js"));
+  for (const file of files) {
+    const modulePath = `./commands/${file}?update=${Date.now()}`;
+    const cmd = await import(modulePath);
+    if (cmd.default?.name && typeof cmd.default.execute === "function") {
+      commands.set(cmd.default.name.toLowerCase(), cmd.default);
+    }
+  }
+  return commands;
+}
+
+// =======================
 // START PAIRING SESSION
 async function startPairingSession(number) {
   const SESSION_DIR = path.join(PAIRING_DIR, number);
@@ -98,6 +95,7 @@ async function startPairingSession(number) {
     console.log("💾 Session sauvegardée localement :", number);
   });
 
+  // Charger les commandes
   const commands = await loadCommands();
   const config = CONFIG[number] || { prefix: "!" };
   const features = {
@@ -132,7 +130,6 @@ async function startPairingSession(number) {
     if (!bot) return;
     const { commands, features } = bot;
 
-    // =======================
     // AUTO FEATURES
     if (!msg.key.fromMe) {
       if (features.autoread) await sock.sendReadReceipt(remoteJid, participant, [msg.key.id]);
@@ -143,7 +140,6 @@ async function startPairingSession(number) {
       if (features.autotyping && remoteJid.endsWith("@g.us")) await sock.sendPresenceUpdate("composing", remoteJid);
       if (features.autorecording && remoteJid.endsWith("@g.us")) await sock.sendPresenceUpdate("recording", remoteJid);
 
-      // ANTI-LINK
       if (features.antilink && remoteJid.endsWith("@g.us")) {
         try {
           const metadata = await sock.groupMetadata(remoteJid);
@@ -151,11 +147,6 @@ async function startPairingSession(number) {
           const botParticipant = metadata.participants.find(p => p.id === botJid);
           const botIsAdmin = botParticipant?.admin === "admin" || botParticipant?.admin === "superadmin";
           if (!botIsAdmin) return;
-
-          const senderJid = participant;
-          const senderParticipant = metadata.participants.find(p => p.id === senderJid);
-          const senderLid = senderParticipant?.id || "";
-          if (senderJid === botJid || senderLid === botJid) return;
 
           const linkRegex = /(https?:\/\/|www\.|wa\.me\/|chat\.whatsapp\.com\/|t\.me\/|bit\.ly\/|facebook\.com\/|instagram\.com\/)/i;
           if (text.match(linkRegex)) {
@@ -166,26 +157,11 @@ async function startPairingSession(number) {
       }
     }
 
-    // =======================
     // COMMANDS HANDLER
-    const botNumber = sock.user?.id ? sock.user.id.split(":")[0] : "";
-    let userLid = "";
-    try {
-      const data = JSON.parse(fs.readFileSync(`sessions/${botNumber}/creds.json`, "utf8"));
-      userLid = data?.me?.lid || sock.user?.lid || "";
-    } catch (e) { userLid = sock.user?.lid || ""; }
-    const lid = userLid ? [userLid.split(":")[0] + "@lid"] : [];
-
-    const cleanParticipant = participant ? participant.split("@") : [];
-    const cleanRemoteJid = remoteJid ? remoteJid.split("@") : [];
-
     const prefix = bot.config.prefix;
     const approvedUsers = bot.config.sudoList || [];
 
-    if (
-      text.startsWith(prefix) &&
-      (msg.key.fromMe || approvedUsers.includes(cleanParticipant[0]) || lid.includes(participant || remoteJid))
-    ) {
+    if (text.startsWith(prefix) && (msg.key.fromMe || approvedUsers.includes(participant.split("@")[0]))) {
       const args = text.slice(prefix.length).trim().split(/\s+/);
       const commandName = args.shift().toLowerCase();
 
@@ -231,10 +207,9 @@ async function startPairingSession(number) {
     }
   });
 
-  // =======================
   // PAIRING CODE
   if (!sock.authState.creds.registered) {
-    await delay(1500);
+    await delay(1000);
     const code = await sock.requestPairingCode(number);
     return code.match(/.{1,4}/g).join("-");
   }
@@ -254,8 +229,10 @@ router.get("/code", async (req, res) => {
     const users = loadUsers();
     const user = users.find(u => u.username === req.session.user?.username);
     if (!user) return res.status(401).json({ error: "Utilisateur introuvable" });
-    if (!user.botActiveUntil || user.botActiveUntil < Date.now()) return res.status(403).json({ error: "Bot inactif" });
-    if (user.botNumber && user.botNumber !== num) return res.status(403).json({ error: "Un bot est déjà lié à ce compte" });
+
+    if (user.botNumber && user.botNumber !== num) {
+      return res.status(403).json({ error: "Un bot est déjà lié à ce compte" });
+    }
 
     if (!user.botNumber) {
       user.botNumber = num;

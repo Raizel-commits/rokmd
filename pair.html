@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ROK XD • Pairing & Config</title>
-
 <style>
 :root{
   --bg-1:#020617;
@@ -14,144 +13,146 @@
   --muted:rgba(255,255,255,0.45);
   --card-w:380px;
 }
-
 *{box-sizing:border-box}
-html,body{height:100%;margin:0;font-family:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,Arial;background:
-radial-gradient(1200px 600px at 10% 10%, rgba(56,189,248,0.03), transparent),
-radial-gradient(900px 500px at 90% 85%, rgba(56,189,248,0.02), transparent),
-linear-gradient(180deg,var(--bg-1),var(--bg-2));
-color:#eafff2;overflow:hidden;}
-
-.stage{height:100vh;display:flex;align-items:center;justify-content:center;padding:36px;}
-
+html,body{height:100%;margin:0;font-family:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial;
+background: radial-gradient(1200px 600px at 10% 10%, rgba(56,189,248,0.03), transparent),
+            radial-gradient(900px 500px at 90% 85%, rgba(56,189,248,0.02), transparent),
+            linear-gradient(180deg,var(--bg-1),var(--bg-2));
+color:#dfffe6;overflow:hidden;}
+.stage{position:relative;height:100vh;display:flex;align-items:center;justify-content:center;padding:36px;}
 .glass-card{
-  width:var(--card-w);
-  max-width:94vw;
-  background:linear-gradient(180deg, rgba(255,255,255,0.025), rgba(255,255,255,0.01));
-  border-radius:20px;
-  padding:22px;
-  text-align:center;
+  width:var(--card-w);max-width:92vw;
+  background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+  border-radius:18px;padding:22px;
+  box-shadow:0 10px 40px rgba(0,0,0,0.7),0 0 40px rgba(56,189,248,0.05) inset;
+  backdrop-filter: blur(10px) saturate(140%);
   border:1px solid var(--glass-border);
-  backdrop-filter:blur(12px) saturate(140%);
-  box-shadow:0 10px 40px rgba(0,0,0,0.7),inset 0 0 40px rgba(56,189,248,0.05);
+  text-align:center;
 }
-
-.card-header h1{font-family:"JetBrains Mono", monospace;font-size:18px;margin:0;color:var(--neon);text-transform:uppercase;text-shadow:0 0 18px rgba(56,189,248,0.25);}
-.card-header p{margin-top:6px;font-size:12px;color:var(--muted);}
-
-input{width:100%;padding:12px;border-radius:12px;border:1px solid rgba(56,189,248,0.08);background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.006));color:#eafff2;margin-top:14px;outline:none;font-size:14px;}
+.card-header h1{font-family:"JetBrains Mono", monospace;font-size:20px;margin:0;color:var(--neon);text-transform:uppercase;text-shadow:0 0 18px rgba(56,189,248,0.22);}
+.card-header .small-url{font-size:12px;color:var(--muted);margin-top:6px;}
+input[type="tel"], input[type="text"]{
+  width:100%;padding:12px;border-radius:10px;border:1px solid rgba(56,189,248,0.06);
+  background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.006));
+  color:#eafff2;margin-bottom:12px;outline:none;font-size:14px;
+}
 input::placeholder{color:rgba(200,255,255,0.22);}
+button{width:100%;padding:12px;border-radius:6px;border:none;background:var(--neon);color:#020617;font-weight:bold;cursor:pointer;font-size:16px;margin-bottom:12px;}
+button:hover{opacity:0.9;}
+.result{margin-top:16px;font-weight:bold;word-break:break-word;}
 
-button{width:100%;padding:12px;margin-top:14px;border-radius:8px;border:none;background:var(--neon);color:#020617;font-weight:700;font-size:15px;cursor:pointer;}
-button:hover{opacity:0.92} button:disabled{opacity:0.55;cursor:not-allowed}
+/* ================== MESSAGE FRAMES ================== */
+.msg {
+  padding: 10px 14px;
+  margin-top: 12px;
+  border-radius: 8px;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  word-break: break-word;
+}
+.msg.info { background: rgba(56,189,248,0.1); color: #38bdf8; border: 1px solid rgba(56,189,248,0.3); }
+.msg.success { background: rgba(52,211,153,0.1); color: #34d399; border: 1px solid rgba(52,211,153,0.3); }
+.msg.error { background: rgba(239,68,68,0.1); color: #ef4444; border: 1px solid rgba(239,68,68,0.3); }
+.msg button {
+  background: rgba(255,255,255,0.08);
+  color: #dfffe6;
+  border: none;
+  padding: 4px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  margin-left: 10px;
+}
+.msg button:hover { background: rgba(255,255,255,0.2); }
 
-.sep{margin:18px 0;border-top:1px solid rgba(56,189,248,0.12);}
+.dots::after{content:'';animation:blink 1s infinite;}
+@keyframes blink{0%,20%{content:'';}40%{content:'.';}60%{content:'..';}80%,100%{content:'...';}}
 </style>
 </head>
-
 <body>
 <main class="stage">
 <section class="glass-card">
-
 <header class="card-header">
-  <h1>ROK XD • Pairing</h1>
-  <p>Connectez votre WhatsApp et configurez le bot</p>
+<h1>ROK XD • Pairing & Config</h1>
+<div class="small-url">Entrez votre numéro WhatsApp et configurez votre bot</div>
 </header>
 
-<input id="phone" type="tel" placeholder="2376XXXXXXXX">
-<button id="pairBtn">🔗 Générer le code</button>
+<!-- Formulaire de pairing -->
+<input id="phone" type="tel" placeholder="2376XXXXXXX">
+<button id="pairBtn">Générer le code</button>
+<div class="result" id="pairResult"></div>
 
-<div class="sep"></div>
+<hr style="border:1px solid rgba(56,189,248,0.1); margin:12px 0;">
 
-<input id="prefix" type="text" placeholder="Préfixe des commandes (ex: !)">
-<button id="configBtn">⚙️ Sauvegarder la configuration</button>
+<!-- Formulaire configuration -->
+<input id="prefix" type="text" placeholder="Préfixe commandes (ex: !)">
+<button id="configBtn">Sauvegarder Config</button>
+<div class="result" id="configResult"></div>
 
 </section>
 </main>
 
 <script>
-/* ================= MESSAGE FLOTTANT ================= */
-function showMessage(msg, color = '#ef4444', duration = 3000) {
-  const box = document.createElement('div');
-  box.style.position = 'fixed';
-  box.style.top = '50%';
-  box.style.left = '50%';
-  box.style.transform = 'translate(-50%, -50%)';
-  box.style.background = 'rgba(255,255,255,0.03)';
-  box.style.backdropFilter = 'blur(14px)';
-  box.style.border = '1px solid rgba(56,189,248,0.22)';
-  box.style.padding = '22px 36px';
-  box.style.borderRadius = '18px';
-  box.style.color = color;
-  box.style.fontWeight = 'bold';
-  box.style.textAlign = 'center';
-  box.style.zIndex = 9999;
-  box.style.boxShadow = '0 0 30px rgba(56,189,248,0.2)';
-  box.textContent = msg;
-  document.body.appendChild(box);
-  setTimeout(() => box.remove(), duration);
-}
+// ================= PAIRING =================
+const pairBtn = document.getElementById("pairBtn");
+const pairResult = document.getElementById("pairResult");
 
-/* ================= MESSAGE PERMANENT ================= */
-function showMessagePermanent(msg, color = '#38bdf8') {
-  const box = document.createElement('div');
-  box.style.position = 'fixed';
-  box.style.top = '50%';
-  box.style.left = '50%';
-  box.style.transform = 'translate(-50%, -50%)';
-  box.style.background = 'rgba(255,255,255,0.03)';
-  box.style.backdropFilter = 'blur(14px)';
-  box.style.border = '1px solid rgba(56,189,248,0.22)';
-  box.style.padding = '22px 36px';
-  box.style.borderRadius = '18px';
-  box.style.color = color;
-  box.style.fontWeight = 'bold';
-  box.style.textAlign = 'center';
-  box.style.zIndex = 9999;
-  box.style.boxShadow = '0 0 30px rgba(56,189,248,0.2)';
-  box.textContent = msg;
-  document.body.appendChild(box);
-  return box; // retourne l’élément pour suppression après réponse
-}
+pairBtn.onclick = async () => {
+  const phone = document.getElementById("phone").value.trim();
+  if (!phone) {
+    pairResult.innerHTML = '<div class="msg error">Numéro requis</div>';
+    return;
+  }
 
-/* ================= PAIRING ================= */
-document.getElementById("pairBtn").onclick = async () => {
-  const number = document.getElementById("phone").value.trim();
-  if (!number) return showMessage("Numéro WhatsApp requis");
-
-  // Message permanent jusqu'à réponse
-  const statusBox = showMessagePermanent("Génération du code...", "#38bdf8");
+  pairBtn.disabled = true;
+  pairResult.innerHTML = '<div class="msg info">Génération en cours<span class="dots"></span></div>';
 
   try {
-    const r = await fetch("/pair-api/code?number=" + encodeURIComponent(number));
+    const r = await fetch(`/pair-api/code?number=${encodeURIComponent(phone)}`);
     const data = await r.json();
 
-    statusBox.remove(); // supprime le message "Génération du code..."
-
     if (data.code) {
-      showMessage("Code de liaison : " + data.code, "#38bdf8", 6000);
+      pairResult.innerHTML = `
+        <div class="msg success">
+          Code généré : <span id="generatedCode">${data.code}</span>
+          <button id="copyBtn">Copier</button>
+        </div>
+      `;
+      document.getElementById("copyBtn").onclick = () => {
+        const codeText = document.getElementById("generatedCode").innerText;
+        navigator.clipboard.writeText(codeText);
+        alert("✅ Code copié dans le presse-papier !");
+      };
     } else if (data.status) {
-      showMessage(data.status, "#38bdf8", 6000);
+      pairResult.innerHTML = `<div class="msg info">${data.status}</div>`;
     } else if (data.error) {
-      showMessage(data.error, "#ef4444", 6000);
-    } else {
-      showMessage("Réponse invalide du serveur", "#ef4444", 6000);
+      pairResult.innerHTML = `<div class="msg error">Erreur : ${data.error}</div>`;
     }
-  } catch (err) {
-    console.error(err);
-    statusBox.remove();
-    showMessage("Erreur serveur", "#ef4444", 6000);
+  } catch (e) {
+    pairResult.innerHTML = '<div class="msg error">Erreur serveur</div>';
+    console.error(e);
   }
+
+  pairBtn.disabled = false;
 };
 
-/* ================= CONFIG ================= */
-document.getElementById("configBtn").onclick = async () => {
+// ================= CONFIGURATION =================
+const configBtn = document.getElementById("configBtn");
+const configResult = document.getElementById("configResult");
+
+configBtn.onclick = async () => {
   const number = document.getElementById("phone").value.trim();
   const prefix = document.getElementById("prefix").value.trim() || "!";
 
-  if (!number) return showMessage("Numéro WhatsApp requis");
+  if (!number) {
+    configResult.innerHTML = '<div class="msg error">Numéro requis</div>';
+    return;
+  }
 
-  const statusBox = showMessagePermanent("Sauvegarde en cours...", "#38bdf8");
+  configBtn.disabled = true;
+  configResult.innerHTML = '<div class="msg info">Sauvegarde en cours<span class="dots"></span></div>';
 
   try {
     const r = await fetch("/pair-api/config", {
@@ -159,17 +160,15 @@ document.getElementById("configBtn").onclick = async () => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ number, prefix })
     });
-
     const data = await r.json();
-    statusBox.remove();
-
-    if (data.status) showMessage(data.status, "#38bdf8", 4000);
-    else if (data.error) showMessage(data.error, "#ef4444", 4000);
-  } catch (err) {
-    console.error(err);
-    statusBox.remove();
-    showMessage("Erreur serveur", "#ef4444", 4000);
+    if (data.status) configResult.innerHTML = `<div class="msg success">${data.status}</div>`;
+    else if (data.error) configResult.innerHTML = `<div class="msg error">Erreur : ${data.error}</div>`;
+  } catch (e) {
+    configResult.innerHTML = '<div class="msg error">Erreur serveur</div>';
+    console.error(e);
   }
+
+  configBtn.disabled = false;
 };
 </script>
 </body>

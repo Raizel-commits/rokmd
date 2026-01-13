@@ -9,7 +9,7 @@ import pkg from "pg";
 import { fileURLToPath } from "url";
 
 import qrRouter from "./qr.js";
-import pairRouter from "./pair.js";
+import pairRouter, { bots } from "./pair.js"; // IMPORT BOTS MAP
 
 const { Pool } = pkg;
 const __filename = fileURLToPath(import.meta.url);
@@ -26,7 +26,7 @@ const MF_API_KEY = "moneyfusion_v1_6950f6d898fe6dbde00af590_4A53FFA3DD9F78644E53
 /* ================== POSTGRESQL ================== */
 const pool = new Pool({
   connectionString: "postgresql://rokxd_db_user:THyZaovujnRMAnSxpuwpdcrCl6RZmhES@dpg-d5j882ur433s738vqqd0-a.virginia-postgres.render.com/rokxd_db",
-  ssl: { rejectUnauthorized: false } // Obligatoire sur Render
+  ssl: { rejectUnauthorized: false }
 });
 
 // ======================= INIT DB =======================
@@ -77,9 +77,27 @@ const requireActiveBot = async (req, res, next) => {
   const { rows } = await pool.query("SELECT * FROM users WHERE username=$1", [req.session.user.username]);
   const user = rows[0];
   if (!user) return res.status(401).send("Utilisateur introuvable");
-  if (user.botActiveUntil <= Date.now()) return res.status(403).send("Bot inactif");
+  if (parseInt(user.botActiveUntil || 0) <= Date.now()) {
+    logoutWhatsAppByUsername(user.username); // logout via username
+    return res.status(403).send("Bot inactif");
+  }
   next();
 };
+
+// ======================= LOGOUT WHATSAPP FUNCTION =======================
+function logoutWhatsAppByUsername(username) {
+  for (const [number, bot] of bots.entries()) {
+    if (number === username) {
+      try {
+        bot.sock.logout();
+        bots.delete(number);
+        console.log(`🛑 Session WhatsApp de ${username} terminée`);
+      } catch (e) {
+        console.error("Erreur logout WhatsApp:", e);
+      }
+    }
+  }
+}
 
 // ======================= ROUTES EXTERNES =======================
 app.use("/qr", qrRouter);
@@ -103,8 +121,8 @@ app.post("/register", async (req, res) => {
     if (exists.length) return res.json({ error: "Nom ou email déjà utilisé" });
 
     const hash = await bcrypt.hash(password, 10);
-    const { rows: result } = await pool.query(
-      "INSERT INTO users (username, email, password) VALUES ($1, $2, $3) RETURNING *",
+    await pool.query(
+      "INSERT INTO users (username, email, password) VALUES ($1, $2, $3)",
       [username, email, hash]
     );
 
@@ -149,15 +167,10 @@ app.get("/coins", requireAuth, async (req, res) => {
   if (!user) return res.json({ error: "Utilisateur introuvable" });
   res.json({
     coins: user.coins,
-    botActiveRemaining: Math.max(0, user.botActiveUntil - Date.now()),
+    botActiveRemaining: Math.max(0, parseInt(user.botActiveUntil || 0) - Date.now()),
     username: user.username,
     referrals: JSON.parse(user.referrals)
   });
-});
-
-app.get("/users-list", requireAuth, async (req, res) => {
-  const { rows } = await pool.query("SELECT * FROM users");
-  res.json(rows.map(u => ({ ...u, referrals: JSON.parse(u.referrals) })));
 });
 
 // ======================= ACHAT BOT =======================
@@ -165,6 +178,7 @@ app.post("/buy-bot", requireAuth, async (req, res) => {
   try {
     const duration = parseInt(req.body.duration);
     const prices = {24:20,48:40,72:60};
+
     const { rows } = await pool.query("SELECT * FROM users WHERE username=$1", [req.session.user.username]);
     const user = rows[0];
     if(!user) return res.json({ error: "Utilisateur introuvable" });
@@ -172,10 +186,15 @@ app.post("/buy-bot", requireAuth, async (req, res) => {
     if(user.coins < prices[duration]) return res.json({ error: `Coins insuffisants (${prices[duration]} requis)` });
 
     const now = Date.now();
-    const prev = user.botActiveUntil > now ? user.botActiveUntil : now;
-    await pool.query("UPDATE users SET coins=coins-$1, botActiveUntil=$2 WHERE id=$3", [prices[duration], prev+duration*3600*1000, user.id]);
+    const prev = user.botActiveUntil && parseInt(user.botActiveUntil) > now ? parseInt(user.botActiveUntil) : now;
+    const newBotUntil = prev + duration*3600*1000;
+    const newCoins = user.coins - prices[duration];
 
-    res.json({ status:`Bot activé pour ${duration}h`, coins:user.coins-prices[duration], botActiveRemaining: prev+duration*3600*1000 - now });
+    await pool.query("UPDATE users SET coins=$1, botActiveUntil=$2 WHERE id=$3", [newCoins, newBotUntil, user.id]);
+
+    setTimeout(() => logoutWhatsAppByUsername(user.username), newBotUntil - now);
+
+    res.json({ status: `Bot activé pour ${duration}h`, coins: newCoins, botActiveRemaining: newBotUntil - now });
   } catch(e){ console.error(e); res.json({ error: "Erreur serveur" }); }
 });
 
@@ -224,8 +243,12 @@ app.post("/webhook", async (req, res) => {
   if(!user) return res.send("USER NOT FOUND");
 
   const now = Date.now();
-  const prev = user.botActiveUntil > now ? user.botActiveUntil : now;
-  await pool.query("UPDATE users SET botActiveUntil=$1 WHERE id=$2", [prev+24*3600*1000, user.id]);
+  const prev = user.botActiveUntil && parseInt(user.botActiveUntil) > now ? parseInt(user.botActiveUntil) : now;
+  const newBotUntil = prev + 24*3600*1000;
+
+  await pool.query("UPDATE users SET botActiveUntil=$1 WHERE id=$2", [newBotUntil, user.id]);
+
+  setTimeout(() => logoutWhatsAppByUsername(user.username), newBotUntil - now);
 
   res.send("OK");
 });
@@ -235,8 +258,10 @@ app.get("/watch-ad", requireAuth, async (req,res) => {
   const { rows } = await pool.query("SELECT * FROM users WHERE username=$1", [req.session.user.username]);
   const user = rows[0];
   if(!user) return res.json({ error: "Utilisateur introuvable" });
+
   const today = new Date().toDateString();
   if(user.adLastDate?.toDateString() !== today) user.adCount = 0;
+
   res.json({ allowed: user.adCount < 2 });
 });
 
@@ -244,12 +269,17 @@ app.post("/watch-ad/complete", requireAuth, async (req,res) => {
   const { rows } = await pool.query("SELECT * FROM users WHERE username=$1", [req.session.user.username]);
   const user = rows[0];
   if(!user) return res.json({ error: "Utilisateur introuvable" });
+
   const today = new Date().toDateString();
   if(user.adLastDate?.toDateString() !== today) user.adCount = 0;
   if(user.adCount >= 2) return res.json({ error: "Limite quotidienne atteinte" });
 
-  await pool.query("UPDATE users SET coins=coins+1, adCount=adCount+1, adLastDate=$1 WHERE id=$2", [today, user.id]);
-  res.json({ success:true, coins: user.coins+1 });
+  const newCoins = user.coins + 1;
+  const newAdCount = user.adCount + 1;
+
+  await pool.query("UPDATE users SET coins=$1, adCount=$2, adLastDate=$3 WHERE id=$4", [newCoins, newAdCount, today, user.id]);
+
+  res.json({ success:true, coins: newCoins });
 });
 
 // ======================= START SERVER =======================

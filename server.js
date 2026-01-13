@@ -21,7 +21,7 @@ const __dirname = path.dirname(__filename);
 
 /* =================== APP =================== */
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
 /* ================== MONEY FUSION ================== */
 const MERCHANT_ID = "69620e03013a0771970d2b80";
@@ -63,7 +63,7 @@ app.use(session({
   cookie: {
     httpOnly: true,
     sameSite: "none",
-    secure: false  // mettre true si HTTPS
+    secure: false  // true si HTTPS
   }
 }));
 
@@ -82,17 +82,6 @@ const requireActiveBot = (req, res, next) => {
     return res.status(403).json({ error: "Bot inactif" });
   next();
 };
-
-/* ================== FRONTEND STATIC ================== */
-app.use(express.static(path.join(__dirname, "htdocs"))); // dossier frontend
-
-// Redirection par défaut vers login si non connecté
-app.get("/", (req, res) => {
-  if (!req.session.user) {
-    return res.sendFile(path.join(__dirname, "htdocs", "login.html"));
-  }
-  res.sendFile(path.join(__dirname, "htdocs", "dashboard.html")); // page après login
-});
 
 /* ================== AUTH ================== */
 app.post("/register", (req, res) => {

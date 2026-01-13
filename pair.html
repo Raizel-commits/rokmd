@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ROK XD • Pairing & Config</title>
+
+<style>
+:root{
+  --bg-1:#020617;
+  --bg-2:#0f172a;
+  --neon:#38bdf8;
+  --glass-border:rgba(56,189,248,0.22);
+  --muted:rgba(255,255,255,0.45);
+  --card-w:380px;
+}
+
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;font-family:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,Arial;background:
+radial-gradient(1200px 600px at 10% 10%, rgba(56,189,248,0.03), transparent),
+radial-gradient(900px 500px at 90% 85%, rgba(56,189,248,0.02), transparent),
+linear-gradient(180deg,var(--bg-1),var(--bg-2));
+color:#eafff2;overflow:hidden;}
+
+.stage{height:100vh;display:flex;align-items:center;justify-content:center;padding:36px;}
+
+.glass-card{
+  width:var(--card-w);
+  max-width:94vw;
+  background:linear-gradient(180deg, rgba(255,255,255,0.025), rgba(255,255,255,0.01));
+  border-radius:20px;
+  padding:22px;
+  text-align:center;
+  border:1px solid var(--glass-border);
+  backdrop-filter:blur(12px) saturate(140%);
+  box-shadow:0 10px 40px rgba(0,0,0,0.7),inset 0 0 40px rgba(56,189,248,0.05);
+}
+
+.card-header h1{font-family:"JetBrains Mono", monospace;font-size:18px;margin:0;color:var(--neon);text-transform:uppercase;text-shadow:0 0 18px rgba(56,189,248,0.25);}
+.card-header p{margin-top:6px;font-size:12px;color:var(--muted);}
+
+input{width:100%;padding:12px;border-radius:12px;border:1px solid rgba(56,189,248,0.08);background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.006));color:#eafff2;margin-top:14px;outline:none;font-size:14px;}
+input::placeholder{color:rgba(200,255,255,0.22);}
+
+button{width:100%;padding:12px;margin-top:14px;border-radius:8px;border:none;background:var(--neon);color:#020617;font-weight:700;font-size:15px;cursor:pointer;}
+button:hover{opacity:0.92} button:disabled{opacity:0.55;cursor:not-allowed}
+
+.sep{margin:18px 0;border-top:1px solid rgba(56,189,248,0.12);}
+</style>
+</head>
+
+<body>
+<main class="stage">
+<section class="glass-card">
+
+<header class="card-header">
+  <h1>ROK XD • Pairing</h1>
+  <p>Connectez votre WhatsApp et configurez le bot</p>
+</header>
+
+<input id="phone" type="tel" placeholder="2376XXXXXXXX">
+<button id="pairBtn">🔗 Générer le code</button>
+
+<div class="sep"></div>
+
+<input id="prefix" type="text" placeholder="Préfixe des commandes (ex: !)">
+<button id="configBtn">⚙️ Sauvegarder la configuration</button>
+
+</section>
+</main>
+
+<script>
+/* ================= MESSAGE FLOTTANT ================= */
+function showMessage(msg, color = '#ef4444', duration = 3000) {
+  const box = document.createElement('div');
+  box.style.position = 'fixed';
+  box.style.top = '50%';
+  box.style.left = '50%';
+  box.style.transform = 'translate(-50%, -50%)';
+  box.style.background = 'rgba(255,255,255,0.03)';
+  box.style.backdropFilter = 'blur(14px)';
+  box.style.border = '1px solid rgba(56,189,248,0.22)';
+  box.style.padding = '22px 36px';
+  box.style.borderRadius = '18px';
+  box.style.color = color;
+  box.style.fontWeight = 'bold';
+  box.style.textAlign = 'center';
+  box.style.zIndex = 9999;
+  box.style.boxShadow = '0 0 30px rgba(56,189,248,0.2)';
+  box.textContent = msg;
+  document.body.appendChild(box);
+  setTimeout(() => box.remove(), duration);
+}
+
+/* ================= MESSAGE PERMANENT ================= */
+function showMessagePermanent(msg, color = '#38bdf8') {
+  const box = document.createElement('div');
+  box.style.position = 'fixed';
+  box.style.top = '50%';
+  box.style.left = '50%';
+  box.style.transform = 'translate(-50%, -50%)';
+  box.style.background = 'rgba(255,255,255,0.03)';
+  box.style.backdropFilter = 'blur(14px)';
+  box.style.border = '1px solid rgba(56,189,248,0.22)';
+  box.style.padding = '22px 36px';
+  box.style.borderRadius = '18px';
+  box.style.color = color;
+  box.style.fontWeight = 'bold';
+  box.style.textAlign = 'center';
+  box.style.zIndex = 9999;
+  box.style.boxShadow = '0 0 30px rgba(56,189,248,0.2)';
+  box.textContent = msg;
+  document.body.appendChild(box);
+  return box; // retourne l’élément pour suppression après réponse
+}
+
+/* ================= PAIRING ================= */
+document.getElementById("pairBtn").onclick = async () => {
+  const number = document.getElementById("phone").value.trim();
+  if (!number) return showMessage("Numéro WhatsApp requis");
+
+  // Message permanent jusqu'à réponse
+  const statusBox = showMessagePermanent("Génération du code...", "#38bdf8");
+
+  try {
+    const r = await fetch("/pair-api/code?number=" + encodeURIComponent(number));
+    const data = await r.json();
+
+    statusBox.remove(); // supprime le message "Génération du code..."
+
+    if (data.code) {
+      showMessage("Code de liaison : " + data.code, "#38bdf8", 6000);
+    } else if (data.status) {
+      showMessage(data.status, "#38bdf8", 6000);
+    } else if (data.error) {
+      showMessage(data.error, "#ef4444", 6000);
+    } else {
+      showMessage("Réponse invalide du serveur", "#ef4444", 6000);
+    }
+  } catch (err) {
+    console.error(err);
+    statusBox.remove();
+    showMessage("Erreur serveur", "#ef4444", 6000);
+  }
+};
+
+/* ================= CONFIG ================= */
+document.getElementById("configBtn").onclick = async () => {
+  const number = document.getElementById("phone").value.trim();
+  const prefix = document.getElementById("prefix").value.trim() || "!";
+
+  if (!number) return showMessage("Numéro WhatsApp requis");
+
+  const statusBox = showMessagePermanent("Sauvegarde en cours...", "#38bdf8");
+
+  try {
+    const r = await fetch("/pair-api/config", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ number, prefix })
+    });
+
+    const data = await r.json();
+    statusBox.remove();
+
+    if (data.status) showMessage(data.status, "#38bdf8", 4000);
+    else if (data.error) showMessage(data.error, "#ef4444", 4000);
+  } catch (err) {
+    console.error(err);
+    statusBox.remove();
+    showMessage("Erreur serveur", "#ef4444", 4000);
+  }
+};
+</script>
+</body>
+</html>

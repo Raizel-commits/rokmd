@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ROK XD • Login</title>
+<style>
+:root{
+  --bg-1:#020617;
+  --bg-2:#0f172a;
+  --neon:#38bdf8;
+  --glass-border:rgba(56,189,248,0.22);
+  --muted:rgba(255,255,255,0.45);
+  --card-w:380px;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;font-family:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial;
+background: radial-gradient(1200px 600px at 10% 10%, rgba(56,189,248,0.03), transparent),
+            radial-gradient(900px 500px at 90% 85%, rgba(56,189,248,0.02), transparent),
+            linear-gradient(180deg,var(--bg-1),var(--bg-2));
+color:#dfffe6;overflow:hidden;}
+.stage{position:relative;height:100vh;display:flex;align-items:center;justify-content:center;padding:36px;}
+.glass-card{
+  width:var(--card-w);max-width:92vw;
+  background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+  border-radius:18px;padding:22px;
+  box-shadow:0 10px 40px rgba(0,0,0,0.7),0 0 40px rgba(56,189,248,0.05) inset;
+  backdrop-filter: blur(10px) saturate(140%);
+  border:1px solid var(--glass-border);
+  text-align:center;
+}
+.card-header h1{font-family:"JetBrains Mono", monospace;font-size:20px;margin:0;color:var(--neon);text-transform:uppercase;text-shadow:0 0 18px rgba(56,189,248,0.22);}
+.card-header .small-url{font-size:12px;color:var(--muted);margin-top:6px;}
+.avatar { margin: 16px 0; text-align: center; }
+.avatar img { width: 80px; height: 80px; border-radius: 50%; border: 2px solid var(--neon); box-shadow: 0 0 12px var(--neon); }
+input{
+  width:100%;padding:12px;border-radius:10px;border:1px solid rgba(56,189,248,0.06);
+  background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.006));
+  color:#eafff2;margin-bottom:12px;outline:none;font-size:14px;
+}
+input::placeholder{color:rgba(200,255,255,0.22);}
+button{width:100%;padding:12px;border-radius:6px;border:none;background:var(--neon);color:#020617;font-weight:bold;cursor:pointer;font-size:16px;margin-bottom:12px;}
+button:hover{opacity:0.9;}
+.link{font-size:13px;color:var(--muted);}
+.link a{color:var(--neon);text-decoration:none;}
+.result-message{margin-top:6px;font-weight:bold;text-align:center;font-size:14px;font-family:"JetBrains Mono", monospace;}
+</style>
+</head>
+<body>
+<main class="stage">
+<section class="glass-card">
+
+<header class="card-header">
+<h1>ROK XD • Login</h1>
+<div class="small-url">Connexion sécurisée</div>
+</header>
+
+<div class="avatar">
+  <img src="https://files.catbox.moe/36ywf8.jpeg" alt="Avatar">
+</div>
+
+<form id="loginForm">
+  <input type="text" name="username" placeholder="Nom d'utilisateur" required>
+  <input type="password" name="password" placeholder="Mot de passe" required>
+  <button type="submit">Connexion</button>
+</form>
+
+<div class="link">
+  Pas de compte ? <a href="/register">Créer un compte</a>
+</div>
+
+<div class="result-message" id="resultMsg"></div>
+</section>
+</main>
+
+<script>
+// Affichage messages flottants
+function showMessage(msg, color='#ef4444', duration=3000){
+  if(!msg) return;
+  const container=document.createElement('div');
+  container.style.position='fixed';
+  container.style.top='50%';
+  container.style.left='50%';
+  container.style.transform='translate(-50%,-50%)';
+  container.style.background='linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01))';
+  container.style.backdropFilter='blur(12px) saturate(140%)';
+  container.style.border='1px solid rgba(56,189,248,0.22)';
+  container.style.padding='20px 28px';
+  container.style.borderRadius='18px';
+  container.style.color=color;
+  container.style.fontWeight='bold';
+  container.style.textAlign='center';
+  container.style.fontFamily='"JetBrains Mono", monospace';
+  container.style.fontSize='14px';
+  container.style.textShadow=color==='red'?'0 0 12px rgba(239,68,68,0.8)':'0 0 12px rgba(56,189,248,0.8)';
+  container.style.zIndex=9999;
+  container.style.boxShadow='0 10px 30px rgba(0,0,0,0.6),0 0 20px rgba(56,189,248,0.05) inset';
+  container.textContent=msg;
+  document.body.appendChild(container);
+  setTimeout(()=>container.remove(),duration);
+}
+
+// Login
+document.getElementById('loginForm').addEventListener('submit', async e=>{
+  e.preventDefault();
+  const formData = new FormData(e.target);
+  const data = Object.fromEntries(formData.entries());
+
+  try{
+    const res = await fetch('/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
+    const result = await res.json();
+    if(result.error){
+      showMessage(result.error,'#ef4444');
+    } else {
+      showMessage(result.status,'#38bdf8');
+      setTimeout(()=>window.location.href='/',800);
+    }
+  } catch(err){ showMessage('Erreur serveur','#ef4444'); }
+});
+</script>
+</body>
+</html>

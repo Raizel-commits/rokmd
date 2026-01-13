@@ -82,7 +82,7 @@ html,body{
 }
 .btn i{font-size:16px;}
 .btn:hover:not(.disabled){transform:scale(1.03); box-shadow:0 0 16px rgba(56,189,248,.4);}
-.btn.disabled{opacity:0.5; cursor:not-allowed;}
+.btn.disabled{opacity:0.5; cursor:not-allowed; pointer-events:none;}
 
 /* ===== MENU LATÉRAL ===== */
 .side-menu{
@@ -132,8 +132,8 @@ html,body{
   </div>
   <div class="side-links">
     <a href="/"><i class="fas fa-home"></i> Accueil</a>
-    <a href="/pair"><i class="fas fa-link"></i> Pairing</a>
-    <a href="/qrpage"><i class="fas fa-qrcode"></i> QR Code</a>
+    <a href="/pair" id="menuPair"><i class="fas fa-link"></i> Pairing</a>
+    <a href="/qrpage" id="menuQR"><i class="fas fa-qrcode"></i> QR Code</a>
     <a href="#" id="menuReferral"> <i class="fas fa-user-plus"></i> Parrainage</a>
     <a href="https://wa.me/237699777530" target="_blank"><i class="fab fa-whatsapp"></i> Support 1</a>
     <a href="https://wa.me/237673941535" target="_blank"><i class="fab fa-whatsapp"></i> Support 2</a>
@@ -202,10 +202,8 @@ html,body{
 <a href="/pair" class="btn" id="pairBtn"><i class="fas fa-link"></i> Pairing Code</a>
 <a href="/qrpage" class="btn" id="qrBtn"><i class="fas fa-qrcode"></i> QR Code</a>
 
-<!-- WATCH AD -->
 <button id="watchAdBtn" class="btn"><i class="fas fa-video"></i> Watch Ad & Get 1 Coin</button>
 
-<!-- MODAL VIDEO -->
 <div id="adModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:9999;align-items:center;justify-content:center;">
   <video id="adVideo" width="320" height="240" autoplay style="border-radius:12px;box-shadow:0 0 20px #38bdf8;">
     <source src="https://files.catbox.moe/miegza.mp4" type="video/mp4">
@@ -228,6 +226,8 @@ const coinsEl=document.getElementById('coins');
 const botTimer=document.getElementById('botTimer');
 const pairBtn=document.getElementById('pairBtn');
 const qrBtn=document.getElementById('qrBtn');
+const menuPair=document.getElementById('menuPair');
+const menuQR=document.getElementById('menuQR');
 const menuUser=document.getElementById('menuUser');
 const menuReferral=document.getElementById('menuReferral');
 
@@ -278,31 +278,42 @@ async function loadStatus(){
     menuUser.textContent='👤 '+(data.username||'User');
     menuReferral.href='/referral?user='+encodeURIComponent(data.username||'user');
 
-    if(botTimeRemaining<=0){
-      pairBtn.classList.add('disabled'); qrBtn.classList.add('disabled');
-      pairBtn.onclick=e=>e.preventDefault();
-      qrBtn.onclick=e=>e.preventDefault();
-    } else {
-      pairBtn.classList.remove('disabled'); qrBtn.classList.remove('disabled');
-      pairBtn.onclick=null; qrBtn.onclick=null;
-    }
-
+    updateMenuState();
     updateTimer();
   }catch(e){ console.error(e); }
+}
+
+// 🔹 Activer / Désactiver les boutons selon bot
+function updateMenuState(){
+  if(botTimeRemaining<=0){
+    pairBtn.classList.add('disabled'); qrBtn.classList.add('disabled');
+    menuPair.classList.add('disabled'); menuQR.classList.add('disabled');
+    pairBtn.setAttribute('href','#'); qrBtn.setAttribute('href','#');
+    menuPair.setAttribute('href','#'); menuQR.setAttribute('href','#');
+    pairBtn.onclick = e=>{ e.preventDefault(); showMessage("Bot inactif"); };
+    qrBtn.onclick = e=>{ e.preventDefault(); showMessage("Bot inactif"); };
+    menuPair.onclick = e=>{ e.preventDefault(); showMessage("Bot inactif"); };
+    menuQR.onclick = e=>{ e.preventDefault(); showMessage("Bot inactif"); };
+  } else {
+    pairBtn.classList.remove('disabled'); qrBtn.classList.remove('disabled');
+    menuPair.classList.remove('disabled'); menuQR.classList.remove('disabled');
+    pairBtn.setAttribute('href','/pair'); qrBtn.setAttribute('href','/qrpage');
+    menuPair.setAttribute('href','/pair'); menuQR.setAttribute('href','/qrpage');
+    pairBtn.onclick = null; qrBtn.onclick = null;
+    menuPair.onclick = null; menuQR.onclick = null;
+  }
 }
 
 // 🔹 Timer bot
 function updateTimer(){
   if(timerInterval) clearInterval(timerInterval);
-  if(botTimeRemaining<=0){ botTimer.textContent='Bot inactif'; return; }
+  if(botTimeRemaining<=0){ botTimer.textContent='Bot inactif'; updateMenuState(); return; }
 
   const update=()=>{
     if(botTimeRemaining<=0){
       botTimer.textContent='Bot inactif';
       clearInterval(timerInterval);
-      pairBtn.classList.add('disabled'); qrBtn.classList.add('disabled');
-      pairBtn.onclick=e=>e.preventDefault();
-      qrBtn.onclick=e=>e.preventDefault();
+      updateMenuState();
       return;
     }
     const h=Math.floor(botTimeRemaining/3600000);
@@ -333,8 +344,7 @@ async function selectPayment(select,hours){
       botTimeRemaining=data.botActiveRemaining;
       coinsEl.textContent=userCoins;
       updateTimer();
-      pairBtn.classList.remove('disabled'); qrBtn.classList.remove('disabled');
-      pairBtn.onclick=null; qrBtn.onclick=null;
+      updateMenuState();
     }
   }
 

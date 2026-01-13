@@ -6,7 +6,8 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "nodemon server.js"
+    "dev": "nodemon server.js",
+    "psql": "render psql dpg-d5j882ur433s738vqqd0-a"
   },
   "author": "Raizel",
   "license": "MIT",

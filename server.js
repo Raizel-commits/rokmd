@@ -1,3 +1,4 @@
+// ======================= IMPORTS =======================
 import express from "express";
 import session from "express-session";
 import bodyParser from "body-parser";
@@ -7,10 +8,14 @@ import bcrypt from "bcryptjs";
 import pkg from "pg";
 import { fileURLToPath } from "url";
 
+import qrRouter from "./qr.js";
+import pairRouter from "./pair.js";
+
 const { Pool } = pkg;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// ======================= CONFIG =======================
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -24,7 +29,7 @@ const pool = new Pool({
   ssl: { rejectUnauthorized: false } // Obligatoire sur Render
 });
 
-/* ================== INIT DB AUTOMATIQUE ================== */
+// ======================= INIT DB =======================
 async function initDB() {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS users (
@@ -52,10 +57,9 @@ async function initDB() {
 
   console.log("✅ Tables initialisées !");
 }
-
 initDB().catch(console.error);
 
-/* ================== MIDDLEWARE ================== */
+// ======================= MIDDLEWARE =======================
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(session({
@@ -77,7 +81,11 @@ const requireActiveBot = async (req, res, next) => {
   next();
 };
 
-/* ================== ROUTES HTML ================== */
+// ======================= ROUTES EXTERNES =======================
+app.use("/qr", qrRouter);
+app.use("/pair-api", pairRouter);
+
+// ======================= ROUTES HTML =======================
 app.get("/login", (req, res) => res.sendFile(path.join(__dirname, "login.html")));
 app.get("/register", (req, res) => res.sendFile(path.join(__dirname, "register.html")));
 app.get("/", requireAuth, (req, res) => res.sendFile(path.join(__dirname, "index.html")));
@@ -85,7 +93,7 @@ app.get("/pair", requireAuth, requireActiveBot, (req, res) => res.sendFile(path.
 app.get("/qrpage", requireAuth, requireActiveBot, (req, res) => res.sendFile(path.join(__dirname, "qr.html")));
 app.get("/referral", requireAuth, (req, res) => res.sendFile(path.join(__dirname, "referral.html")));
 
-/* ================== AUTH ================== */
+// ======================= AUTH =======================
 app.post("/register", async (req, res) => {
   try {
     const { username, email, password, ref } = req.body;
@@ -134,7 +142,7 @@ app.get("/logout", requireAuth, async (req, res) => {
   req.session.destroy(() => res.json({ status: "Déconnecté" }));
 });
 
-/* ================== COINS & BOT ================== */
+// ======================= COINS & BOT =======================
 app.get("/coins", requireAuth, async (req, res) => {
   const { rows } = await pool.query("SELECT * FROM users WHERE username=$1", [req.session.user.username]);
   const user = rows[0];
@@ -152,7 +160,7 @@ app.get("/users-list", requireAuth, async (req, res) => {
   res.json(rows.map(u => ({ ...u, referrals: JSON.parse(u.referrals) })));
 });
 
-/* ================== ACHAT BOT ================== */
+// ======================= ACHAT BOT =======================
 app.post("/buy-bot", requireAuth, async (req, res) => {
   try {
     const duration = parseInt(req.body.duration);
@@ -171,7 +179,7 @@ app.post("/buy-bot", requireAuth, async (req, res) => {
   } catch(e){ console.error(e); res.json({ error: "Erreur serveur" }); }
 });
 
-/* ================== MONEY FUSION PAY ================== */
+// ======================= MONEY FUSION PAY =======================
 app.post("/pay-bot", requireAuth, async (req, res) => {
   try {
     const { amount } = req.body;
@@ -222,7 +230,7 @@ app.post("/webhook", async (req, res) => {
   res.send("OK");
 });
 
-/* ================== WATCH ADS ================== */
+// ======================= WATCH ADS =======================
 app.get("/watch-ad", requireAuth, async (req,res) => {
   const { rows } = await pool.query("SELECT * FROM users WHERE username=$1", [req.session.user.username]);
   const user = rows[0];
@@ -244,5 +252,5 @@ app.post("/watch-ad/complete", requireAuth, async (req,res) => {
   res.json({ success:true, coins: user.coins+1 });
 });
 
-/* ================== START SERVER ================== */
+// ======================= START SERVER =======================
 app.listen(PORT, ()=>console.log(`🚀 Server lancé sur le port ${PORT}`));

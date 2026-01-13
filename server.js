@@ -16,11 +16,12 @@ const PORT = process.env.PORT || 3000;
 
 /* ================== MONEY FUSION CONFIG ================== */
 const MERCHANT_ID = "69620e03013a0771970d2b80";
-const MF_API_KEY = "moneyfusion_v1_6950f6d898fe6dbde00af590_4A53FFA3DD9F78644E53269883CEB2C5CBD11FF72932C76BE5C8EC504D0DA82";
+const MF_API_KEY = "moneyfusion_v1_6950f6d898fe6dbde00af590_4A53FFA3DD9F78644E53269883CE5C8EC504D0DA82";
 
 /* ================== POSTGRESQL ================== */
 const pool = new Pool({
-  connectionString: "postgresql://rokxd_db_user:THyZaovujnRMAnSxpuwpdcrCl6RZmhES@dpg-d5j882ur433s738vqqd0-a.virginia-postgres.render.com/rokxd_db"
+  connectionString: "postgresql://rokxd_db_user:THyZaovujnRMAnSxpuwpdcrCl6RZmhES@dpg-d5j882ur433s738vqqd0-a.virginia-postgres.render.com/rokxd_db",
+  ssl: { rejectUnauthorized: false } // Obligatoire sur Render
 });
 
 /* ================== INIT DB AUTOMATIQUE ================== */
@@ -195,7 +196,6 @@ app.post("/pay-bot", requireAuth, async (req, res) => {
     if(!data.data || !data.data.url) return res.json({ error: "Erreur paiement MoneyFusion" });
 
     await pool.query("INSERT INTO payments (payment_id,user_id,amount,status) VALUES ($1,$2,$3,'pending')", [paymentId, user.id, amount]);
-
     res.json({ url:data.data.url });
   } catch(e){ console.error(e); res.json({ error: "Erreur serveur" }); }
 });

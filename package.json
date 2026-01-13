@@ -30,6 +30,7 @@
     "google-it": "^1.6.0",
     "gtts": "^0.2.1",
     "helmet": "^7.0.0",
+    "mysql2": "^3.6.0",
     "image-to-base64": "^2.2.0",
     "jsdom": "^24.0.0",
     "jsonwebtoken": "^9.0.0",

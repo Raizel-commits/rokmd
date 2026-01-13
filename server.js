@@ -73,17 +73,6 @@ const requireAuth = async (req, res, next) => {
   next();
 };
 
-const requireActiveBot = async (req, res, next) => {
-  const { rows } = await pool.query("SELECT * FROM users WHERE username=$1", [req.session.user.username]);
-  const user = rows[0];
-  if (!user) return res.status(401).send("Utilisateur introuvable");
-  if (Number(user.botActiveUntil || 0) <= Date.now()) {
-    logoutWhatsAppByUsername(user.username);
-    return res.status(403).send("Bot inactif");
-  }
-  next();
-};
-
 // ======================= LOGOUT WHATSAPP FUNCTION =======================
 function logoutWhatsAppByUsername(username) {
   for (const [number, bot] of bots.entries()) {
@@ -104,11 +93,12 @@ app.use("/qr", qrRouter);
 app.use("/pair-api", pairRouter);
 
 // ======================= ROUTES HTML =======================
+// IMPORTANT : ne pas bloquer l'accès aux pages pair/qr, front se charge et désactive boutons si bot inactif
 app.get("/login", (req, res) => res.sendFile(path.join(__dirname, "login.html")));
 app.get("/register", (req, res) => res.sendFile(path.join(__dirname, "register.html")));
 app.get("/", requireAuth, (req, res) => res.sendFile(path.join(__dirname, "index.html")));
-app.get("/pair", requireAuth, requireActiveBot, (req, res) => res.sendFile(path.join(__dirname, "pair.html")));
-app.get("/qrpage", requireAuth, requireActiveBot, (req, res) => res.sendFile(path.join(__dirname, "qr.html")));
+app.get("/pair", requireAuth, (req, res) => res.sendFile(path.join(__dirname, "pair.html")));
+app.get("/qrpage", requireAuth, (req, res) => res.sendFile(path.join(__dirname, "qr.html")));
 app.get("/referral", requireAuth, (req, res) => res.sendFile(path.join(__dirname, "referral.html")));
 
 // ======================= AUTH =======================
@@ -165,11 +155,12 @@ app.get("/coins", requireAuth, async (req, res) => {
   const { rows } = await pool.query("SELECT * FROM users WHERE username=$1", [req.session.user.username]);
   const user = rows[0];
   if (!user) return res.json({ error: "Utilisateur introuvable" });
+
   res.json({
     coins: user.coins,
     botActiveRemaining: Math.max(0, Number(user.botActiveUntil || 0) - Date.now()),
     username: user.username,
-    referrals: JSON.parse(user.referrals)
+    referrals: JSON.parse(user.referrals || '[]')
   });
 });
 
@@ -192,8 +183,7 @@ app.post("/buy-bot", requireAuth, async (req, res) => {
 
     await pool.query("UPDATE users SET coins=$1, botActiveUntil=$2 WHERE id=$3", [newCoins, newBotUntil, user.id]);
 
-    setTimeout(() => logoutWhatsAppByUsername(user.username), newBotUntil - now);
-
+    // NE PAS logout automatiquement dans buy-bot, front gère timer
     res.json({ status: `Bot activé pour ${duration}h`, coins: newCoins, botActiveRemaining: newBotUntil - now });
   } catch(e){ console.error(e); res.json({ error: "Erreur serveur" }); }
 });
@@ -248,8 +238,6 @@ app.post("/webhook", async (req, res) => {
 
   await pool.query("UPDATE users SET botActiveUntil=$1 WHERE id=$2", [newBotUntil, user.id]);
 
-  setTimeout(() => logoutWhatsAppByUsername(user.username), newBotUntil - now);
-
   res.send("OK");
 });
 
@@ -259,10 +247,11 @@ app.get("/watch-ad", requireAuth, async (req,res) => {
   const user = rows[0];
   if(!user) return res.json({ error: "Utilisateur introuvable" });
 
-  const today = new Date().toDateString();
+  const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
   let adCount = user.adCount || 0;
+  const lastDate = user.adLastDate ? user.adLastDate.toISOString().split('T')[0] : null;
 
-  if(!user.adLastDate || user.adLastDate.toDateString() !== today){
+  if(lastDate !== today){
     adCount = 0;
     await pool.query("UPDATE users SET adCount=$1, adLastDate=$2 WHERE id=$3", [0, today, user.id]);
   }
@@ -275,10 +264,10 @@ app.post("/watch-ad/complete", requireAuth, async (req,res) => {
   const user = rows[0];
   if(!user) return res.json({ error: "Utilisateur introuvable" });
 
-  const today = new Date().toDateString();
+  const today = new Date().toISOString().split('T')[0];
   let adCount = user.adCount || 0;
 
-  if(!user.adLastDate || user.adLastDate.toDateString() !== today){
+  if(user.adLastDate ? user.adLastDate.toISOString().split('T')[0] !== today : true){
     adCount = 0;
   }
 
@@ -288,7 +277,6 @@ app.post("/watch-ad/complete", requireAuth, async (req,res) => {
   const newCoins = user.coins + 1;
 
   await pool.query("UPDATE users SET coins=$1, adCount=$2, adLastDate=$3 WHERE id=$4", [newCoins, adCount, today, user.id]);
-
   res.json({ success:true, coins: newCoins });
 });
 

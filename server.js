@@ -77,8 +77,8 @@ const requireActiveBot = async (req, res, next) => {
   const { rows } = await pool.query("SELECT * FROM users WHERE username=$1", [req.session.user.username]);
   const user = rows[0];
   if (!user) return res.status(401).send("Utilisateur introuvable");
-  if (parseInt(user.botActiveUntil || 0) <= Date.now()) {
-    logoutWhatsAppByUsername(user.username); // logout via username
+  if (Number(user.botActiveUntil || 0) <= Date.now()) {
+    logoutWhatsAppByUsername(user.username);
     return res.status(403).send("Bot inactif");
   }
   next();
@@ -167,7 +167,7 @@ app.get("/coins", requireAuth, async (req, res) => {
   if (!user) return res.json({ error: "Utilisateur introuvable" });
   res.json({
     coins: user.coins,
-    botActiveRemaining: Math.max(0, parseInt(user.botActiveUntil || 0) - Date.now()),
+    botActiveRemaining: Math.max(0, Number(user.botActiveUntil || 0) - Date.now()),
     username: user.username,
     referrals: JSON.parse(user.referrals)
   });
@@ -186,7 +186,7 @@ app.post("/buy-bot", requireAuth, async (req, res) => {
     if(user.coins < prices[duration]) return res.json({ error: `Coins insuffisants (${prices[duration]} requis)` });
 
     const now = Date.now();
-    const prev = user.botActiveUntil && parseInt(user.botActiveUntil) > now ? parseInt(user.botActiveUntil) : now;
+    const prev = user.botActiveUntil && Number(user.botActiveUntil) > now ? Number(user.botActiveUntil) : now;
     const newBotUntil = prev + duration*3600*1000;
     const newCoins = user.coins - prices[duration];
 
@@ -243,7 +243,7 @@ app.post("/webhook", async (req, res) => {
   if(!user) return res.send("USER NOT FOUND");
 
   const now = Date.now();
-  const prev = user.botActiveUntil && parseInt(user.botActiveUntil) > now ? parseInt(user.botActiveUntil) : now;
+  const prev = user.botActiveUntil && Number(user.botActiveUntil) > now ? Number(user.botActiveUntil) : now;
   const newBotUntil = prev + 24*3600*1000;
 
   await pool.query("UPDATE users SET botActiveUntil=$1 WHERE id=$2", [newBotUntil, user.id]);
@@ -260,9 +260,14 @@ app.get("/watch-ad", requireAuth, async (req,res) => {
   if(!user) return res.json({ error: "Utilisateur introuvable" });
 
   const today = new Date().toDateString();
-  if(user.adLastDate?.toDateString() !== today) user.adCount = 0;
+  let adCount = user.adCount || 0;
 
-  res.json({ allowed: user.adCount < 2 });
+  if(!user.adLastDate || user.adLastDate.toDateString() !== today){
+    adCount = 0;
+    await pool.query("UPDATE users SET adCount=$1, adLastDate=$2 WHERE id=$3", [0, today, user.id]);
+  }
+
+  res.json({ allowed: adCount < 2 });
 });
 
 app.post("/watch-ad/complete", requireAuth, async (req,res) => {
@@ -271,13 +276,18 @@ app.post("/watch-ad/complete", requireAuth, async (req,res) => {
   if(!user) return res.json({ error: "Utilisateur introuvable" });
 
   const today = new Date().toDateString();
-  if(user.adLastDate?.toDateString() !== today) user.adCount = 0;
-  if(user.adCount >= 2) return res.json({ error: "Limite quotidienne atteinte" });
+  let adCount = user.adCount || 0;
 
+  if(!user.adLastDate || user.adLastDate.toDateString() !== today){
+    adCount = 0;
+  }
+
+  if(adCount >= 2) return res.json({ error: "Limite quotidienne atteinte" });
+
+  adCount += 1;
   const newCoins = user.coins + 1;
-  const newAdCount = user.adCount + 1;
 
-  await pool.query("UPDATE users SET coins=$1, adCount=$2, adLastDate=$3 WHERE id=$4", [newCoins, newAdCount, today, user.id]);
+  await pool.query("UPDATE users SET coins=$1, adCount=$2, adLastDate=$3 WHERE id=$4", [newCoins, adCount, today, user.id]);
 
   res.json({ success:true, coins: newCoins });
 });

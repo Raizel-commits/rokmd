@@ -1,3 +1,4 @@
+// server.js
 // =======================
 // IMPORTS
 // =======================
@@ -48,9 +49,9 @@ const saveJSON = (file, data) =>
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-// 🔥 CORS pour InfinityFree → Render
+// 🔥 CORS pour frontend externe
 app.use(cors({
-  origin: "https://rok-xd.gt.tc",
+  origin: "https://rok-xd.gt.tc", // ton frontend
   credentials: true
 }));
 
@@ -62,7 +63,7 @@ app.use(session({
   cookie: {
     httpOnly: true,
     sameSite: "none",
-    secure: true
+    secure: false  // mettre true si HTTPS
   }
 }));
 
@@ -81,6 +82,17 @@ const requireActiveBot = (req, res, next) => {
     return res.status(403).json({ error: "Bot inactif" });
   next();
 };
+
+/* ================== FRONTEND STATIC ================== */
+app.use(express.static(path.join(__dirname, "htdocs"))); // dossier frontend
+
+// Redirection par défaut vers login si non connecté
+app.get("/", (req, res) => {
+  if (!req.session.user) {
+    return res.sendFile(path.join(__dirname, "htdocs", "login.html"));
+  }
+  res.sendFile(path.join(__dirname, "htdocs", "dashboard.html")); // page après login
+});
 
 /* ================== AUTH ================== */
 app.post("/register", (req, res) => {

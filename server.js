@@ -1,87 +1,56 @@
 import express from "express";
 import session from "express-session";
 import bodyParser from "body-parser";
-import fs from "fs";
 import path from "path";
 import fetch from "node-fetch";
+import bcrypt from "bcrypt";
+import mysql from "mysql2/promise";
 import { fileURLToPath } from "url";
 
-/* =================== ROUTERS =================== */
-import qrRouter from "./qr.js";
-import pairRouter from "./pair.js";
-
-/* =================== PATH =================== */
+/* =================== CONFIG =================== */
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-/* =================== APP =================== */
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
-/* ================== MONEY FUSION ================== */
 const MERCHANT_ID = "69620e03013a0771970d2b80";
-const MF_API_KEY = "moneyfusion_v1_XXXXXXXXXXXXXXXXXXXXXXXX";
+const MF_API_KEY = "moneyfusion_v1_6950f6d898fe6dbde00af590_4A53FFA3DD9F78644E53269883CEB2C5CBD11FF72932C76BE5C8EC504D0DA82";
 
-/* ================== FILES ================== */
-const usersFile = path.join(__dirname, "users.json");
-const paymentsFile = path.join(__dirname, "payments.json");
+/* =================== MYSQL =================== */
+const pool = mysql.createPool({
+  host: "sql308.infinityfree.com",
+  user: "if0_40882410",
+  password: "7SZGWP2YuyNme",
+  database: "if0_40882410_XXX",
+  port: 3306,
+  waitForConnections: true,
+  connectionLimit: 5
+});
 
-if (!fs.existsSync(usersFile)) fs.writeFileSync(usersFile, "[]");
-if (!fs.existsSync(paymentsFile)) fs.writeFileSync(paymentsFile, "[]");
-
-/* ================== HELPERS ================== */
-const loadUsers = () => {
-  try { return JSON.parse(fs.readFileSync(usersFile, "utf8")); }
-  catch { return []; }
-};
-const saveUsers = d => fs.writeFileSync(usersFile, JSON.stringify(d, null, 2));
-
-const loadPayments = () => {
-  try { return JSON.parse(fs.readFileSync(paymentsFile, "utf8")); }
-  catch { return []; }
-};
-const savePayments = d => fs.writeFileSync(paymentsFile, JSON.stringify(d, null, 2));
-
-/* ================== MIDDLEWARE ================== */
+/* =================== MIDDLEWARE =================== */
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
-
 app.use(session({
-  name: "rokxd.sid",
-  secret: "ROK_XD_SECRET_2025",
+  secret: "ROK_XD_SECRET",
   resave: false,
   saveUninitialized: false,
-  cookie: {
-    httpOnly: true,
-    secure: false,      // true uniquement si HTTPS
-    sameSite: "lax",    // IMPORTANT mobile/panel
-    maxAge: 24 * 60 * 60 * 1000
-  }
 }));
 
-/* ================== AUTH MIDDLEWARE ================== */
-const requireAuth = (req, res, next) => {
-  if (!req.session.user) {
-    return res.status(401).json({ error: "Non connecté" });
-  }
+const requireAuth = async (req, res, next) => {
+  if (!req.session.user) return res.status(401).json({ error: "Non connecté" });
   next();
 };
 
-const requireActiveBot = (req, res, next) => {
-  const users = loadUsers();
-  const user = users.find(u => u.username === req.session.user.username);
+const requireActiveBot = async (req, res, next) => {
+  const [rows] = await pool.query("SELECT * FROM users WHERE username=?", [req.session.user.username]);
+  const user = rows[0];
   if (!user) return res.status(401).send("Utilisateur introuvable");
-  if (user.botActiveUntil <= Date.now()) {
-    return res.status(403).send("Bot inactif");
-  }
+  if (user.botActiveUntil <= Date.now()) return res.status(403).send("Bot inactif");
   next();
 };
 
-/* ================== ROUTERS ================== */
-app.use("/qr", requireAuth, qrRouter);
-app.use("/pair-api", requireAuth, pairRouter);
-
-/* ================== HTML ================== */
+/* =================== ROUTES HTML =================== */
 app.get("/login", (req, res) => res.sendFile(path.join(__dirname, "login.html")));
 app.get("/register", (req, res) => res.sendFile(path.join(__dirname, "register.html")));
 app.get("/", requireAuth, (req, res) => res.sendFile(path.join(__dirname, "index.html")));
@@ -89,158 +58,154 @@ app.get("/pair", requireAuth, requireActiveBot, (req, res) => res.sendFile(path.
 app.get("/qrpage", requireAuth, requireActiveBot, (req, res) => res.sendFile(path.join(__dirname, "qr.html")));
 app.get("/referral", requireAuth, (req, res) => res.sendFile(path.join(__dirname, "referral.html")));
 
-/* ================== AUTH ================== */
-app.post("/register", (req, res) => {
-  const { username, password, email, ref } = req.body;
-  if (!username || !password || !email) {
-    return res.json({ error: "Champs manquants" });
-  }
+/* =================== AUTH =================== */
+app.post("/register", async (req, res) => {
+  try {
+    const { username, email, password, ref } = req.body;
+    if (!username || !email || !password) return res.json({ error: "Champs manquants" });
 
-  const users = loadUsers();
-  if (users.find(u => u.username === username)) {
-    return res.json({ error: "Nom déjà utilisé" });
-  }
-  if (users.find(u => u.email === email)) {
-    return res.json({ error: "Email déjà utilisé" });
-  }
+    const [exists] = await pool.query("SELECT * FROM users WHERE username=? OR email=?", [username, email]);
+    if (exists.length) return res.json({ error: "Nom ou email déjà utilisé" });
 
-  const user = {
-    username,
-    password,
-    email,
-    coins: 20,
-    botActiveUntil: 0,
-    adCount: 0,
-    adLastDate: "",
-    referrals: []
-  };
+    const hash = await bcrypt.hash(password, 10);
 
-  users.push(user);
+    const [result] = await pool.query("INSERT INTO users (username,email,password,coins,botActiveUntil,adCount,referrals) VALUES (?,?,?,?,0,0,'[]')", [username,email,hash,20]);
 
-  if (ref) {
-    const parrain = users.find(u => u.username === ref);
-    if (parrain) {
-      parrain.coins += 5;
-      parrain.referrals.push(username);
+    if (ref) {
+      const [[parrain]] = await pool.query("SELECT * FROM users WHERE username=?", [ref]);
+      if (parrain) {
+        const referrals = parrain.referrals ? JSON.parse(parrain.referrals) : [];
+        referrals.push(username);
+        await pool.query("UPDATE users SET coins=coins+5, referrals=? WHERE id=?", [JSON.stringify(referrals), parrain.id]);
+      }
     }
-  }
 
-  saveUsers(users);
-  res.json({ status: "Compte créé (20 coins)" });
+    res.json({ status: "Compte créé ! Vous avez 20 coins" });
+  } catch(e) { console.error(e); res.json({ error: "Erreur serveur" }); }
 });
 
-app.post("/login", (req, res) => {
-  const { username, password } = req.body;
-  const users = loadUsers();
-  const user = users.find(u => u.username === username && u.password === password);
-  if (!user) return res.json({ error: "Identifiants incorrects" });
+app.post("/login", async (req, res) => {
+  try {
+    const { username, password } = req.body;
+    const [rows] = await pool.query("SELECT * FROM users WHERE username=?", [username]);
+    const user = rows[0];
+    if (!user) return res.json({ error: "Identifiants incorrects" });
 
-  req.session.user = { username };
-  res.json({ status: "Connecté" });
+    const match = await bcrypt.compare(password, user.password);
+    if (!match) return res.json({ error: "Identifiants incorrects" });
+
+    req.session.user = { username: user.username };
+    res.json({ status: "Connecté avec succès" });
+  } catch(e) { console.error(e); res.json({ error: "Erreur serveur" }); }
 });
 
-app.get("/logout", requireAuth, (req, res) => {
-  req.session.destroy(() => {
-    res.json({ status: "Déconnecté" });
-  });
+app.get("/logout", requireAuth, async (req,res) => {
+  req.session.destroy(()=>res.json({status:"Déconnecté"}));
 });
 
-/* ================== USER INFO ================== */
-app.get("/coins", requireAuth, (req, res) => {
-  const user = loadUsers().find(u => u.username === req.session.user.username);
-  if (!user) return res.json({ error: "Utilisateur introuvable" });
-
+/* =================== COINS & BOT =================== */
+app.get("/coins", requireAuth, async (req,res)=>{
+  const [rows] = await pool.query("SELECT * FROM users WHERE username=?", [req.session.user.username]);
+  const user = rows[0];
+  if(!user) return res.json({error:"Utilisateur introuvable"});
   res.json({
-    username: user.username,
     coins: user.coins,
-    botActiveRemaining: Math.max(0, user.botActiveUntil - Date.now()),
-    referrals: user.referrals
+    botActiveRemaining: Math.max(0,user.botActiveUntil - Date.now()),
+    username: user.username,
+    referrals: JSON.parse(user.referrals)
   });
 });
 
-/* ================== BUY BOT ================== */
-app.post("/buy-bot", requireAuth, (req, res) => {
-  const { duration } = req.body;
-  const prices = { 24: 20, 48: 40, 72: 60 };
-
-  const users = loadUsers();
-  const user = users.find(u => u.username === req.session.user.username);
-  if (!user) return res.json({ error: "Utilisateur introuvable" });
-
-  if (!prices[duration]) return res.json({ error: "Durée invalide" });
-  if (user.coins < prices[duration]) return res.json({ error: "Coins insuffisants" });
-
-  user.coins -= prices[duration];
-  const base = user.botActiveUntil > Date.now() ? user.botActiveUntil : Date.now();
-  user.botActiveUntil = base + duration * 3600000;
-
-  saveUsers(users);
-  res.json({ status: "Bot activé", coins: user.coins });
+app.get("/users-list", requireAuth, async (req,res)=>{
+  const [rows] = await pool.query("SELECT * FROM users");
+  res.json(rows.map(u=>({...u,referrals:JSON.parse(u.referrals)})));
 });
 
-/* ================== MONEYFUSION ================== */
-app.post("/pay-bot", requireAuth, async (req, res) => {
-  const { amount } = req.body;
-  const user = loadUsers().find(u => u.username === req.session.user.username);
-  if (!user) return res.json({ error: "Utilisateur introuvable" });
+app.post("/buy-bot", requireAuth, async (req,res)=>{
+  const duration = parseInt(req.body.duration);
+  const prices = {24:20,48:40,72:60};
+  const [rows] = await pool.query("SELECT * FROM users WHERE username=?", [req.session.user.username]);
+  const user = rows[0];
+  if(!user) return res.json({error:"Utilisateur introuvable"});
+  if(!prices[duration]) return res.json({error:"Durée invalide"});
+  if(user.coins<prices[duration]) return res.json({error:`Coins insuffisants (${prices[duration]} requis)`});
 
-  const payment_id = "MF_" + Date.now();
+  const now = Date.now();
+  const prev = user.botActiveUntil>now?user.botActiveUntil:now;
+  await pool.query("UPDATE users SET coins=coins-?, botActiveUntil=? WHERE id=?", [prices[duration], prev+duration*3600*1000, user.id]);
 
-  const r = await fetch("https://api.moneyfusion.net/v1/payin", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${MF_API_KEY}`
-    },
-    body: JSON.stringify({
-      merchant_id: MERCHANT_ID,
-      amount: Number(amount),
-      currency: "XAF",
-      payment_id,
-      redirect_url: `${req.protocol}://${req.get("host")}`,
-      webhook_url: `${req.protocol}://${req.get("host")}/webhook`
-    })
-  });
-
-  const data = await r.json();
-  if (!data?.data?.url) return res.json({ error: "Paiement échoué" });
-
-  const payments = loadPayments();
-  payments.push({ id: payment_id, user: user.username, status: "pending" });
-  savePayments(payments);
-
-  res.json({ url: data.data.url });
+  res.json({status:`Bot activé pour ${duration}h`, coins:user.coins-prices[duration], botActiveRemaining: prev+duration*3600*1000 - now});
 });
 
-/* ================== WEBHOOK ================== */
-app.post("/webhook", (req, res) => {
+/* =================== MONEY FUSION =================== */
+app.post("/pay-bot", requireAuth, async (req,res)=>{
+  try{
+    const {amount} = req.body;
+    const [rows] = await pool.query("SELECT * FROM users WHERE username=?", [req.session.user.username]);
+    const user = rows[0];
+    if(!user) return res.json({error:"Utilisateur introuvable"});
+
+    const paymentId = "MF_" + Date.now();
+    const response = await fetch("https://api.moneyfusion.net/v1/payin", {
+      method:"POST",
+      headers:{ "Content-Type":"application/json","Authorization":`Bearer ${MF_API_KEY}` },
+      body:JSON.stringify({
+        merchant_id:MERCHANT_ID,
+        amount:Number(amount),
+        currency:"XAF",
+        payment_id:paymentId,
+        redirect_url:`${req.protocol}://${req.get("host")}/payment-success`,
+        webhook_url:`${req.protocol}://${req.get("host")}/webhook`
+      })
+    });
+    const data = await response.json();
+    if(!data.data || !data.data.url) return res.json({error:"Erreur paiement"});
+
+    await pool.query("INSERT INTO payments (payment_id,user_id,amount,status) VALUES (?,?,?,?)",[paymentId,user.id,amount,'pending']);
+    res.json({url:data.data.url});
+  }catch(e){console.error(e);res.json({error:"Erreur serveur"});}
+});
+
+app.post("/webhook", async (req,res)=>{
   const data = req.body;
-  if (data.status !== "success") return res.send("IGNORED");
+  if(!data || data.status!=="success") return res.send("IGNORED");
 
-  const payments = loadPayments();
-  const pay = payments.find(p => p.id === data.payment_id);
-  if (!pay || pay.status === "success") return res.send("DONE");
+  const [[pay]] = await pool.query("SELECT * FROM payments WHERE payment_id=?", [data.payment_id]);
+  if(!pay) return res.send("NOT FOUND");
+  if(pay.status==="success") return res.send("ALREADY PAID");
 
-  pay.status = "success";
+  await pool.query("UPDATE payments SET status='success' WHERE id=?", [pay.id]);
 
-  const users = loadUsers();
-  const user = users.find(u => u.username === pay.user);
-  if (user) {
-    const base = user.botActiveUntil > Date.now() ? user.botActiveUntil : Date.now();
-    user.botActiveUntil = base + 24 * 3600000;
-    saveUsers(users);
-  }
+  const [[user]] = await pool.query("SELECT * FROM users WHERE id=?", [pay.user_id]);
+  if(!user) return res.send("USER NOT FOUND");
 
-  savePayments(payments);
+  const now = Date.now();
+  const prev = user.botActiveUntil>now?user.botActiveUntil:now;
+  await pool.query("UPDATE users SET botActiveUntil=? WHERE id=?", [prev+24*3600*1000,user.id]);
   res.send("OK");
 });
 
-/* ================== DEBUG ================== */
-app.get("/debug-session", (req, res) => {
-  res.json(req.session);
+/* =================== WATCH ADS =================== */
+app.get("/watch-ad", requireAuth, async (req,res)=>{
+  const [[user]] = await pool.query("SELECT * FROM users WHERE username=?", [req.session.user.username]);
+  if(!user) return res.json({error:"Utilisateur introuvable"});
+  const today = new Date().toDateString();
+  const lastDate = user.adLastDate ? new Date(user.adLastDate).toDateString() : null;
+  const adCount = lastDate!==today ? 0 : user.adCount;
+  res.json({allowed: adCount<2});
 });
 
-/* ================== START ================== */
-app.listen(PORT, () => {
-  console.log("✅ ROK XD server lancé sur le port " + PORT);
+app.post("/watch-ad/complete", requireAuth, async (req,res)=>{
+  const [[user]] = await pool.query("SELECT * FROM users WHERE username=?", [req.session.user.username]);
+  if(!user) return res.json({error:"Utilisateur introuvable"});
+  const today = new Date().toDateString();
+  let adCount = user.adLastDate!==today?0:user.adCount;
+  if(adCount>=2) return res.json({error:"Limite quotidienne atteinte"});
+  adCount++;
+  const coins = user.coins+1;
+  await pool.query("UPDATE users SET coins=?, adCount=?, adLastDate=? WHERE id=?", [coins, adCount, new Date(), user.id]);
+  res.json({success:true, coins});
 });
+
+/* =================== START SERVER =================== */
+app.listen(PORT, ()=>console.log(`🚀 Server lancé sur le port ${PORT}`));

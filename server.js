@@ -3,7 +3,7 @@ import session from "express-session";
 import bodyParser from "body-parser";
 import path from "path";
 import fetch from "node-fetch";
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 import mysql from "mysql2/promise";
 import { fileURLToPath } from "url";
 

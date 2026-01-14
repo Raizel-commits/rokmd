@@ -357,5 +357,4 @@ router.post("/config", async (req, res) => {
 });
 
 // EXPORTS
-export { bots };  
 export default router;

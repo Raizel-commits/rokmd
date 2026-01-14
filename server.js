@@ -93,7 +93,6 @@ app.use("/qr", qrRouter);
 app.use("/pair-api", pairRouter);
 
 // ======================= ROUTES HTML =======================
-// IMPORTANT : ne pas bloquer l'accès aux pages pair/qr, front se charge et désactive boutons si bot inactif
 app.get("/login", (req, res) => res.sendFile(path.join(__dirname, "login.html")));
 app.get("/register", (req, res) => res.sendFile(path.join(__dirname, "register.html")));
 app.get("/", requireAuth, (req, res) => res.sendFile(path.join(__dirname, "index.html")));
@@ -183,7 +182,6 @@ app.post("/buy-bot", requireAuth, async (req, res) => {
 
     await pool.query("UPDATE users SET coins=$1, botActiveUntil=$2 WHERE id=$3", [newCoins, newBotUntil, user.id]);
 
-    // NE PAS logout automatiquement dans buy-bot, front gère timer
     res.json({ status: `Bot activé pour ${duration}h`, coins: newCoins, botActiveRemaining: newBotUntil - now });
   } catch(e){ console.error(e); res.json({ error: "Erreur serveur" }); }
 });
@@ -302,5 +300,6 @@ app.post("/watch-ad/complete", requireAuth, async (req, res) => {
     remaining: 2 - adCount
   });
 });
+
 // ======================= START SERVER =======================
 app.listen(PORT, ()=>console.log(`🚀 Server lancé sur le port ${PORT}`));

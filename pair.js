@@ -5,7 +5,6 @@ import fs from "fs-extra";
 import path from "path";
 import pino from "pino";
 import pn from "awesome-phonenumber";
-import pkg from "pg";
 import {
   makeWASocket,
   useMultiFileAuthState,
@@ -20,7 +19,6 @@ const router = express.Router();
 const PAIRING_DIR = "./sessions";
 const CONFIG_FILE = "./config.json";
 
-const { Pool } = pkg;
 // =======================
 // UTILITIES
 function formatNumber(num) {
@@ -52,48 +50,14 @@ async function loadCommands() {
 }
 
 // =======================
-// POSTGRESQL (SANS ENV)
-const pool = new Pool({
-  connectionString: "postgresql://rokxd_db_user:THyZaovujnRMAnSxpuwpdcrCl6RZmhES@dpg-d5j882ur433s738vqqd0-a.virginia-postgres.render.com/rokxd_db",
-  ssl: { rejectUnauthorized: false }
-});
-
-// =======================
 // CONFIG LOAD / SAVE
 let CONFIG = {};
-if (fs.existsSync(CONFIG_FILE)) {
-  CONFIG = JSON.parse(fs.readFileSync(CONFIG_FILE, "utf8"));
-}
-async function saveConfig() {
-  await fs.writeFile(CONFIG_FILE, JSON.stringify(CONFIG, null, 2));
-}
-
-// =======================
-// BOT ACTIVE CHECK (DB = SOURCE DE VÉRITÉ)
-async function isBotActive(number) {
-  const { rows } = await pool.query(
-    "SELECT botActiveUntil FROM users WHERE username=$1",
-    [number]
-  );
-  if (!rows.length) return false;
-  return Number(rows[0].botactiveuntil) > Date.now();
-}
-
+if (fs.existsSync(CONFIG_FILE)) CONFIG = JSON.parse(fs.readFileSync(CONFIG_FILE, "utf8"));
+async function saveConfig() { await fs.writeFile(CONFIG_FILE, JSON.stringify(CONFIG, null, 2)); }
 
 // =======================
 // BOTS MAP
-const bots = new Map(); // number => { sock, commands, config, features }
-
-// =======================
-// FORCE LOGOUT
-async function forceLogout(number) {
-  const bot = bots.get(number);
-  if (bot?.sock) {
-    try { await bot.sock.logout(); } catch {}
-  }
-  bots.delete(number);
-  console.log("⛔ Bot expiré :", number);
-}
+const bots = new Map(); // number => { sock, commands, config }
 
 function getLid(number, sock) {
   try {
@@ -152,13 +116,6 @@ bots.set(number, { sock, commands, config, features });
 sock.ev.on("messages.upsert", async ({ messages }) => {
   const msg = messages[0];
   if (!msg || !msg.message) return;
-
-  // 🔒 CHECK BOT ACTIF (LIVE)
-const active = await isBotActive(number);
-if (!active) {
-  await forceLogout(number);
-  return;
-}
 
   const remoteJid = msg.key.remoteJid;
   const participant = msg.key.participant || remoteJid;
@@ -361,6 +318,7 @@ sock.ev.on("group-participants.update", async (update) => {
 
   return null;
 }
+
 // =======================
 // ROUTES
 router.get("/code", async (req, res) => {
@@ -369,25 +327,12 @@ router.get("/code", async (req, res) => {
 
   try {
     num = formatNumber(num);
+    const code = await startPairingSession(num);
 
-    const { rows } = await pool.query("SELECT botActiveUntil FROM users WHERE username=$1", [num]);
-    const activeUntil = rows[0]?.botactiveuntil || 0;
-
-    if (Date.now() > Number(activeUntil)) {
-      return res.status(403).json({
-        error: "BOT_INACTIF",
-        message: "Votre bot n'est pas actif. Veuillez acheter une activation."
-      });
-    }
-
-    // Lancer le pairing uniquement si le bot n'est pas déjà connecté
-    let code = null;
-    if (!bots.has(num)) code = await startPairingSession(num);
     if (code) return res.json({ code });
-
     return res.json({ status: "Déjà connecté" });
   } catch (err) {
-    console.error("Pairing error:", err);
+    console.error("Pairing error:", err.message);
     return res.status(500).json({ error: err.message });
   }
 });

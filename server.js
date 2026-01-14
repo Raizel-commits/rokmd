@@ -51,7 +51,29 @@ async function initDB() {
       payment_id VARCHAR(50) UNIQUE NOT NULL,
       user_id INT REFERENCES users(id),
       amount NUMERIC NOT NULL,
+      type VARCHAR(20),
+      meta JSONB,
       status VARCHAR(20) DEFAULT 'pending'
+    );
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS coin_history (
+      id SERIAL PRIMARY KEY,
+      user_id INT REFERENCES users(id),
+      change INT,
+      reason VARCHAR(50),
+      created_at TIMESTAMP DEFAULT NOW()
+    );
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS bot_purchases (
+      id SERIAL PRIMARY KEY,
+      user_id INT REFERENCES users(id),
+      duration INT,
+      coins_spent INT,
+      created_at TIMESTAMP DEFAULT NOW()
     );
   `);
 
@@ -167,20 +189,30 @@ app.post("/buy-bot", requireAuth, async (req, res) => {
 
     await pool.query("UPDATE users SET coins=$1, botActiveUntil=$2 WHERE id=$3", [newCoins, newBotUntil, user.id]);
 
+    await pool.query("INSERT INTO bot_purchases (user_id,duration,coins_spent) VALUES ($1,$2,$3)", [user.id,duration,prices[duration]]);
+
     res.json({ status: `Bot activé pour ${duration}h`, coins: newCoins, botActiveRemaining: newBotUntil - now });
   } catch(e){ console.error(e); res.json({ error: "Erreur serveur" }); }
 });
 
-// ======================= MONEY FUSION PAY =======================
-app.post("/pay-bot", requireAuth, async (req, res) => {
+// ======================= MONEY FUSION PAY UNIFIÉ =======================
+app.post("/pay", requireAuth, async (req,res) => {
   try {
-    const { amount } = req.body;
-    const { rows } = await pool.query("SELECT * FROM users WHERE username=$1", [req.session.user.username]);
-    const user = rows[0];
-    if(!user) return res.json({ error: "Utilisateur introuvable" });
+    const { type, option } = req.body; // type="bot"|"coins", option="24h" ou "100"
+    const pricesBot = { "24h": 500, "48h": 1000, "72h": 1500 };
+    const pricesCoins = { "50": 500, "100": 1000, "250": 2000 };
 
-    const paymentId = "MF_" + Date.now();
-    const response = await fetch("https://api.moneyfusion.net/v1/payin", {
+    let amount;
+    if(type==="bot") amount=pricesBot[option];
+    else if(type==="coins") amount=pricesCoins[option];
+    else return res.json({ error:"Option invalide" });
+
+    const { rows } = await pool.query("SELECT * FROM users WHERE username=$1",[req.session.user.username]);
+    const user = rows[0];
+    if(!user) return res.json({ error:"Utilisateur introuvable" });
+
+    const paymentId = "MF_"+Date.now();
+    const response = await fetch("https://api.moneyfusion.net/v1/payin",{
       method:"POST",
       headers:{ "Content-Type":"application/json", "Authorization":`Bearer ${MF_API_KEY}` },
       body:JSON.stringify({
@@ -188,38 +220,51 @@ app.post("/pay-bot", requireAuth, async (req, res) => {
         amount:Number(amount),
         currency:"XAF",
         payment_id:paymentId,
-        redirect_url:`${req.protocol}://${req.get("host")}/payment-success`,
+        redirect_url:`${req.protocol}://${req.get("host")}/`,
         webhook_url:`${req.protocol}://${req.get("host")}/webhook`
       })
     });
-    const data = await response.json();
-    if(!data.data || !data.data.url) return res.json({ error: "Erreur paiement MoneyFusion" });
 
-    await pool.query("INSERT INTO payments (payment_id,user_id,amount,status) VALUES ($1,$2,$3,'pending')", [paymentId, user.id, amount]);
-    res.json({ url:data.data.url });
-  } catch(e){ console.error(e); res.json({ error: "Erreur serveur" }); }
+    const data = await response.json();
+    if(!data?.data?.url) return res.json({ error:"Erreur MoneyFusion" });
+
+    await pool.query("INSERT INTO payments (payment_id,user_id,amount,type,meta,status) VALUES ($1,$2,$3,$4,$5,'pending')",
+      [paymentId,user.id,amount,type,{option}]);
+
+    res.json({ url: data.data.url });
+  } catch(e){ console.error(e); res.json({ error:"Erreur serveur" }); }
 });
 
-app.post("/webhook", async (req, res) => {
-  const data = req.body;
+// ======================= WEBHOOK =======================
+app.post("/webhook", async (req,res)=>{
+  const data=req.body;
   if(!data || data.status!=="success") return res.send("IGNORED");
 
-  const { rows: payRows } = await pool.query("SELECT * FROM payments WHERE payment_id=$1", [data.payment_id]);
+  const { rows: payRows } = await pool.query("SELECT * FROM payments WHERE payment_id=$1",[data.payment_id]);
   const pay = payRows[0];
-  if(!pay) return res.send("NOT FOUND");
-  if(pay.status==="success") return res.send("ALREADY PAID");
+  if(!pay || pay.status==="success") return res.send("IGNORED");
 
-  await pool.query("UPDATE payments SET status='success' WHERE id=$1", [pay.id]);
+  await pool.query("UPDATE payments SET status='success' WHERE id=$1",[pay.id]);
 
-  const { rows: userRows } = await pool.query("SELECT * FROM users WHERE id=$1", [pay.user_id]);
+  const { rows: userRows } = await pool.query("SELECT * FROM users WHERE id=$1",[pay.user_id]);
   const user = userRows[0];
   if(!user) return res.send("USER NOT FOUND");
 
+  const option = pay.meta.option;
   const now = Date.now();
-  const prev = user.botActiveUntil && Number(user.botActiveUntil) > now ? Number(user.botActiveUntil) : now;
-  const newBotUntil = prev + 24*3600*1000;
 
-  await pool.query("UPDATE users SET botActiveUntil=$1 WHERE id=$2", [newBotUntil, user.id]);
+  if(pay.type==="bot"){
+    const hours = parseInt(option.replace("h",""));
+    const until = Math.max(user.botActiveUntil, now) + hours*3600*1000;
+    await pool.query("UPDATE users SET botActiveUntil=$1 WHERE id=$2",[until,user.id]);
+    await pool.query("INSERT INTO bot_purchases (user_id,duration,coins_spent) VALUES ($1,$2,0)",[user.id,hours]);
+  }
+
+  if(pay.type==="coins"){
+    const coins = parseInt(option);
+    await pool.query("UPDATE users SET coins=coins+$1 WHERE id=$2",[coins,user.id]);
+    await pool.query("INSERT INTO coin_history (user_id,change,reason) VALUES ($1,$2,'buy_coins')",[user.id,coins]);
+  }
 
   res.send("OK");
 });
@@ -230,7 +275,7 @@ app.get("/watch-ad", requireAuth, async (req,res) => {
   const user = rows[0];
   if(!user) return res.json({ error: "Utilisateur introuvable" });
 
-  const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+  const today = new Date().toISOString().split('T')[0];
   let adCount = user.adCount || 0;
   const lastDate = user.adLastDate ? user.adLastDate.toISOString().split('T')[0] : null;
 
@@ -260,6 +305,8 @@ app.post("/watch-ad/complete", requireAuth, async (req,res) => {
   const newCoins = user.coins + 1;
 
   await pool.query("UPDATE users SET coins=$1, adCount=$2, adLastDate=$3 WHERE id=$4", [newCoins, adCount, today, user.id]);
+  await pool.query("INSERT INTO coin_history (user_id,change,reason) VALUES ($1,$2,'watch_ad')",[user.id,1]);
+
   res.json({ success:true, coins: newCoins });
 });
 

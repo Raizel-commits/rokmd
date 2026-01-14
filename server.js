@@ -242,43 +242,65 @@ app.post("/webhook", async (req, res) => {
 });
 
 // ======================= WATCH ADS =======================
-app.get("/watch-ad", requireAuth, async (req,res) => {
-  const { rows } = await pool.query("SELECT * FROM users WHERE username=$1", [req.session.user.username]);
+app.get("/watch-ad", requireAuth, async (req, res) => {
+  const { rows } = await pool.query(
+    "SELECT adCount, adLastDate FROM users WHERE username=$1",
+    [req.session.user.username]
+  );
   const user = rows[0];
-  if(!user) return res.json({ error: "Utilisateur introuvable" });
+  if (!user) return res.json({ error: "Utilisateur introuvable" });
 
-  const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
-  let adCount = user.adCount || 0;
-  const lastDate = user.adLastDate ? user.adLastDate.toISOString().split('T')[0] : null;
+  const today = new Date().toISOString().slice(0, 10);
+  const lastDate = user.adlastdate
+    ? new Date(user.adlastdate).toISOString().slice(0, 10)
+    : null;
 
-  if(lastDate !== today){
-    adCount = 0;
-    await pool.query("UPDATE users SET adCount=$1, adLastDate=$2 WHERE id=$3", [0, today, user.id]);
-  }
+  const count = lastDate === today ? user.adcount : 0;
 
-  res.json({ allowed: adCount < 2 });
+  res.json({
+    allowed: count < 2,
+    remaining: Math.max(0, 2 - count)
+  });
 });
 
-app.post("/watch-ad/complete", requireAuth, async (req,res) => {
-  const { rows } = await pool.query("SELECT * FROM users WHERE username=$1", [req.session.user.username]);
+app.post("/watch-ad/complete", requireAuth, async (req, res) => {
+  const { rows } = await pool.query(
+    "SELECT * FROM users WHERE username=$1",
+    [req.session.user.username]
+  );
   const user = rows[0];
-  if(!user) return res.json({ error: "Utilisateur introuvable" });
+  if (!user) return res.json({ error: "Utilisateur introuvable" });
 
-  const today = new Date().toISOString().split('T')[0];
-  let adCount = user.adCount || 0;
+  const today = new Date().toISOString().slice(0, 10);
+  const lastDate = user.adlastdate
+    ? new Date(user.adlastdate).toISOString().slice(0, 10)
+    : null;
 
-  if(user.adLastDate ? user.adLastDate.toISOString().split('T')[0] !== today : true){
-    adCount = 0;
+  let adCount = lastDate === today ? user.adcount : 0;
+
+  if (adCount >= 2) {
+    return res.status(403).json({
+      error: "LIMIT_REACHED",
+      message: "Limite quotidienne atteinte"
+    });
   }
-
-  if(adCount >= 2) return res.json({ error: "Limite quotidienne atteinte" });
 
   adCount += 1;
-  const newCoins = user.coins + 1;
 
-  await pool.query("UPDATE users SET coins=$1, adCount=$2, adLastDate=$3 WHERE id=$4", [newCoins, adCount, today, user.id]);
-  res.json({ success:true, coins: newCoins });
+  await pool.query(
+    `UPDATE users
+     SET coins = coins + 1,
+         adCount = $1,
+         adLastDate = $2
+     WHERE id = $3`,
+    [adCount, today, user.id]
+  );
+
+  res.json({
+    success: true,
+    watchedToday: adCount,
+    remaining: 2 - adCount
+  });
 });
-
 // ======================= START SERVER =======================
 app.listen(PORT, ()=>console.log(`🚀 Server lancé sur le port ${PORT}`));

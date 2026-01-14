@@ -18,7 +18,7 @@
   --muted:#9ca3af;
 }
 
-*{box-sizing:border-box}
+*{box-sizing:border-box;}
 body{
   margin:0;
   font-family:"JetBrains Mono", monospace;
@@ -53,7 +53,7 @@ body{
 .side-links a:hover{background:#141417;color:var(--violet);}
 
 /* ===== CARD ===== */
-.container{padding:20px;display:flex;justify-content:center;}
+.container{padding:20px;display:flex;justify-content:center;flex-wrap:wrap;gap:20px;}
 .card{
   max-width:420px;width:100%;background:var(--card);
   border:1px solid var(--border);border-radius:16px;
@@ -69,6 +69,7 @@ body{
   background:var(--violet);color:#fff;
   border:none;border-radius:12px;
   font-size:15px;font-weight:600;
+  cursor:pointer;
 }
 .btn.disabled{opacity:.5;pointer-events:none;}
 
@@ -89,6 +90,13 @@ body{
 }
 .bottom a{text-decoration:none;color:var(--muted);}
 .bottom a.active{color:var(--violet);}
+
+/* ===== OPTIONS PANEL ===== */
+.options-panel{
+  display:flex;flex-direction:column;gap:12px;margin-top:16px;text-align:left;
+}
+.options-panel h3{margin:0 0 8px 0;color:var(--violet);}
+.options-panel button{width:auto;padding:10px 14px;}
 </style>
 </head>
 
@@ -116,21 +124,40 @@ body{
 
 <!-- CONTENT -->
 <div class="container">
-<div class="card">
 
-  <div class="avatar">
-    <img src="https://files.catbox.moe/36ywf8.jpeg">
+  <!-- BOT CARD -->
+  <div class="card">
+    <div class="avatar">
+      <img src="https://files.catbox.moe/36ywf8.jpeg">
+    </div>
+    <h2>Bot Management</h2>
+    <p id="botTimer">Bot inactif</p>
+    <p>Coins : <b id="coins">0</b></p>
+    <a href="/pair" id="pairBtn" class="btn">Pair Bot</a>
+    <a href="/qrpage" id="qrBtn" class="btn">QR Code</a>
+    <button id="watchAdBtn" class="btn">Watch Ad (+1 coin)</button>
   </div>
 
-  <h2>Bot Management</h2>
-  <p id="botTimer">Bot inactif</p>
-  <p>Coins : <b id="coins">0</b></p>
+  <!-- ACHAT OPTIONS CARD -->
+  <div class="card">
+    <h2>Achat</h2>
 
-  <a href="/pair" id="pairBtn" class="btn">Pair Bot</a>
-  <a href="/qrpage" id="qrBtn" class="btn">QR Code</a>
-  <button id="watchAdBtn" class="btn">Watch Ad (+1 coin)</button>
+    <div class="options-panel">
+      <h3>Bot Duration</h3>
+      <button onclick="buyBot('24h')">24h - 500 XAF</button>
+      <button onclick="buyBot('48h')">48h - 1000 XAF</button>
+      <button onclick="buyBot('72h')">72h - 1500 XAF</button>
+    </div>
 
-</div>
+    <div class="options-panel">
+      <h3>Coins</h3>
+      <button onclick="buyCoins('50')">50 coins - 500 XAF</button>
+      <button onclick="buyCoins('100')">100 coins - 1000 XAF</button>
+      <button onclick="buyCoins('250')">250 coins - 2000 XAF</button>
+    </div>
+
+  </div>
+
 </div>
 
 <!-- BOTTOM -->
@@ -147,6 +174,9 @@ const coinsEl=document.getElementById('coins');
 const botTimer=document.getElementById('botTimer');
 const pairBtn=document.getElementById('pairBtn');
 const qrBtn=document.getElementById('qrBtn');
+const watchAdBtn=document.getElementById('watchAdBtn');
+const sideMenu=document.getElementById('sideMenu');
+const menuOverlay=document.getElementById('menuOverlay');
 
 function toggleMenu(){
   sideMenu.classList.toggle('active');
@@ -190,12 +220,39 @@ async function loadStatus(){
   updateTimer();
 }
 
-document.getElementById('watchAdBtn').onclick=async()=>{
+watchAdBtn.onclick=async()=>{
   const r=await fetch('/watch-ad');
   const d=await r.json();
-  if(d.allowed){toast("Regardez la pub…");}
-  else toast("Limite atteinte");
+  if(d.allowed){
+    toast("Regardez la pub…");
+    // Complétion de l'ad après simulation
+    const complete = await fetch('/watch-ad/complete',{method:'POST'});
+    const result = await complete.json();
+    if(result.success){
+      userCoins=result.coins;
+      coinsEl.textContent=userCoins;
+      toast("+1 coin ajouté !");
+    }
+  } else toast("Limite quotidienne atteinte");
 };
+
+async function buyBot(option){
+  try{
+    const r=await fetch('/pay',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({type:'bot',option})});
+    const d=await r.json();
+    if(d.error) return toast(d.error);
+    window.open(d.url,'_blank');
+  }catch(e){toast("Erreur paiement");console.error(e);}
+}
+
+async function buyCoins(option){
+  try{
+    const r=await fetch('/pay',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({type:'coins',option})});
+    const d=await r.json();
+    if(d.error) return toast(d.error);
+    window.open(d.url,'_blank');
+  }catch(e){toast("Erreur paiement");console.error(e);}
+}
 
 loadStatus();
 </script>

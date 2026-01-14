@@ -3,380 +3,199 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ROK XD • Dashboard</title>
+<title>Senku Tech • Bot Management</title>
+
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+
 <style>
 :root{
-  --bg-1:#020617;
-  --bg-2:#0f172a;
-  --neon:#38bdf8;
-  --glass-border:rgba(56,189,248,0.22);
-  --muted:rgba(255,255,255,0.45);
-  --card-w:380px;
-  --btn-bg:#38bdf8;
+  --bg:#0b0b0d;
+  --card:#141417;
+  --border:#232327;
+  --violet:#8b5cf6;
+  --text:#e5e7eb;
+  --muted:#9ca3af;
 }
-*{box-sizing:border-box;}
-html,body{
-  height:100%; margin:0; font-family:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial;
-  background: radial-gradient(1200px 600px at 10% 10%, rgba(56,189,248,0.03), transparent),
-              radial-gradient(900px 500px at 90% 85%, rgba(56,189,248,0.02), transparent),
-              linear-gradient(180deg,var(--bg-1),var(--bg-2));
-  color:#dfffe6;
-}
-.stage{
-  position:relative;
-  height:100vh;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  padding:36px;
-  overflow-y:auto;
-}
-.glass-card{
-  width:var(--card-w); max-width:92vw;
-  background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
-  border-radius:18px; padding:20px;
-  box-shadow:0 10px 40px rgba(0,0,0,0.7),0 0 40px rgba(56,189,248,0.05) inset;
-  backdrop-filter: blur(12px) saturate(140%);
-  border:1px solid var(--glass-border);
-  text-align:center;
-  position:relative;
-}
-.card-header h1{
-  font-family:"JetBrains Mono", monospace;
-  font-size:20px;margin:0;color:var(--neon);
-  text-transform:uppercase;
-  text-shadow:0 0 18px rgba(56,189,248,0.22);
-}
-.card-header .small-url{font-size:12px;color:var(--muted);margin-top:4px;}
-.avatar { margin: 12px 0; text-align: center; }
-.avatar img { width:60px; height:60px; border-radius:50%; border:2px solid var(--neon); box-shadow:0 0 12px var(--neon); }
-.timer, .coins, h2, .store-card h3, .store-card p{
-  font-family:"JetBrains Mono", monospace;
-}
-.timer, .coins{margin:6px 0;font-weight:bold;color:var(--neon);}
-.store-card{
-  background:rgba(255,255,255,0.02);
-  border:1px solid var(--glass-border);
-  border-radius:12px;
-  padding:10px;
-  margin-bottom:6px;
-  cursor:pointer;
-  transition:.2s;
-  text-align:left;
-  font-size:14px;
-}
-.store-card:hover{box-shadow:0 0 16px var(--neon); transform:scale(1.02);}
-.select-pay{
-  margin-top:6px; padding:4px 8px; border-radius:6px; border:1px solid var(--glass-border);
-  background:rgba(255,255,255,0.02); color:#dfffe6; width:100%;
-  font-family:"JetBrains Mono", monospace;
-  font-size:13px;
-}
-.btn{
-  display:flex; align-items:center; justify-content:center;
-  background:var(--btn-bg); color:#000; padding:10px 12px;
-  border-radius:24px; font-weight:700; text-decoration:none; text-align:center; margin:6px 0; transition:.2s;
-  font-family:"JetBrains Mono", monospace;
-  gap:8px;
-}
-.btn i{font-size:16px;}
-.btn:hover:not(.disabled){transform:scale(1.03); box-shadow:0 0 16px rgba(56,189,248,.4);}
-.btn.disabled{opacity:0.5; cursor:not-allowed; pointer-events:none;}
 
-/* ===== MENU LATÉRAL ===== */
+*{box-sizing:border-box}
+body{
+  margin:0;
+  font-family:"JetBrains Mono", monospace;
+  background:linear-gradient(180deg,#050506,#0b0b0d);
+  color:var(--text);
+}
+
+/* ===== HEADER ===== */
+.header{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:16px 18px;border-bottom:1px solid var(--border);
+}
+.menu-btn{font-size:22px;cursor:pointer;color:var(--violet);}
+
+/* ===== SIDE MENU ===== */
 .side-menu{
-  position:fixed; top:0; left:-260px; width:260px; height:100%; background:linear-gradient(180deg,#020617,#0f172a);
-  border-right:1px solid var(--glass-border);
-  backdrop-filter:blur(12px);
-  transition:.3s;
-  z-index:1000;
-  display:flex; flex-direction:column;
+  position:fixed;top:0;left:-260px;width:260px;height:100%;
+  background:#0b0b0d;border-right:1px solid var(--border);
+  transition:.3s;z-index:1000;
 }
 .side-menu.active{left:0;}
 .menu-overlay{
-  position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:900; display:none;
+  position:fixed;inset:0;background:rgba(0,0,0,.6);
+  display:none;z-index:900;
 }
 .menu-overlay.active{display:block;}
-.side-header{padding:16px; border-bottom:1px solid var(--glass-border);}
-.side-title{font-family:"JetBrains Mono", monospace; font-size:20px; color:var(--neon);}
-.side-user{font-size:12px;color:var(--muted);}
-.side-links{padding:14px; flex:1;}
-.side-links a{display:flex; align-items:center; gap:12px; padding:12px; color:#e5e7eb; text-decoration:none; border-radius:10px; transition:.2s; font-family:"JetBrains Mono", monospace;}
-.side-links a:hover{background:rgba(56,189,248,.1); color:var(--neon);}
-.side-footer{padding:14px; font-size:12px; text-align:center; color:var(--muted); border-top:1px solid var(--glass-border);}
-.hamburger{position:fixed; top:16px; left:16px; font-size:22px; color:var(--neon); cursor:pointer; z-index:1100;}
-
-/* Responsive */
-@media (max-width:480px){
-  .glass-card{width:90vw;padding:12px;}
-  .card-header h1{font-size:16px;}
-  .avatar img{width:50px;height:50px;}
-  .store-card{font-size:12px;padding:8px;}
-  .btn{padding:8px 10px;font-size:13px;gap:6px;}
-  .timer,.coins{font-size:12px;}
-  .hamburger{font-size:20px;}
+.side-header{padding:16px;border-bottom:1px solid var(--border);}
+.side-links a{
+  display:flex;gap:12px;padding:14px;color:#e5e7eb;
+  text-decoration:none;transition:.2s;
 }
+.side-links a:hover{background:#141417;color:var(--violet);}
+
+/* ===== CARD ===== */
+.container{padding:20px;display:flex;justify-content:center;}
+.card{
+  max-width:420px;width:100%;background:var(--card);
+  border:1px solid var(--border);border-radius:16px;
+  padding:20px;box-shadow:0 10px 30px rgba(0,0,0,.6);
+  text-align:center;
+}
+.avatar img{
+  width:70px;height:70px;border-radius:50%;
+  border:2px solid var(--violet);
+}
+.btn{
+  width:100%;margin-top:12px;padding:14px;
+  background:var(--violet);color:#fff;
+  border:none;border-radius:12px;
+  font-size:15px;font-weight:600;
+}
+.btn.disabled{opacity:.5;pointer-events:none;}
+
+/* ===== FLOAT MESSAGE ===== */
+.toast{
+  position:fixed;top:50%;left:50%;
+  transform:translate(-50%,-50%);
+  background:#141417;border:1px solid var(--border);
+  padding:18px 26px;border-radius:16px;
+  font-weight:bold;z-index:9999;
+}
+
+/* ===== BOTTOM ===== */
+.bottom{
+  position:fixed;bottom:0;left:0;right:0;
+  background:#0b0b0d;border-top:1px solid var(--border);
+  display:flex;justify-content:space-around;padding:10px 0;
+}
+.bottom a{text-decoration:none;color:var(--muted);}
+.bottom a.active{color:var(--violet);}
 </style>
 </head>
+
 <body>
 
-<!-- BOUTON MENU -->
-<div class="hamburger" onclick="toggleMenu()"><i class="fas fa-bars"></i></div>
-
-<!-- MENU LATÉRAL -->
-<div id="sideMenu" class="side-menu">
-  <div class="side-header">
-    <div class="side-title">ROK XD</div>
-    <div class="side-user" id="menuUser">👤 User</div>
-  </div>
-  <div class="side-links">
-    <a href="/"><i class="fas fa-home"></i> Accueil</a>
-    <a href="/pair" id="menuPair"><i class="fas fa-link"></i> Pairing</a>
-    <a href="/qrpage" id="menuQR"><i class="fas fa-qrcode"></i> QR Code</a>
-    <a href="#" id="menuReferral"> <i class="fas fa-user-plus"></i> Parrainage</a>
-    <a href="https://wa.me/237699777530" target="_blank"><i class="fab fa-whatsapp"></i> Support 1</a>
-    <a href="https://wa.me/237673941535" target="_blank"><i class="fab fa-whatsapp"></i> Support 2</a>
-    <a href="/logout"><i class="fas fa-power-off"></i> Déconnexion</a>
-  </div>
-  <div class="side-footer">
-    © 2025 <strong>ROK XD</strong><br>
-    <span style="font-size:11px;">BY RAIZEL & KNUT</span>
-  </div>
+<!-- HEADER -->
+<div class="header">
+  <h1>Senku Tech</h1>
+  <div class="menu-btn" onclick="toggleMenu()"><i class="fas fa-bars"></i></div>
 </div>
 
+<!-- MENU -->
+<div id="sideMenu" class="side-menu">
+  <div class="side-header">ROK XD</div>
+  <div class="side-links">
+    <a href="/"><i class="fas fa-robot"></i> Bot</a>
+    <a href="/panel"><i class="fas fa-shopping-cart"></i> Achat</a>
+    <a href="/coins"><i class="fas fa-coins"></i> Coins</a>
+    <a href="/pair"><i class="fas fa-link"></i> Pair</a>
+    <a href="/qrpage"><i class="fas fa-qrcode"></i> QR</a>
+    <a href="/logout"><i class="fas fa-power-off"></i> Logout</a>
+  </div>
+</div>
 <div id="menuOverlay" class="menu-overlay" onclick="toggleMenu()"></div>
 
-<main class="stage">
-<section class="glass-card">
+<!-- CONTENT -->
+<div class="container">
+<div class="card">
 
-<header class="card-header">
-<h1>ROK XD • Dashboard</h1>
-<div class="small-url">Connexion sécurisée</div>
-</header>
-
-<div class="avatar">
-  <img src="https://files.catbox.moe/36ywf8.jpeg" alt="Avatar">
-</div>
-
-<div class="timer" id="botTimer">Bot inactif</div>
-<div class="coins">Coins : <span id="coins">0</span></div>
-
-<div class="section">
-  <h2 style="font-size:16px;margin:6px 0;">Activer le bot</h2>
-  <p style="font-size:13px;margin:2px 0;">Choisissez la durée et le type de paiement :</p>
-  <div class="store">
-    <div class="store-card">
-      <h3>24 heures</h3>
-      <p>Activation 24h</p>
-      <div class="price">20 coins / 800 F CFA</div>
-      <select class="select-pay" onchange="selectPayment(this,24)">
-        <option value="">--Payer avec--</option>
-        <option value="coins">Coins</option>
-        <option value="fcfa">FCFA</option>
-      </select>
-    </div>
-    <div class="store-card">
-      <h3>48 heures</h3>
-      <p>Activation 48h</p>
-      <div class="price">40 coins / 1 600 F CFA</div>
-      <select class="select-pay" onchange="selectPayment(this,48)">
-        <option value="">--Payer avec--</option>
-        <option value="coins">Coins</option>
-        <option value="fcfa">FCFA</option>
-      </select>
-    </div>
-    <div class="store-card">
-      <h3>72 heures</h3>
-      <p>Activation 72h</p>
-      <div class="price">60 coins / 2 400 F CFA</div>
-      <select class="select-pay" onchange="selectPayment(this,72)">
-        <option value="">--Payer avec--</option>
-        <option value="coins">Coins</option>
-        <option value="fcfa">FCFA</option>
-      </select>
-    </div>
+  <div class="avatar">
+    <img src="https://files.catbox.moe/36ywf8.jpeg">
   </div>
+
+  <h2>Bot Management</h2>
+  <p id="botTimer">Bot inactif</p>
+  <p>Coins : <b id="coins">0</b></p>
+
+  <a href="/pair" id="pairBtn" class="btn">Pair Bot</a>
+  <a href="/qrpage" id="qrBtn" class="btn">QR Code</a>
+  <button id="watchAdBtn" class="btn">Watch Ad (+1 coin)</button>
+
+</div>
 </div>
 
-<a href="/pair" class="btn" id="pairBtn"><i class="fas fa-link"></i> Pairing Code</a>
-<a href="/qrpage" class="btn" id="qrBtn"><i class="fas fa-qrcode"></i> QR Code</a>
-
-<button id="watchAdBtn" class="btn"><i class="fas fa-video"></i> Watch Ad & Get 1 Coin</button>
-
-<div id="adModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:9999;align-items:center;justify-content:center;">
-  <video id="adVideo" width="320" height="240" autoplay style="border-radius:12px;box-shadow:0 0 20px #38bdf8;">
-    <source src="https://files.catbox.moe/miegza.mp4" type="video/mp4">
-    Votre navigateur ne supporte pas la vidéo.
-  </video>
+<!-- BOTTOM -->
+<div class="bottom">
+  <a href="/" class="active">Bot</a>
+  <a href="/panel">Achat</a>
+  <a href="/coins">Coins</a>
 </div>
-
-<div class="result-message" id="resultMsg"></div>
-</section>
-</main>
 
 <script>
-let botTimeRemaining=0;
-let userCoins=0;
-let timerInterval;
+let botTimeRemaining=0,userCoins=0,timerInterval;
 
-const sideMenu=document.getElementById('sideMenu');
-const menuOverlay=document.getElementById('menuOverlay');
 const coinsEl=document.getElementById('coins');
 const botTimer=document.getElementById('botTimer');
 const pairBtn=document.getElementById('pairBtn');
 const qrBtn=document.getElementById('qrBtn');
-const menuPair=document.getElementById('menuPair');
-const menuQR=document.getElementById('menuQR');
-const menuUser=document.getElementById('menuUser');
-const menuReferral=document.getElementById('menuReferral');
-
-const watchAdBtn = document.getElementById('watchAdBtn');
-const adModal = document.getElementById('adModal');
-const adVideo = document.getElementById('adVideo');
 
 function toggleMenu(){
   sideMenu.classList.toggle('active');
   menuOverlay.classList.toggle('active');
 }
 
-function showMessage(msg,color='#ef4444',duration=3000){
-  if(!msg) return;
-  const container=document.createElement('div');
-  container.style.position='fixed';
-  container.style.top='50%';
-  container.style.left='50%';
-  container.style.transform='translate(-50%,-50%)';
-  container.style.background='linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01))';
-  container.style.backdropFilter='blur(12px) saturate(140%)';
-  container.style.border='1px solid rgba(56,189,248,0.22)';
-  container.style.padding='20px 28px';
-  container.style.borderRadius='18px';
-  container.style.color=color;
-  container.style.fontWeight='bold';
-  container.style.textAlign='center';
-  container.style.fontFamily='"JetBrains Mono", monospace';
-  container.style.fontSize='14px';
-  container.style.textShadow=color==='red'?'0 0 12px rgba(239,68,68,0.8)':'0 0 12px rgba(56,189,248,0.8)';
-  container.style.zIndex=9999;
-  container.style.boxShadow='0 10px 30px rgba(0,0,0,0.6), 0 0 20px rgba(56,189,248,0.05) inset';
-  container.textContent=msg;
-  document.body.appendChild(container);
-  setTimeout(()=>container.remove(),duration);
-}
-
-async function loadStatus(){
-  try{
-    const res=await fetch('/coins');
-    const data=await res.json();
-    if(data.error){ window.location.href='/login'; return; }
-    userCoins=data.coins||0;
-    botTimeRemaining=data.botActiveRemaining||0;
-    coinsEl.textContent=userCoins;
-    menuUser.textContent='👤 '+(data.username||'User');
-    menuReferral.href='/referral?user='+encodeURIComponent(data.username||'user');
-
-    updateMenuState();
-    updateTimer();
-  }catch(e){ console.error(e); }
-}
-
-function updateMenuState(){
-  if(botTimeRemaining<=0){
-    pairBtn.classList.add('disabled'); qrBtn.classList.add('disabled');
-    menuPair.classList.add('disabled'); menuQR.classList.add('disabled');
-    pairBtn.setAttribute('href','#'); qrBtn.setAttribute('href','#');
-    menuPair.setAttribute('href','#'); menuQR.setAttribute('href','#');
-    pairBtn.onclick = e=>{ e.preventDefault(); showMessage("Bot inactif"); };
-    qrBtn.onclick = e=>{ e.preventDefault(); showMessage("Bot inactif"); };
-    menuPair.onclick = e=>{ e.preventDefault(); showMessage("Bot inactif"); };
-    menuQR.onclick = e=>{ e.preventDefault(); showMessage("Bot inactif"); };
-  } else {
-    pairBtn.classList.remove('disabled'); qrBtn.classList.remove('disabled');
-    menuPair.classList.remove('disabled'); menuQR.classList.remove('disabled');
-    pairBtn.setAttribute('href','/pair'); qrBtn.setAttribute('href','/qrpage');
-    menuPair.setAttribute('href','/pair'); menuQR.setAttribute('href','/qrpage');
-    pairBtn.onclick = null; qrBtn.onclick = null;
-    menuPair.onclick = null; menuQR.onclick = null;
-  }
+function toast(msg){
+  const t=document.createElement('div');
+  t.className='toast';t.textContent=msg;
+  document.body.appendChild(t);
+  setTimeout(()=>t.remove(),2500);
 }
 
 function updateTimer(){
   if(timerInterval) clearInterval(timerInterval);
-  if(botTimeRemaining<=0){ botTimer.textContent='Bot inactif'; updateMenuState(); return; }
-
-  const update=()=>{
-    if(botTimeRemaining<=0){
-      botTimer.textContent='Bot inactif';
-      clearInterval(timerInterval);
-      updateMenuState();
-      return;
-    }
+  if(botTimeRemaining<=0){
+    botTimer.textContent="Bot inactif";
+    pairBtn.classList.add('disabled');
+    qrBtn.classList.add('disabled');
+    return;
+  }
+  pairBtn.classList.remove('disabled');
+  qrBtn.classList.remove('disabled');
+  timerInterval=setInterval(()=>{
+    if(botTimeRemaining<=0){updateTimer();return;}
     const h=Math.floor(botTimeRemaining/3600000);
     const m=Math.floor((botTimeRemaining%3600000)/60000);
     const s=Math.floor((botTimeRemaining%60000)/1000);
-    botTimer.textContent=`Bot actif : ${h}h ${m}m ${s}s`;
+    botTimer.textContent=`Actif : ${h}h ${m}m ${s}s`;
     botTimeRemaining-=1000;
-  };
-  update();
-  timerInterval=setInterval(update,1000);
+  },1000);
 }
 
-async function selectPayment(select,hours){
-  const choice=select.value; if(!choice) return;
-  const priceCoins={24:20,48:40,72:60};
-  const priceFcfa={24:800,48:1600,72:2400};
-
-  if(choice==='coins'){
-    if(userCoins<priceCoins[hours]){ showMessage(`Coins insuffisants (${priceCoins[hours]} requis)`); select.value=''; return; }
-    if(!confirm(`Confirmer l'activation du bot pour ${hours}h pour ${priceCoins[hours]} coins ?`)){ select.value=''; return; }
-    const res=await fetch('/buy-bot',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({duration:hours})});
-    const data=await res.json();
-    if(data.error) showMessage(data.error);
-    else{
-      showMessage(data.status,'#38bdf8');
-      userCoins=data.coins;
-      botTimeRemaining=data.botActiveRemaining;
-      coinsEl.textContent=userCoins;
-      updateTimer();
-      updateMenuState();
-    }
-  }
-
-  if(choice==='fcfa'){
-    const paymentId="moneyfusion_"+Date.now();
-    const amount=priceFcfa[hours];
-    const url=`https://payin.moneyfusion.net/payment/69620e03013a0771970d2b80/${amount}/${paymentId}`;
-    window.location.href=url;
-  }
-  select.value='';
+async function loadStatus(){
+  const r=await fetch('/coins');
+  const d=await r.json();
+  if(d.error){location.href='/login';return;}
+  userCoins=d.coins||0;
+  botTimeRemaining=d.botActiveRemaining||0;
+  coinsEl.textContent=userCoins;
+  updateTimer();
 }
 
-watchAdBtn.addEventListener('click', async () => {
-  const res = await fetch('/watch-ad');
-  const data = await res.json();
-  if(data.error){ showMessage(data.error); return; }
-  if(data.allowed){
-    adModal.style.display = 'flex';
-    adVideo.currentTime = 0;
-    adVideo.play();
-  } else {
-    showMessage("Vous avez déjà utilisé cette fonctionnalité 2 fois aujourd'hui !");
-  }
-});
-
-adVideo.addEventListener('ended', async () => {
-  adModal.style.display = 'none';
-  const res = await fetch('/watch-ad/complete', {method:'POST'});
-  const data = await res.json();
-  if(data.success){
-    showMessage("Vous avez gagné 1 coin !", "#38bdf8");
-    userCoins += 1;
-    coinsEl.textContent = userCoins;
-  } else if(data.error){
-    showMessage(data.error);
-  }
-});
+document.getElementById('watchAdBtn').onclick=async()=>{
+  const r=await fetch('/watch-ad');
+  const d=await r.json();
+  if(d.allowed){toast("Regardez la pub…");}
+  else toast("Limite atteinte");
+};
 
 loadStatus();
 </script>

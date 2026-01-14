@@ -89,6 +89,7 @@ app.use(session({
   resave: false,
   saveUninitialized: false,
 }));
+app.use(express.static(path.join(__dirname))); // sert HTML/CSS/JS
 
 const requireAuth = async (req, res, next) => {
   if (!req.session.user) return res.status(401).json({ error: "Non connecté" });
@@ -103,9 +104,6 @@ app.use("/pair-api", pairRouter);
 app.get("/login", (req, res) => res.sendFile(path.join(__dirname, "login.html")));
 app.get("/register", (req, res) => res.sendFile(path.join(__dirname, "register.html")));
 app.get("/", requireAuth, (req, res) => res.sendFile(path.join(__dirname, "index.html")));
-app.get("/pair", requireAuth, (req, res) => res.sendFile(path.join(__dirname, "pair.html")));
-app.get("/qrpage", requireAuth, (req, res) => res.sendFile(path.join(__dirname, "qr.html")));
-app.get("/referral", requireAuth, (req, res) => res.sendFile(path.join(__dirname, "referral.html")));
 
 // ======================= AUTH =======================
 app.post("/register", async (req, res) => {
@@ -170,50 +168,56 @@ app.get("/coins", requireAuth, async (req, res) => {
   });
 });
 
-// ======================= MONEY FUSION PAY UNIFIÉ =======================
-app.post("/pay", requireAuth, async (req,res) => {
+// ======================= MONEY FUSION PAY =======================
+app.post("/pay-bot", requireAuth, async (req, res) => {
   try {
-    const { type, option } = req.body; // type="bot", option="24h"
-    const pricesBot = { "24h": 500, "48h": 1000, "72h": 1500 };
-
-    if(type !== "bot") return res.json({ error:"Option invalide" });
-    const amount = pricesBot[option];
-    if(!amount) return res.json({ error:"Durée invalide" });
-
-    const { rows } = await pool.query("SELECT * FROM users WHERE username=$1",[req.session.user.username]);
+    const { amount } = req.body;
+    const { rows } = await pool.query("SELECT * FROM users WHERE username=$1", [req.session.user.username]);
     const user = rows[0];
-    if(!user) return res.json({ error:"Utilisateur introuvable" });
+    if(!user) return res.json({ error: "Utilisateur introuvable" });
 
-    const paymentId = "moneyfusion_"+Date.now();
-    const url=`https://payin.moneyfusion.net/payment/${MERCHANT_ID}/${amount}/${paymentId}`;
-    res.json({ url });
-  } catch(e){ console.error(e); res.json({ error:"Erreur serveur" }); }
+    const paymentId = "MF_" + Date.now();
+    const response = await fetch("https://api.moneyfusion.net/v1/payin", {
+      method:"POST",
+      headers:{ "Content-Type":"application/json", "Authorization":`Bearer ${MF_API_KEY}` },
+      body:JSON.stringify({
+        merchant_id: MERCHANT_ID,
+        amount:Number(amount),
+        currency:"XAF",
+        payment_id:paymentId,
+        redirect_url:`${req.protocol}://${req.get("host")}/payment-success`,
+        webhook_url:`${req.protocol}://${req.get("host")}/webhook`
+      })
+    });
+    const data = await response.json();
+    if(!data.data || !data.data.url) return res.json({ error: "Erreur paiement MoneyFusion" });
+
+    await pool.query("INSERT INTO payments (payment_id,user_id,amount,status) VALUES ($1,$2,$3,'pending')", [paymentId, user.id, amount]);
+    res.json({ url:data.data.url });
+  } catch(e){ console.error(e); res.json({ error: "Erreur serveur" }); }
 });
 
 // ======================= WEBHOOK =======================
-app.post("/webhook", async (req,res)=>{
-  const data=req.body;
+app.post("/webhook", async (req, res) => {
+  const data = req.body;
   if(!data || data.status!=="success") return res.send("IGNORED");
 
-  const { rows: payRows } = await pool.query("SELECT * FROM payments WHERE payment_id=$1",[data.payment_id]);
+  const { rows: payRows } = await pool.query("SELECT * FROM payments WHERE payment_id=$1", [data.payment_id]);
   const pay = payRows[0];
-  if(!pay || pay.status==="success") return res.send("IGNORED");
+  if(!pay) return res.send("NOT FOUND");
+  if(pay.status==="success") return res.send("ALREADY PAID");
 
-  await pool.query("UPDATE payments SET status='success' WHERE id=$1",[pay.id]);
+  await pool.query("UPDATE payments SET status='success' WHERE id=$1", [pay.id]);
 
-  const { rows: userRows } = await pool.query("SELECT * FROM users WHERE id=$1",[pay.user_id]);
+  const { rows: userRows } = await pool.query("SELECT * FROM users WHERE id=$1", [pay.user_id]);
   const user = userRows[0];
   if(!user) return res.send("USER NOT FOUND");
 
-  const option = pay.meta.option;
   const now = Date.now();
+  const prev = user.botActiveUntil && Number(user.botActiveUntil) > now ? Number(user.botActiveUntil) : now;
+  const newBotUntil = prev + 24*3600*1000; // +24h par achat
 
-  if(pay.type==="bot"){
-    const hours = parseInt(option.replace("h",""));
-    const until = Math.max(user.botActiveUntil, now) + hours*3600*1000;
-    await pool.query("UPDATE users SET botActiveUntil=$1 WHERE id=$2",[until,user.id]);
-    await pool.query("INSERT INTO bot_purchases (user_id,duration,coins_spent) VALUES ($1,$2,0)",[user.id,hours]);
-  }
+  await pool.query("UPDATE users SET botActiveUntil=$1 WHERE id=$2", [newBotUntil, user.id]);
 
   res.send("OK");
 });

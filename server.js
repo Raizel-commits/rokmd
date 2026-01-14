@@ -89,7 +89,7 @@ app.use(session({
   resave: false,
   saveUninitialized: false,
 }));
-app.use(express.static(path.join(__dirname))); // sert HTML/CSS/JS
+app.use(express.static(path.join(__dirname))); // HTML/CSS/JS
 
 const requireAuth = async (req, res, next) => {
   if (!req.session.user) return res.status(401).json({ error: "Non connecté" });
@@ -115,10 +115,11 @@ app.post("/register", async (req, res) => {
     if (exists.length) return res.json({ error: "Nom ou email déjà utilisé" });
 
     const hash = await bcrypt.hash(password, 10);
-    await pool.query(
-      "INSERT INTO users (username, email, password) VALUES ($1, $2, $3)",
+    const { rows } = await pool.query(
+      "INSERT INTO users (username, email, password) VALUES ($1, $2, $3) RETURNING *",
       [username, email, hash]
     );
+    const user = rows[0];
 
     // Gestion parrainage
     if (ref) {
@@ -164,7 +165,8 @@ app.get("/coins", requireAuth, async (req, res) => {
     coins: user.coins,
     botActiveRemaining: Math.max(0, Number(user.botActiveUntil || 0) - Date.now()),
     username: user.username,
-    referrals: JSON.parse(user.referrals || '[]')
+    referrals: JSON.parse(user.referrals || '[]'),
+    userId: user.username
   });
 });
 

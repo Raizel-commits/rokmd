@@ -170,68 +170,23 @@ app.get("/coins", requireAuth, async (req, res) => {
   });
 });
 
-// ======================= ACHAT BOT =======================
-app.post("/buy-bot", requireAuth, async (req, res) => {
-  try {
-    const duration = parseInt(req.body.duration);
-    const prices = {24:20,48:40,72:60};
-
-    const { rows } = await pool.query("SELECT * FROM users WHERE username=$1", [req.session.user.username]);
-    const user = rows[0];
-    if(!user) return res.json({ error: "Utilisateur introuvable" });
-    if(!prices[duration]) return res.json({ error: "Durée invalide" });
-    if(user.coins < prices[duration]) return res.json({ error: `Coins insuffisants (${prices[duration]} requis)` });
-
-    const now = Date.now();
-    const prev = user.botActiveUntil && Number(user.botActiveUntil) > now ? Number(user.botActiveUntil) : now;
-    const newBotUntil = prev + duration*3600*1000;
-    const newCoins = user.coins - prices[duration];
-
-    await pool.query("UPDATE users SET coins=$1, botActiveUntil=$2 WHERE id=$3", [newCoins, newBotUntil, user.id]);
-
-    await pool.query("INSERT INTO bot_purchases (user_id,duration,coins_spent) VALUES ($1,$2,$3)", [user.id,duration,prices[duration]]);
-
-    res.json({ status: `Bot activé pour ${duration}h`, coins: newCoins, botActiveRemaining: newBotUntil - now });
-  } catch(e){ console.error(e); res.json({ error: "Erreur serveur" }); }
-});
-
 // ======================= MONEY FUSION PAY UNIFIÉ =======================
 app.post("/pay", requireAuth, async (req,res) => {
   try {
-    const { type, option } = req.body; // type="bot"|"coins", option="24h" ou "100"
+    const { type, option } = req.body; // type="bot", option="24h"
     const pricesBot = { "24h": 500, "48h": 1000, "72h": 1500 };
-    const pricesCoins = { "50": 500, "100": 1000, "250": 2000 };
 
-    let amount;
-    if(type==="bot") amount=pricesBot[option];
-    else if(type==="coins") amount=pricesCoins[option];
-    else return res.json({ error:"Option invalide" });
+    if(type !== "bot") return res.json({ error:"Option invalide" });
+    const amount = pricesBot[option];
+    if(!amount) return res.json({ error:"Durée invalide" });
 
     const { rows } = await pool.query("SELECT * FROM users WHERE username=$1",[req.session.user.username]);
     const user = rows[0];
     if(!user) return res.json({ error:"Utilisateur introuvable" });
 
-    const paymentId = "MF_"+Date.now();
-    const response = await fetch("https://api.moneyfusion.net/v1/payin",{
-      method:"POST",
-      headers:{ "Content-Type":"application/json", "Authorization":`Bearer ${MF_API_KEY}` },
-      body:JSON.stringify({
-        merchant_id: MERCHANT_ID,
-        amount:Number(amount),
-        currency:"XAF",
-        payment_id:paymentId,
-        redirect_url:`${req.protocol}://${req.get("host")}/`,
-        webhook_url:`${req.protocol}://${req.get("host")}/webhook`
-      })
-    });
-
-    const data = await response.json();
-    if(!data?.data?.url) return res.json({ error:"Erreur MoneyFusion" });
-
-    await pool.query("INSERT INTO payments (payment_id,user_id,amount,type,meta,status) VALUES ($1,$2,$3,$4,$5,'pending')",
-      [paymentId,user.id,amount,type,{option}]);
-
-    res.json({ url: data.data.url });
+    const paymentId = "moneyfusion_"+Date.now();
+    const url=`https://payin.moneyfusion.net/payment/${MERCHANT_ID}/${amount}/${paymentId}`;
+    res.json({ url });
   } catch(e){ console.error(e); res.json({ error:"Erreur serveur" }); }
 });
 
@@ -260,12 +215,6 @@ app.post("/webhook", async (req,res)=>{
     await pool.query("INSERT INTO bot_purchases (user_id,duration,coins_spent) VALUES ($1,$2,0)",[user.id,hours]);
   }
 
-  if(pay.type==="coins"){
-    const coins = parseInt(option);
-    await pool.query("UPDATE users SET coins=coins+$1 WHERE id=$2",[coins,user.id]);
-    await pool.query("INSERT INTO coin_history (user_id,change,reason) VALUES ($1,$2,'buy_coins')",[user.id,coins]);
-  }
-
   res.send("OK");
 });
 
@@ -273,7 +222,7 @@ app.post("/webhook", async (req,res)=>{
 app.get("/watch-ad", requireAuth, async (req,res) => {
   const { rows } = await pool.query("SELECT * FROM users WHERE username=$1", [req.session.user.username]);
   const user = rows[0];
-  if(!user) return res.json({ error: "Utilisateur introuvable" });
+  if (!user) return res.json({ error: "Utilisateur introuvable" });
 
   const today = new Date().toISOString().split('T')[0];
   let adCount = user.adCount || 0;
@@ -311,4 +260,4 @@ app.post("/watch-ad/complete", requireAuth, async (req,res) => {
 });
 
 // ======================= START SERVER =======================
-app.listen(PORT, ()=>console.log(`🚀 Server lancé sur le port ${PORT}`));
+app.listen(PORT, ()=>console.log(`🚀 Server Rok XD MiniBot lancé sur le port ${PORT}`));

@@ -17,47 +17,51 @@
   --text:#e5e7eb;
   --muted:#9ca3af;
   --highlight:#34d399;
+  --glass-border: rgba(139,92,246,0.22);
 }
 *{box-sizing:border-box;}
 body{margin:0;font-family:"JetBrains Mono", monospace;background:linear-gradient(180deg,#050506,#0b0b0d);color:var(--text);}
 .header{display:flex;justify-content:space-between;align-items:center;padding:16px 18px;border-bottom:1px solid var(--border);}
-.menu-btn{font-size:22px;cursor:pointer;color:var(--violet);}
+.menu-btn{font-size:22px;cursor:pointer;color:var(--violet);transition:.3s;}
+.menu-btn:hover{transform:rotate(90deg);}
 .side-menu{position:fixed;top:0;left:-260px;width:260px;height:100%;background:#0b0b0d;border-right:1px solid var(--border);transition:.3s;z-index:1000;}
 .side-menu.active{left:0;}
 .menu-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;z-index:900;}
 .menu-overlay.active{display:flex;}
-.side-header{padding:16px;border-bottom:1px solid var(--border);}
-.side-links a{display:flex;gap:12px;padding:14px;color:#e5e7eb;text-decoration:none;transition:.2s;}
-.side-links a:hover{background:#141417;color:var(--violet);}
+.side-header{padding:16px;border-bottom:1px solid var(--border);font-weight:bold;color:var(--violet);}
+.side-links a{display:flex;gap:12px;padding:14px;color:#e5e7eb;text-decoration:none;transition:.3s;border-radius:8px;}
+.side-links a:hover{background:rgba(139,92,246,0.15);color:var(--violet);}
+.side-links a.active{background:rgba(139,92,246,0.22);}
 .container{padding:20px;display:flex;justify-content:center;flex-wrap:wrap;gap:20px;}
-.card{max-width:420px;width:100%;background:var(--card);border:1px solid var(--border);border-radius:16px;padding:20px;box-shadow:0 10px 30px rgba(0,0,0,.6);text-align:center;transition:.3s;position:relative;}
+.section{width:100%;max-width:900px;}
+.card{max-width:420px;width:100%;background:var(--card);border:1px solid var(--border);border-radius:16px;padding:20px;box-shadow:0 10px 30px rgba(0,0,0,.6);text-align:center;transition:.3s;position:relative;backdrop-filter: blur(10px) saturate(140%);}
 .card:hover{transform:translateY(-4px) scale(1.02);}
 .avatar img{width:70px;height:70px;border-radius:50%;border:2px solid var(--violet);}
-.btn{width:100%;margin-top:12px;padding:14px;background:var(--violet);color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:600;cursor:pointer;transition:.2s;}
-.btn:hover{background:#7c3aed;}
-.btn.disabled{opacity:.5;pointer-events:none;}
-.toast{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#141417;border:1px solid var(--border);padding:18px 26px;border-radius:16px;font-weight:bold;z-index:9999;}
+.btn{width:100%;margin-top:12px;padding:14px;background:var(--violet);color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:600;cursor:pointer;transition:.3s;}
+.btn:hover{background:#7c3aed;transform:scale(1.05);}
+.btn:disabled{opacity:.5;pointer-events:none;}
+.toast{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(20,20,23,0.95);border:1px solid var(--glass-border);padding:18px 26px;border-radius:16px;font-weight:bold;z-index:9999;color:var(--highlight);}
 .bottom{position:fixed;bottom:0;left:0;right:0;background:#0b0b0d;border-top:1px solid var(--border);display:flex;justify-content:space-around;padding:10px 0;}
 .bottom a{text-decoration:none;color:var(--muted);}
 .bottom a.active{color:var(--violet);}
-.options-panel{display:flex;flex-direction:column;gap:12px;margin-top:16px;text-align:left;}
-.options-panel h3{margin:0 0 8px 0;color:var(--violet);}
-.options-panel button{width:auto;padding:10px 14px;cursor:pointer;transition:.2s;border-radius:8px;}
-.options-panel button:hover{background:#7c3aed;color:#fff;}
-#adModal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:9999;align-items:center;justify-content:center;}
-#adVideo{border-radius:12px;box-shadow:0 0 20px #38bdf8;}
-.qrimg{width:240px;height:240px;margin:0 auto;display:block;background:#fff;padding:10px;border-radius:12px;}
 input[type="tel"], input[type="text"]{width:100%;padding:12px;border-radius:10px;border:1px solid rgba(56,189,248,0.06);background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.006));color:#eafff2;margin-bottom:12px;outline:none;font-size:14px;}
 input::placeholder{color:rgba(200,255,255,0.22);}
+.qrimg{width:240px;height:240px;margin:0 auto;display:block;background:#fff;padding:10px;border-radius:12px;}
 
-/* Tarifs style VPS */
+/* Price cards */
 .price-card{border:1px solid var(--border);border-radius:16px;padding:20px;transition:.3s;position:relative;background:#1a1a1d;text-align:center;box-shadow:0 10px 30px rgba(0,0,0,.5);}
 .price-card:hover{transform:translateY(-5px) scale(1.02);border-color:var(--violet);}
 .price-card .title{font-size:20px;font-weight:600;color:var(--violet);margin-bottom:12px;}
 .price-card .price{font-size:28px;font-weight:700;color:var(--highlight);margin-bottom:12px;}
 .price-card ul{list-style:none;padding:0;margin:0 0 12px 0;text-align:left;}
 .price-card ul li{padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.05);}
-.price-card .buy-btn{padding:12px 20px;font-weight:600;}
+.price-card .buy-btn{padding:12px 20px;font-weight:600;cursor:pointer;transition:.2s;}
+.price-card .buy-btn:hover{background:rgba(139,92,246,0.22);color:#fff;transform:scale(1.05);}
+
+/* Parrainage */
+.referral{display:flex;gap:8px;align-items:center;margin-top:10px;}
+.referral input{flex:1;}
+.referral button{width:auto;padding:8px 12px;}
 </style>
 </head>
 <body>
@@ -95,6 +99,10 @@ input::placeholder{color:rgba(200,255,255,0.22);}
       <p id="botTimer">Bot inactif</p>
       <p>Coins : <b id="coins">0</b></p>
       <button id="watchAdBtn" class="btn"><i class="fas fa-video"></i> Watch Ad & Get 1 Coin</button>
+      <div class="referral">
+        <input id="referralLink" type="text" readonly>
+        <button onclick="copyReferral()" class="btn">Copier</button>
+      </div>
     </div>
   </div>
 
@@ -102,30 +110,33 @@ input::placeholder{color:rgba(200,255,255,0.22);}
   <div id="section-achat" class="section" style="display:none;">
     <div class="price-card">
       <div class="title">24h Bot</div>
-      <div class="price">500 XAF</div>
+      <div class="price">500 XAF / 20 Coins</div>
       <ul>
         <li>Bot actif 24 heures</li>
-        <li>Coins inclus : 0</li>
+        <li>Coins requis : 20</li>
       </ul>
-      <button class="btn buy-btn" onclick="buyBot(24)">Acheter</button>
+      <button class="btn buy-btn" onclick="buyBotFCFA(24)">Acheter FCFA</button>
+      <button class="btn buy-btn" onclick="buyBotCoins(24)">Acheter Coins</button>
     </div>
     <div class="price-card">
       <div class="title">48h Bot</div>
-      <div class="price">1000 XAF</div>
+      <div class="price">1000 XAF / 40 Coins</div>
       <ul>
         <li>Bot actif 48 heures</li>
-        <li>Coins inclus : 0</li>
+        <li>Coins requis : 40</li>
       </ul>
-      <button class="btn buy-btn" onclick="buyBot(48)">Acheter</button>
+      <button class="btn buy-btn" onclick="buyBotFCFA(48)">Acheter FCFA</button>
+      <button class="btn buy-btn" onclick="buyBotCoins(48)">Acheter Coins</button>
     </div>
     <div class="price-card">
       <div class="title">72h Bot</div>
-      <div class="price">1500 XAF</div>
+      <div class="price">1500 XAF / 60 Coins</div>
       <ul>
         <li>Bot actif 72 heures</li>
-        <li>Coins inclus : 0</li>
+        <li>Coins requis : 60</li>
       </ul>
-      <button class="btn buy-btn" onclick="buyBot(72)">Acheter</button>
+      <button class="btn buy-btn" onclick="buyBotFCFA(72)">Acheter FCFA</button>
+      <button class="btn buy-btn" onclick="buyBotCoins(72)">Acheter Coins</button>
     </div>
   </div>
 
@@ -147,6 +158,7 @@ input::placeholder{color:rgba(200,255,255,0.22);}
       <h2>Pairing & Config</h2>
       <input id="phonePair" type="tel" placeholder="2376XXXXXXX">
       <button id="pairBtn2" class="btn">Générer le code</button>
+      <button onclick="copyPairCode()" class="btn">Copier Code</button>
       <div class="result" id="pairResult"></div>
       <input id="prefix" type="text" placeholder="Préfixe commandes (ex: !)">
       <button id="configBtn" class="btn">Sauvegarder Config</button>
@@ -183,6 +195,7 @@ input::placeholder{color:rgba(200,255,255,0.22);}
 
 <script>
 let botTimeRemaining=0,userCoins=0,timerInterval;
+let currentPairCode='';
 const coinsEl=document.getElementById('coins');
 const botTimer=document.getElementById('botTimer');
 const watchAdBtn=document.getElementById('watchAdBtn');
@@ -190,8 +203,9 @@ const sideMenu=document.getElementById('sideMenu');
 const menuOverlay=document.getElementById('menuOverlay');
 const adModal=document.getElementById('adModal');
 const adVideo=document.getElementById('adVideo');
+const referralInput=document.getElementById('referralLink');
 
-// Sections SPA
+// SPA Sections
 function showSection(name){
   document.querySelectorAll('.section').forEach(s=>s.style.display='none');
   document.getElementById('section-'+name).style.display='block';
@@ -202,16 +216,16 @@ function showSection(name){
   });
 }
 
-// MENU TOGGLE
+// MENU
 function toggleMenu(){ sideMenu.classList.toggle('active'); menuOverlay.classList.toggle('active'); }
 
 // TOAST
 function toast(msg){ const t=document.createElement('div'); t.className='toast'; t.textContent=msg; document.body.appendChild(t); setTimeout(()=>t.remove(),2500); }
 
-// UPDATE BOT TIMER
+// TIMER BOT
 function updateTimer(){
   if(timerInterval) clearInterval(timerInterval);
-  if(botTimeRemaining<=0){ botTimer.textContent="Bot inactif"; return; }
+  if(botTimeRemaining<=0){ botTimer.textContent="Bot inactif"; checkBotAccess(); return; }
   timerInterval=setInterval(()=>{
     if(botTimeRemaining<=0){updateTimer(); return;}
     const h=Math.floor(botTimeRemaining/3600000);
@@ -219,15 +233,18 @@ function updateTimer(){
     const s=Math.floor((botTimeRemaining%60000)/1000);
     botTimer.textContent=`Actif : ${h}h ${m}m ${s}s`;
     botTimeRemaining-=1000;
+    checkBotAccess();
   },1000);
 }
 
-// LOAD USER STATUS
+// LOAD STATUS
 async function loadStatus(){
   const r=await fetch('/coins'); const d=await r.json();
   if(d.error){location.href='/login'; return;}
   userCoins=d.coins||0; botTimeRemaining=d.botActiveRemaining||0;
-  coinsEl.textContent=userCoins; updateTimer();
+  coinsEl.textContent=userCoins;
+  referralInput.value=`https://rokxd.example.com/?ref=${d.userId}`;
+  updateTimer();
 }
 
 // WATCH ADS
@@ -243,16 +260,46 @@ watchAdBtn.onclick=()=>{
   }
 };
 
-// BUY BOT
+// COPY REFERRAL
+function copyReferral(){
+  referralInput.select(); referralInput.setSelectionRange(0,99999);
+  navigator.clipboard.writeText(referralInput.value);
+  toast("Lien copié !");
+}
+
+// BUY BOT COINS / FCFA
 const priceFcfaBot={24:500,48:1000,72:1500};
-function buyBot(hours){
+const priceCoinsBot={24:20,48:40,72:60};
+
+async function buyBotCoins(hours){
+  if(userCoins < priceCoinsBot[hours]){ toast("Coins insuffisants"); return; }
+  const res=await fetch('/pay',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({type:'bot',option:hours+'h'})});
+  const data=await res.json();
+  if(data.error){ toast(data.error); return; }
+  toast(`Bot acheté ${hours}h avec ${priceCoinsBot[hours]} coins !`);
+  userCoins -= priceCoinsBot[hours]; coinsEl.textContent=userCoins;
+  botTimeRemaining += hours*3600*1000;
+  updateTimer();
+}
+
+function buyBotFCFA(hours){
   const paymentId="moneyfusion_"+Date.now();
   const amount=priceFcfaBot[hours];
   const url=`https://payin.moneyfusion.net/payment/69620e03013a0771970d2b80/${amount}/${paymentId}`;
   window.location.href=url;
 }
 
-// PAIRING
+// BOT ACCESS CHECK
+function checkBotAccess(){
+  const blocked = botTimeRemaining<=0;
+  ['section-pair','section-qr'].forEach(id=>{
+    const sec=document.getElementById(id);
+    sec.querySelectorAll('input, button').forEach(el=>el.disabled=blocked);
+    sec.style.opacity = blocked ? 0.5 : 1;
+  });
+}
+
+// PAIR CODE
 const pairBtn2=document.getElementById("pairBtn2");
 const pairResult=document.getElementById("pairResult");
 pairBtn2.onclick=async()=>{
@@ -260,10 +307,15 @@ pairBtn2.onclick=async()=>{
   if(!phone){ pairResult.innerHTML='<span style="color:#ef4444;">Numéro requis</span>'; return;}
   pairBtn2.disabled=true; pairResult.innerHTML='<span style="color:#8b5cf6;">Génération en cours...</span>';
   try{ const r=await fetch(`/pair-api/code?number=${encodeURIComponent(phone)}`); const d=await r.json();
-    if(d.code){ pairResult.innerHTML=`<span style="color:#34d399;">Code : ${d.code}</span>`; } else pairResult.innerHTML=`<span style="color:#ef4444;">Erreur : ${d.error||d.status}</span>`;}
+    if(d.code){ currentPairCode=d.code; pairResult.innerHTML=`<span style="color:#34d399;">Code : ${d.code}</span>`; } else pairResult.innerHTML=`<span style="color:#ef4444;">Erreur : ${d.error||d.status}</span>`;}
   catch(e){ pairResult.innerHTML='<span style="color:#ef4444;">Erreur serveur</span>'; console.error(e);}
   pairBtn2.disabled=false;
 };
+function copyPairCode(){
+  if(!currentPairCode){ toast("Aucun code à copier"); return;}
+  navigator.clipboard.writeText(currentPairCode);
+  toast("Code Pair copié !");
+}
 
 // CONFIG
 const configBtn=document.getElementById("configBtn");
@@ -294,6 +346,5 @@ btnQR.onclick=async()=>{
 
 loadStatus();
 </script>
-
 </body>
 </html>

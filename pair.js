@@ -21,7 +21,6 @@ const PAIRING_DIR = "./sessions";
 const CONFIG_FILE = "./config.json";
 
 const { Pool } = pkg;
-const router = express.Router();
 // =======================
 // UTILITIES
 function formatNumber(num) {

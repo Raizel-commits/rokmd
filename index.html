@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ROK XD MiniBot • Dashboard</title>
+<title>Rok XD MiniBot • Dashboard</title>
 
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
@@ -16,102 +16,42 @@
   --violet:#8b5cf6;
   --text:#e5e7eb;
   --muted:#9ca3af;
-  --hover:#1e1e26;
 }
-
-*{box-sizing:border-box;margin:0;padding:0;font-family:"JetBrains Mono", monospace;}
-
-body{
-  background:linear-gradient(180deg,#050506,#0b0b0d);
-  color:var(--text);
-}
-
-/* ===== HEADER ===== */
-.header{
-  display:flex;justify-content:space-between;align-items:center;
-  padding:16px 18px;border-bottom:1px solid var(--border);
-  position:sticky;top:0;background:var(--bg);z-index:10;
-}
+*{box-sizing:border-box;}
+body{margin:0;font-family:"JetBrains Mono", monospace;background:linear-gradient(180deg,#050506,#0b0b0d);color:var(--text);}
+.header{display:flex;justify-content:space-between;align-items:center;padding:16px 18px;border-bottom:1px solid var(--border);}
 .menu-btn{font-size:22px;cursor:pointer;color:var(--violet);}
-
-/* ===== SIDE MENU ===== */
-.side-menu{
-  position:fixed;top:0;left:-260px;width:260px;height:100%;
-  background:var(--bg);border-right:1px solid var(--border);
-  transition:.3s;z-index:1000;
-}
+.side-menu{position:fixed;top:0;left:-260px;width:260px;height:100%;background:#0b0b0d;border-right:1px solid var(--border);transition:.3s;z-index:1000;}
 .side-menu.active{left:0;}
-.menu-overlay{
-  position:fixed;inset:0;background:rgba(0,0,0,.6);
-  display:none;z-index:900;
-}
-.menu-overlay.active{display:block;}
+.menu-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;z-index:900;}
+.menu-overlay.active{display:flex;}
 .side-header{padding:16px;border-bottom:1px solid var(--border);}
-.side-links a{
-  display:flex;gap:12px;padding:14px;color:#e5e7eb;
-  text-decoration:none;transition:.2s;
-}
-.side-links a.active,
-.side-links a:hover{background:var(--hover);color:var(--violet);}
-
-/* ===== CARDS ===== */
+.side-links a{display:flex;gap:12px;padding:14px;color:#e5e7eb;text-decoration:none;transition:.2s;}
+.side-links a:hover{background:#141417;color:var(--violet);}
 .container{padding:20px;display:flex;justify-content:center;flex-wrap:wrap;gap:20px;}
-.card{
-  max-width:360px;width:100%;background:var(--card);
-  border:1px solid var(--border);border-radius:16px;
-  padding:20px;box-shadow:0 10px 30px rgba(0,0,0,.6);
-  text-align:center;
-  transition:transform .3s, box-shadow .3s;
-}
-.card:hover{
-  transform: translateY(-5px);
-  box-shadow:0 15px 40px rgba(0,0,0,.8);
-}
-
-/* ===== BUTTONS ===== */
-.btn{
-  width:100%;margin-top:12px;padding:14px;
-  background:linear-gradient(45deg,#8b5cf6,#4c1d95);
-  color:#fff;border:none;border-radius:12px;
-  font-size:15px;font-weight:600;cursor:pointer;
-  transition:.3s;
-}
-.btn:hover{transform:scale(1.05);box-shadow:0 6px 15px rgba(139,92,246,.6);}
+.card{max-width:420px;width:100%;background:var(--card);border:1px solid var(--border);border-radius:16px;padding:20px;box-shadow:0 10px 30px rgba(0,0,0,.6);text-align:center;transition:.3s;position:relative;}
+.card:hover{transform:translateY(-4px) scale(1.02);}
+.avatar img{width:70px;height:70px;border-radius:50%;border:2px solid var(--violet);}
+.btn{width:100%;margin-top:12px;padding:14px;background:var(--violet);color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:600;cursor:pointer;transition:.2s;}
+.btn:hover{background:#7c3aed;}
 .btn.disabled{opacity:.5;pointer-events:none;}
-
-/* ===== OPTIONS PANEL ===== */
-.options-panel{display:flex;flex-direction:column;gap:12px;margin-top:16px;text-align:center;}
-.options-panel h3{margin:0 0 12px 0;color:var(--violet);}
-
-/* ===== FLOAT MESSAGE ===== */
-.toast{
-  position:fixed;top:50%;left:50%;
-  transform:translate(-50%,-50%);
-  background:var(--card);border:1px solid var(--border);
-  padding:18px 26px;border-radius:16px;
-  font-weight:bold;z-index:9999;
-}
-
-/* ===== BOTTOM ===== */
-.bottom{
-  position:fixed;bottom:0;left:0;right:0;
-  background:var(--bg);border-top:1px solid var(--border);
-  display:flex;justify-content:space-around;padding:10px 0;
-}
+.toast{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#141417;border:1px solid var(--border);padding:18px 26px;border-radius:16px;font-weight:bold;z-index:9999;}
+.bottom{position:fixed;bottom:0;left:0;right:0;background:#0b0b0d;border-top:1px solid var(--border);display:flex;justify-content:space-around;padding:10px 0;}
 .bottom a{text-decoration:none;color:var(--muted);}
 .bottom a.active{color:var(--violet);}
-
-/* ===== TABS ===== */
-.tab{display:none;}
-.tab.active{display:block;}
+.options-panel{display:flex;flex-direction:column;gap:12px;margin-top:16px;text-align:left;}
+.options-panel h3{margin:0 0 8px 0;color:var(--violet);}
+.options-panel button{width:auto;padding:10px 14px;cursor:pointer;transition:.2s;}
+.options-panel button:hover{background:#7c3aed;color:#fff;border-radius:8px;}
+#adModal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:9999;align-items:center;justify-content:center;}
+#adVideo{border-radius:12px;box-shadow:0 0 20px #38bdf8;}
 </style>
 </head>
-
 <body>
 
 <!-- HEADER -->
 <div class="header">
-  <h1>ROK XD MiniBot</h1>
+  <h1>Rok XD MiniBot</h1>
   <div class="menu-btn" onclick="toggleMenu()"><i class="fas fa-bars"></i></div>
 </div>
 
@@ -119,11 +59,11 @@ body{
 <div id="sideMenu" class="side-menu">
   <div class="side-header">ROK XD</div>
   <div class="side-links">
-    <a href="#" onclick="showTab('bot')" class="active"><i class="fas fa-robot"></i> Bot</a>
-    <a href="#" onclick="showTab('panel')"><i class="fas fa-shopping-cart"></i> Achat</a>
-    <a href="#" onclick="showTab('coins')"><i class="fas fa-coins"></i> Coins</a>
-    <a href="#" onclick="showTab('pair')"><i class="fas fa-link"></i> Pair</a>
-    <a href="#" onclick="showTab('qr')"><i class="fas fa-qrcode"></i> QR</a>
+    <a href="/" class="active"><i class="fas fa-robot"></i> Bot</a>
+    <a href="/panel"><i class="fas fa-shopping-cart"></i> Achat</a>
+    <a href="/coins"><i class="fas fa-coins"></i> Coins</a>
+    <a href="/pair"><i class="fas fa-link"></i> Pair</a>
+    <a href="/qrpage"><i class="fas fa-qrcode"></i> QR</a>
     <a href="/logout"><i class="fas fa-power-off"></i> Logout</a>
   </div>
 </div>
@@ -132,52 +72,55 @@ body{
 <!-- CONTENT -->
 <div class="container">
 
-  <!-- BOT TAB -->
-  <div id="tab-bot" class="tab active">
-    <div class="card">
-      <div class="avatar">
-        <img src="https://files.catbox.moe/36ywf8.jpeg">
-      </div>
-      <h2>Bot Management</h2>
-      <p id="botTimer">Bot inactif</p>
-      <p>Coins : <b id="coins">0</b></p>
-      <a href="/pair" id="pairBtn" class="btn">Pair Bot</a>
-      <a href="/qrpage" id="qrBtn" class="btn">QR Code</a>
-      <button id="watchAdBtn" class="btn">Watch Ad (+1 coin)</button>
+  <!-- BOT CARD -->
+  <div class="card">
+    <div class="avatar">
+      <img src="https://files.catbox.moe/36ywf8.jpeg">
+    </div>
+    <h2>Bot Management</h2>
+    <p id="botTimer">Bot inactif</p>
+    <p>Coins : <b id="coins">0</b></p>
+    <a href="/pair" id="pairBtn" class="btn">Pair Bot</a>
+    <a href="/qrpage" id="qrBtn" class="btn">QR Code</a>
+    <button id="watchAdBtn" class="btn"><i class="fas fa-video"></i> Watch Ad & Get 1 Coin</button>
+  </div>
+
+  <!-- ACHAT CARD -->
+  <div class="card">
+    <h2>Achat Bot</h2>
+    <div class="options-panel">
+      <h3>Durée du Bot</h3>
+      <button onclick="buyBot(24)">24h - 500 XAF</button>
+      <button onclick="buyBot(48)">48h - 1000 XAF</button>
+      <button onclick="buyBot(72)">72h - 1500 XAF</button>
     </div>
   </div>
 
-  <!-- ACHAT BOT TAB -->
-  <div id="tab-panel" class="tab">
-    <div class="card">
-      <h2>Achat Bot</h2>
-      <div class="options-panel">
-        <button onclick="buyBot('24')">24h - 500 XAF</button>
-        <button onclick="buyBot('48')">48h - 1000 XAF</button>
-        <button onclick="buyBot('72')">72h - 1500 XAF</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- COINS TAB -->
-  <div id="tab-coins" class="tab">
-    <div class="card">
-      <h2>Achat Coins</h2>
-      <div class="options-panel">
-        <button onclick="buyCoins('50')">50 coins - 500 XAF</button>
-        <button onclick="buyCoins('100')">100 coins - 1000 XAF</button>
-        <button onclick="buyCoins('250')">250 coins - 2000 XAF</button>
-      </div>
-    </div>
+  <!-- COINS CARD -->
+  <div class="card">
+    <h2>Coins</h2>
+    <p>Obtenez des coins gratuits :</p>
+    <ul style="text-align:left;">
+      <li>Regardez 2 pubs par jour (+1 coin par pub)</li>
+      <li>Parrainage : partagez votre lien pour gagner des coins</li>
+    </ul>
   </div>
 
 </div>
 
+<!-- AD MODAL -->
+<div id="adModal">
+  <video id="adVideo" width="320" height="240" autoplay>
+    <source src="https://files.catbox.moe/miegza.mp4" type="video/mp4">
+    Votre navigateur ne supporte pas la vidéo.
+  </video>
+</div>
+
 <!-- BOTTOM -->
 <div class="bottom">
-  <a href="#" onclick="showTab('bot')" class="active"><i class="fas fa-robot"></i></a>
-  <a href="#" onclick="showTab('panel')"><i class="fas fa-shopping-cart"></i></a>
-  <a href="#" onclick="showTab('coins')"><i class="fas fa-coins"></i></a>
+  <a href="/" class="active">Bot</a>
+  <a href="/panel">Achat</a>
+  <a href="/coins">Coins</a>
 </div>
 
 <script>
@@ -188,9 +131,10 @@ const botTimer=document.getElementById('botTimer');
 const pairBtn=document.getElementById('pairBtn');
 const qrBtn=document.getElementById('qrBtn');
 const watchAdBtn=document.getElementById('watchAdBtn');
-
 const sideMenu=document.getElementById('sideMenu');
 const menuOverlay=document.getElementById('menuOverlay');
+const adModal=document.getElementById('adModal');
+const adVideo=document.getElementById('adVideo');
 
 function toggleMenu(){
   sideMenu.classList.toggle('active');
@@ -234,47 +178,33 @@ async function loadStatus(){
   updateTimer();
 }
 
-watchAdBtn.onclick=async()=>{
-  const r=await fetch('/watch-ad');
-  const d=await r.json();
-  if(d.allowed){
-    toast("Regardez la pub…");
-    const complete = await fetch('/watch-ad/complete',{method:'POST'});
-    const result = await complete.json();
-    if(result.success){
-      userCoins=result.coins;
+// WATCH ADS
+let adCount=0;
+watchAdBtn.onclick=()=>{
+  if(adCount>=2){toast("Limite quotidienne atteinte"); return;}
+  adModal.style.display="flex";
+  adVideo.play();
+  adVideo.onended=async()=>{
+    adModal.style.display="none";
+    adCount++;
+    // Met à jour coins côté serveur
+    const res=await fetch('/watch-ad/complete',{method:'POST'});
+    const data=await res.json();
+    if(data.success){
+      userCoins=data.coins;
       coinsEl.textContent=userCoins;
       toast("+1 coin ajouté !");
     }
-  } else toast("Limite quotidienne atteinte");
+  }
 };
 
-async function buyBot(option){
-  try{
-    const r=await fetch('/pay-bot',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({amount:option*20})});
-    const d=await r.json();
-    if(d.error) return toast(d.error);
-    window.open(d.url,'_blank');
-  }catch(e){toast("Erreur paiement");console.error(e);}
-}
-
-async function buyCoins(option){
-  try{
-    const r=await fetch('/pay-bot',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({amount:option*10})});
-    const d=await r.json();
-    if(d.error) return toast(d.error);
-    window.open(d.url,'_blank');
-  }catch(e){toast("Erreur paiement");console.error(e);}
-}
-
-// ===== TABS =====
-function showTab(tab){
-  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-  document.getElementById('tab-'+tab).classList.add('active');
-  document.querySelectorAll('.bottom a').forEach(a=>a.classList.remove('active'));
-  document.querySelectorAll('.side-links a').forEach(a=>a.classList.remove('active'));
-  document.querySelector(`.bottom a[onclick*="${tab}"]`)?.classList.add('active');
-  document.querySelector(`.side-links a[onclick*="${tab}"]`)?.classList.add('active');
+// BUY BOT
+const priceFcfaBot={24:500,48:1000,72:1500};
+function buyBot(hours){
+  const paymentId="moneyfusion_"+Date.now();
+  const amount=priceFcfaBot[hours];
+  const url=`https://payin.moneyfusion.net/payment/69620e03013a0771970d2b80/${amount}/${paymentId}`;
+  window.location.href=url;
 }
 
 loadStatus();

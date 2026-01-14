@@ -370,16 +370,19 @@ router.get("/code", async (req, res) => {
   try {
     num = formatNumber(num);
 
-    // 🔒 CHECK BOT ACTIVE
-    const active = await isBotActive(num);
-    if (!active) {
+    const { rows } = await pool.query("SELECT botActiveUntil FROM users WHERE username=$1", [num]);
+    const activeUntil = rows[0]?.botactiveuntil || 0;
+
+    if (Date.now() > Number(activeUntil)) {
       return res.status(403).json({
         error: "BOT_INACTIF",
         message: "Votre bot n'est pas actif. Veuillez acheter une activation."
       });
     }
 
-    const code = await startPairingSession(num);
+    // Lancer le pairing uniquement si le bot n'est pas déjà connecté
+    let code = null;
+    if (!bots.has(num)) code = await startPairingSession(num);
     if (code) return res.json({ code });
 
     return res.json({ status: "Déjà connecté" });

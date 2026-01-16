@@ -29,7 +29,7 @@ body{margin:0;font-family:"JetBrains Mono", monospace;background:linear-gradient
 .menu-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;z-index:900;}
 .menu-overlay.active{display:flex;}
 .side-header{padding:16px;border-bottom:1px solid var(--border);font-weight:bold;color:var(--violet);}
-.side-links a{display:flex;gap:12px;padding:14px;color:#e5e7eb;text-decoration:none;transition:.3s;border-radius:8px;}
+.side-links a{display:flex;align-items:center;gap:12px;padding:14px;color:#e5e7eb;text-decoration:none;transition:.3s;border-radius:8px;}
 .side-links a:hover{background:rgba(139,92,246,0.15);color:var(--violet);}
 .side-links a.active{background:rgba(139,92,246,0.22);}
 .container{padding:20px;display:flex;justify-content:center;flex-wrap:wrap;gap:20px;}
@@ -47,8 +47,8 @@ body{margin:0;font-family:"JetBrains Mono", monospace;background:linear-gradient
 input[type="tel"], input[type="text"]{width:100%;padding:12px;border-radius:10px;border:1px solid rgba(56,189,248,0.06);background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.006));color:#eafff2;margin-bottom:12px;outline:none;font-size:14px;}
 input::placeholder{color:rgba(200,255,255,0.22);}
 .qrimg{width:240px;height:240px;margin:0 auto;display:block;background:#fff;padding:10px;border-radius:12px;}
-
-/* Price cards */
+.msg.success{margin-top:12px;padding:10px;border-radius:12px;background:rgba(52,211,153,0.1);border:1px solid var(--highlight);color:var(--highlight);display:flex;justify-content:space-between;align-items:center;}
+.msg.success button{padding:6px 10px;border:none;background:var(--violet);color:#fff;border-radius:8px;cursor:pointer;}
 .price-card{border:1px solid var(--border);border-radius:16px;padding:20px;transition:.3s;position:relative;background:#1a1a1d;text-align:center;box-shadow:0 10px 30px rgba(0,0,0,.5);}
 .price-card:hover{transform:translateY(-5px) scale(1.02);border-color:var(--violet);}
 .price-card .title{font-size:20px;font-weight:600;color:var(--violet);margin-bottom:12px;}
@@ -57,22 +57,20 @@ input::placeholder{color:rgba(200,255,255,0.22);}
 .price-card ul li{padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.05);}
 .price-card .buy-btn{padding:12px 20px;font-weight:600;cursor:pointer;transition:.2s;}
 .price-card .buy-btn:hover{background:rgba(139,92,246,0.22);color:#fff;transform:scale(1.05);}
-
-/* Parrainage */
 .referral{display:flex;gap:8px;align-items:center;margin-top:10px;}
 .referral input{flex:1;}
 .referral button{width:auto;padding:8px 12px;}
+.contact-wa{margin-top:12px;text-align:center;}
+.contact-wa a{display:inline-block;margin:0 6px;padding:8px 12px;background:#25D366;color:#fff;border-radius:8px;text-decoration:none;font-weight:bold;}
 </style>
 </head>
 <body>
 
-<!-- HEADER -->
 <div class="header">
   <h1>Rok XD MiniBot</h1>
   <div class="menu-btn" onclick="toggleMenu()"><i class="fas fa-bars"></i></div>
 </div>
 
-<!-- MENU -->
 <div id="sideMenu" class="side-menu">
   <div class="side-header">ROK XD</div>
   <div class="side-links">
@@ -81,28 +79,21 @@ input::placeholder{color:rgba(200,255,255,0.22);}
     <a href="#" onclick="showSection('coins')"><i class="fas fa-coins"></i> Coins</a>
     <a href="#" onclick="showSection('pair')"><i class="fas fa-link"></i> Pair</a>
     <a href="#" onclick="showSection('qr')"><i class="fas fa-qrcode"></i> QR</a>
-    <a href="/logout"><i class="fas fa-power-off"></i> Logout</a>
+    <a href="admin-login.html"><i class="fas fa-user-shield"></i> Admin</a>
+    <a href="#" onclick="logout()"><i class="fas fa-power-off"></i> Logout</a>
   </div>
 </div>
 <div id="menuOverlay" class="menu-overlay" onclick="toggleMenu()"></div>
 
-<!-- CONTENT -->
 <div class="container">
-
   <!-- BOT -->
   <div id="section-bot" class="section">
     <div class="card">
-      <div class="avatar">
-        <img src="https://files.catbox.moe/36ywf8.jpeg" alt="Avatar Bot">
-      </div>
+      <div class="avatar"><img src="https://files.catbox.moe/36ywf8.jpeg" alt="Avatar Bot"></div>
       <h2>Bot Management</h2>
       <p id="botTimer">Bot inactif</p>
       <p>Coins : <b id="coins">0</b></p>
       <button id="watchAdBtn" class="btn"><i class="fas fa-video"></i> Watch Ad & Get 1 Coin</button>
-      <div class="referral">
-        <input id="referralLink" type="text" readonly>
-        <button onclick="copyReferral()" class="btn">Copier</button>
-      </div>
     </div>
   </div>
 
@@ -110,7 +101,7 @@ input::placeholder{color:rgba(200,255,255,0.22);}
   <div id="section-achat" class="section" style="display:none;">
     <div class="price-card">
       <div class="title">24h Bot</div>
-      <div class="price">500 XAF / 20 Coins</div>
+      <div class="price">200 XAF / 20 Coins</div>
       <ul>
         <li>Bot actif 24 heures</li>
         <li>Coins requis : 20</li>
@@ -120,7 +111,7 @@ input::placeholder{color:rgba(200,255,255,0.22);}
     </div>
     <div class="price-card">
       <div class="title">48h Bot</div>
-      <div class="price">1000 XAF / 40 Coins</div>
+      <div class="price">350 XAF / 40 Coins</div>
       <ul>
         <li>Bot actif 48 heures</li>
         <li>Coins requis : 40</li>
@@ -130,7 +121,7 @@ input::placeholder{color:rgba(200,255,255,0.22);}
     </div>
     <div class="price-card">
       <div class="title">72h Bot</div>
-      <div class="price">1500 XAF / 60 Coins</div>
+      <div class="price">500 XAF / 60 Coins</div>
       <ul>
         <li>Bot actif 72 heures</li>
         <li>Coins requis : 60</li>
@@ -149,6 +140,15 @@ input::placeholder{color:rgba(200,255,255,0.22);}
         <li>Regardez 2 pubs par jour (+1 coin par pub)</li>
         <li>Parrainage : partagez votre lien pour gagner des coins</li>
       </ul>
+      <div class="referral">
+        <input id="referralLink" type="text" readonly>
+        <button onclick="copyReferral()" class="btn">Copier</button>
+      </div>
+      <div class="contact-wa">
+        <p>Contact WhatsApp :</p>
+        <a href="https://wa.me/237699777530" target="_blank">+237 699 777 530</a>
+        <a href="https://wa.me/237673941535" target="_blank">+237 673 941 535</a>
+      </div>
     </div>
   </div>
 
@@ -158,11 +158,10 @@ input::placeholder{color:rgba(200,255,255,0.22);}
       <h2>Pairing & Config</h2>
       <input id="phonePair" type="tel" placeholder="2376XXXXXXX">
       <button id="pairBtn2" class="btn">Générer le code</button>
-      <button onclick="copyPairCode()" class="btn">Copier Code</button>
-      <div class="result" id="pairResult"></div>
+      <div id="pairResult"></div>
       <input id="prefix" type="text" placeholder="Préfixe commandes (ex: !)">
       <button id="configBtn" class="btn">Sauvegarder Config</button>
-      <div class="result" id="configResult"></div>
+      <div id="configResult"></div>
     </div>
   </div>
 
@@ -172,81 +171,84 @@ input::placeholder{color:rgba(200,255,255,0.22);}
       <h2>QR Code</h2>
       <input id="phoneQR" type="tel" placeholder="2376XXXXXXX">
       <button id="btnQR" class="btn">Générer QR</button>
-      <div class="result" id="resultQR"></div>
+      <div id="resultQR"></div>
     </div>
   </div>
 
 </div>
 
-<!-- AD MODAL -->
-<div id="adModal">
-  <video id="adVideo" width="320" height="240" autoplay>
-    <source src="https://files.catbox.moe/miegza.mp4" type="video/mp4">
-    Votre navigateur ne supporte pas la vidéo.
-  </video>
-</div>
-
-<!-- BOTTOM -->
 <div class="bottom">
   <a href="#" onclick="showSection('bot')" class="active">Bot</a>
   <a href="#" onclick="showSection('achat')">Achat</a>
   <a href="#" onclick="showSection('coins')">Coins</a>
+  <a href="admin-login.html"><i class="fas fa-user-shield"></i> Admin</a>
 </div>
 
 <script>
-let botTimeRemaining=0,userCoins=0,timerInterval;
-let currentPairCode='';
-const coinsEl=document.getElementById('coins');
-const botTimer=document.getElementById('botTimer');
-const watchAdBtn=document.getElementById('watchAdBtn');
-const sideMenu=document.getElementById('sideMenu');
-const menuOverlay=document.getElementById('menuOverlay');
-const adModal=document.getElementById('adModal');
-const adVideo=document.getElementById('adVideo');
-const referralInput=document.getElementById('referralLink');
+// ====== VARIABLES ======
+let botTimeRemaining = 0, userCoins = 0, timerInterval;
+let currentPairCode = '';
+const coinsEl = document.getElementById('coins');
+const botTimer = document.getElementById('botTimer');
+const watchAdBtn = document.getElementById('watchAdBtn');
+const sideMenu = document.getElementById('sideMenu');
+const menuOverlay = document.getElementById('menuOverlay');
+const referralInput = document.getElementById('referralLink');
 
-// SPA Sections
+// ====== MENU & SECTIONS ======
+function toggleMenu() { sideMenu.classList.toggle('active'); menuOverlay.classList.toggle('active'); }
 function showSection(name){
   document.querySelectorAll('.section').forEach(s=>s.style.display='none');
-  document.getElementById('section-'+name).style.display='block';
-  document.querySelectorAll('.side-links a').forEach(a=>a.classList.remove('active'));
-  document.querySelectorAll('.bottom a').forEach(a=>a.classList.remove('active'));
+  const sec = document.getElementById('section-'+name);
+  if(sec) sec.style.display='block';
   document.querySelectorAll('.side-links a, .bottom a').forEach(a=>{
-    if(a.textContent.trim().toLowerCase()===name) a.classList.add('active');
+    a.classList.remove('active');
+    if(a.textContent.trim().toLowerCase() === name) a.classList.add('active');
   });
 }
 
-// MENU
-function toggleMenu(){ sideMenu.classList.toggle('active'); menuOverlay.classList.toggle('active'); }
+// ====== LOGOUT ======
+function logout(){ fetch('/logout',{method:'POST'}).then(()=>location.href='/login').catch(()=>location.href='/login'); }
 
-// TOAST
+// ====== TOAST ======
 function toast(msg){ const t=document.createElement('div'); t.className='toast'; t.textContent=msg; document.body.appendChild(t); setTimeout(()=>t.remove(),2500); }
 
-// TIMER BOT
+// ====== BOT TIMER & ACCESS ======
+function updateBotAccessUI(){
+  const isActive = botTimeRemaining > 0;
+  ["section-pair","section-qr"].forEach(id=>{
+    const sec = document.getElementById(id); if(!sec) return;
+    sec.style.opacity = isActive ? "1" : "0.45";
+    sec.querySelectorAll("input,button").forEach(el=>el.disabled = !isActive);
+  });
+}
+
 function updateTimer(){
   if(timerInterval) clearInterval(timerInterval);
-  if(botTimeRemaining<=0){ botTimer.textContent="Bot inactif"; checkBotAccess(); return; }
+  if(botTimeRemaining <= 0){ botTimer.textContent="Bot inactif"; updateBotAccessUI(); return; }
   timerInterval=setInterval(()=>{
-    if(botTimeRemaining<=0){updateTimer(); return;}
+    if(botTimeRemaining <= 0){ clearInterval(timerInterval); updateTimer(); return; }
     const h=Math.floor(botTimeRemaining/3600000);
     const m=Math.floor((botTimeRemaining%3600000)/60000);
     const s=Math.floor((botTimeRemaining%60000)/1000);
     botTimer.textContent=`Actif : ${h}h ${m}m ${s}s`;
     botTimeRemaining-=1000;
-    checkBotAccess();
+    updateBotAccessUI();
   },1000);
 }
 
-// LOAD STATUS
+// ====== LOAD STATUS ======
 async function loadStatus(){
-  const r=await fetch('/coins'); const d=await r.json();
-  if(d.error){location.href='/login'; return;}
-  userCoins=d.coins||0; botTimeRemaining=d.botActiveRemaining||0;
-  coinsEl.textContent=userCoins;
-  referralInput.value=`https://rokxd.example.com/?ref=${d.userId}`;
-  updateTimer();
+  try{
+    const r=await fetch('/coins'); const d=await r.json();
+    if(d.error){ location.href='/login'; return; }
+    userCoins=d.coins||0; 
+    botTimeRemaining=d.botRemaining||0; // ✅ correction ici
+    coinsEl.textContent=userCoins;
+    referralInput.value=`${location.origin}/?ref=${d.username}`; // ✅ username inclus
+    updateTimer(); updateBotAccessUI();
+  }catch(e){ console.error(e); toast("Erreur de chargement"); }
 }
-
 // WATCH ADS
 let adCount=0;
 watchAdBtn.onclick=()=>{
